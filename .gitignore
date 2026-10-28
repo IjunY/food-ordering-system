@@ -5,6 +5,17 @@ build/
 dist/
 wheels/
 *.egg-info
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
 
 # Virtual environments
 .venv
+
+# Secrets
+.env 
+
+# Local settings
+docker-compose.override.yml

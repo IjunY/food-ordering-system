@@ -1,14 +1,32 @@
 [project]
 name = "nthu-food-ordering-system"
 version = "0.1.0"
-description = "Add your description here"
+description = "Campus meal-ordering app (NTHU Introduction to Python final project)"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
-
-[project.scripts]
-nthu-food-ordering-system = "nthu_food_ordering_system:main"
+dependencies = [
+    "fastapi>=0.161.1",
+    "httpx2>=2.16.0",
+    "pydantic-settings>=2.16.1",
+    "uvicorn[standard]>=0.54.0",
+]
 
 [build-system]
 requires = ["uv_build>=0.12.7,<0.13.0"]
 build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "app"     
+module-root = ""        
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pre-commit>=4.7.0",
+    "pytest>=9.1.1",
+    "ruff>=0.17.2",
+]

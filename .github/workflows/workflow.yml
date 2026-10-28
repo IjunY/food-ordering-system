@@ -1,0 +1,39 @@
+name: Code-Quality-Check
+
+on:
+  push: 
+    branches: ["main"]
+  pull-requests:
+    branches: ["main"]
+
+jobs:
+  quality-check:
+    runs-on: xcode-27, windows-11-arm
+  
+  steps:
+  - name: check-my-code
+    uses: actions/checkout@v4
+  
+  - name: set-python-envionrment
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12' 
+        cache: 'pip'         
+
+  - name: install-checking-tools
+    run: |
+      python -m pip install --upgrade pip
+      pip install flake8 mypy  
+
+  - name: run-linter
+    run: |
+      # stop the build if there are Python syntax errors or undefined names
+      flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      # exit-zero treats all errors as warnings. 
+      flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+  - name: type-checking
+    run: |
+      mypy . --ignore-missing-imports
+
