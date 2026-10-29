@@ -1,7 +1,7 @@
 [project]
 name = "nthu-food-ordering-system"
 version = "0.1.0"
-description = "Campus meal-ordering app (NTHU Introduction to Python final project)"
+description = "Campus meal-ordering app (NTHU Introduction to Programming I final project)"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

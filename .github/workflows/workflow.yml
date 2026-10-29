@@ -8,7 +8,7 @@ on:
 
 jobs:
   quality-check:
-    runs-on: xcode-27, windows-11-arm
+    runs-on: [xcode-27, windows-11-arm]
   
     steps:
     - name: check-my-code
