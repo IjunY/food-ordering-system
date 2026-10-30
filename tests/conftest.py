@@ -1,12 +1,11 @@
 from collections.abc import Iterator
 
-from fastapi.testclient import TestClient
 import pytest
+from fastapi.testclient import TestClient
+from pydantic import SecretStr
 
 from app.core.config import Settings
 from app.main import create_app
-
-from pydantic import SecretStr
 
 
 # Initiating fake test settings
