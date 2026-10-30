@@ -26,7 +26,11 @@ addopts = "-ra --strict-markers"
 [dependency-groups]
 dev = [
     "httpx>=0.28.1",
+    "mypy>=2.4.1",
     "pre-commit>=4.7.0",
     "pytest>=9.1.1",
     "ruff>=0.17.2",
 ]
+
+[tool.mypy]
+plugins = ["pydantic.mypy"]
