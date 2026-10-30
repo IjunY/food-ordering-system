@@ -9,9 +9,9 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     app_env: Literal["dev", "test", "loadtest", "prod"] = "dev"
-    database_url: SecretStr  # no default: the app refuses to start without it
+    database_url: SecretStr  # Comes from explicit settings in test environment or .env during real deployment
 
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    return Settings()  # pyright: ignore[reportCallIssue]
