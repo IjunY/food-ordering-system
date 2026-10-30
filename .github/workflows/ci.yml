@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push: 
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  quality-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Install the latest version of uv
+      uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2
+      with:
+        enable-cache: true
+    
+    - name: Install dependencies
+      run: uv sync --lock
+
+    - name: Lint
+      run: |
+        uv run ruff check .
+        uv run ruff format --check .
+
+    - name: Type checking
+      run: uv run mypy .
+    
+    - name: Tests
+      run: uv run pytest -q
+
