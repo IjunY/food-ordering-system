@@ -5,9 +5,12 @@ description = "Campus meal-ordering app (NTHU Introduction to Programming I fina
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "alembic>=1.20.1",
     "fastapi>=0.161.1",
     "httpx2>=2.16.0",
+    "psycopg[binary]>=3.2",
     "pydantic-settings>=2.16.1",
+    "sqlalchemy>=2.0",
     "uvicorn[standard]>=0.54.0",
 ]
 
