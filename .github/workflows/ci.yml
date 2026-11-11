@@ -55,6 +55,10 @@ jobs:
 
     - name: Type checking
       run: uv run mypy .
+
+    - run: uv run alembic upgrade head
+
+    - run: uv run alembic check # checks if current database matches code
     
     - name: Tests
       run: uv run pytest -q

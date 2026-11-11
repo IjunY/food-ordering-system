@@ -1,33 +1,41 @@
 from collections.abc import Iterator
-from functools import lru_cache
-from sqlalchemy import create_engine, Engine
-from sqlalchemy.engine import make_url, URL
-from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
-from app.core.config import get_settings
+
+from fastapi import Request
+from sqlalchemy import Engine, MetaData, create_engine
+from sqlalchemy.engine import URL, make_url
+from sqlalchemy.orm import DeclarativeBase, Session
+
+from app.core.config import Settings
 
 
 # The parent class of every schema
+# Uses naming convention to prevent random naming by Alembic
 class Base(DeclarativeBase):
-    pass
+    metadata = MetaData(
+        naming_convention={
+            "ix": "ix_%(column_0_label)s",
+            "uq": "uq_%(table_name)s_%(column_0_name)s",
+            "ck": "ck_%(table_name)s_%(constraint_name)s",  # ck_order_items_quantity_positive
+            "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+            "pk": "pk_%(table_name)s",
+        }
+    )
 
 
-@lru_cache
-def get_engine() -> Engine:
+def get_database_url(settings: Settings) -> URL:
+    return make_url(settings.database_url.get_secret_value()).set(
+        drivername="postgresql+psycopg"
+    )
 
-    str_url = get_settings().database_url.get_secret_value()
-    db_url: URL = make_url(str_url).set(drivername="postgresql+psycopg")
 
+def get_engine(settings: Settings) -> Engine:
     # The connection between code and the database
-    engine: Engine = create_engine(url=db_url, pool_pre_ping=True)
-    return engine
+    return create_engine(url=get_database_url(settings), pool_pre_ping=True)
 
 
-def get_db() -> Iterator[Session]:
-    engine = get_engine()
+def get_db(request: Request) -> Iterator[Session]:
 
-    # sessionmaker (factory) creates an instance of a session using our own settings
-    SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
-    # Opens a session
-    with SessionLocal() as session:
+    # create session when api endpoint is called
+    with request.app.state.session_factory() as session:
         # Hands over the session and pause
         yield session
