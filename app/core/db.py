@@ -1,7 +1,7 @@
 from collections.abc import Iterator
 
 from fastapi import Request
-from sqlalchemy import Engine, create_engine
+from sqlalchemy import Engine, MetaData, create_engine
 from sqlalchemy.engine import URL, make_url
 from sqlalchemy.orm import DeclarativeBase, Session
 
@@ -9,8 +9,17 @@ from app.core.config import Settings
 
 
 # The parent class of every schema
+# Uses naming convention to prevent random naming by Alembic
 class Base(DeclarativeBase):
-    pass
+    metadata = MetaData(
+        naming_convention={
+            "ix": "ix_%(column_0_label)s",
+            "uq": "uq_%(table_name)s_%(column_0_name)s",
+            "ck": "ck_%(table_name)s_%(constraint_name)s",  # ck_order_items_quantity_positive
+            "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+            "pk": "pk_%(table_name)s",
+        }
+    )
 
 
 def get_database_url(settings: Settings) -> URL:
