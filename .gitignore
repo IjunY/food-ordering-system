@@ -15,5 +15,10 @@ htmlcov/
 .venv
 
 # Secrets
-.env 
+.env
+
+.impeccable/live/
+.impeccable/review/
+.impeccable/questions/
+**/skills/impeccable/scripts/.impeccable/
 
