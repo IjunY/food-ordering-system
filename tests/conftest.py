@@ -1,18 +1,27 @@
+import os
 from collections.abc import Iterator
 
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
+from sqlalchemy.orm import sessionmaker
 
 from app.core.config import Settings
 from app.main import create_app
+
+# Same database the migrations ran on: CI sets DATABASE_URL, locally it is the
+# docker-compose one. Run `uv run alembic upgrade head` first so the tables exist.
+TEST_DATABASE_URL = os.environ.get(
+    "DATABASE_URL", "postgresql://meal:change-me@localhost:5433/meal"
+)
 
 
 # Initiating fake test settings
 @pytest.fixture
 def settings() -> Settings:
     return Settings(
-        database_url=SecretStr("postgresql://meal:change-me@localhost:5432/meal_test"),
+        database_url=SecretStr(TEST_DATABASE_URL),
+        jwt_secret=SecretStr("test-only-secret-not-used-anywhere-else-0123456789"),
         app_env="test",
         _env_file=None,  # pyright: ignore[reportCallIssue]
     )
@@ -22,8 +31,19 @@ def settings() -> Settings:
 @pytest.fixture
 def client(settings: Settings) -> Iterator[TestClient]:
     app = create_app(settings=settings)
-    with TestClient(app) as test_client:
-        # Give the test_client to the test, comes back after the test
-        yield test_client
+    engine = app.state.session_factory.kw["bind"]
 
-    # TODO: cleanup work
+    # Cleanup: everything a test writes happens inside one outer transaction that is
+    # rolled back at the end, so tests never leave rows behind (even after a commit).
+    with engine.connect() as connection:
+        transaction = connection.begin()
+        app.state.session_factory = sessionmaker(
+            bind=connection,
+            expire_on_commit=False,
+            join_transaction_mode="create_savepoint",
+        )
+        with TestClient(app) as test_client:
+            # Give the test_client to the test, comes back after the test
+            yield test_client
+        transaction.rollback()
+    engine.dispose()
