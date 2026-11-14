@@ -38,3 +38,31 @@ Send the token on later requests as `Authorization: Bearer <access_token>` (vali
 - Passwords are stored as Argon2 hashes, never in plain text.
 - `users.role` is `customer` (what registration creates), `staff` or `admin`.
   Other modules can protect endpoints with `CurrentUser` / `StaffUser` from `app/auth/dependencies.py`.
+
+### Menu (`app/menu`)
+
+| Method | Path | Who | What |
+|---|---|---|---|
+| GET | `/api/vendors` | anyone | Names of the vendors that have menu items |
+| GET | `/api/menu-items` | anyone | The menu. Optional `?vendor=...` and `?available_only=true` |
+| GET | `/api/menu-items/{id}` | anyone | One item |
+| POST | `/api/menu-items` | staff / admin | Add an item: `vendor`, `item_name`, `price`, `is_available` |
+| PATCH | `/api/menu-items/{id}` | staff / admin | Change only the fields that are sent |
+| DELETE | `/api/menu-items/{id}` | staff / admin | Remove an item. `409` if an order already uses it; set `is_available` to `false` instead |
+
+### Orders (`app/orders`)
+
+| Method | Path | Who | What |
+|---|---|---|---|
+| POST | `/api/orders` | signed in | Place an order: `{"items": [{"item_id": 1, "quantity": 2}]}` |
+| GET | `/api/orders` | signed in | Customers get their own orders; staff get everyone's (`?mine=true` for their own). Optional `?status=`, `?limit=`, `?offset=` |
+| GET | `/api/orders/{id}` | owner or staff | One order with its items and total |
+| PATCH | `/api/orders/{id}/status` | staff / admin | Move the order on: `{"status": "preparing"}` |
+| POST | `/api/orders/{id}/cancel` | owner or staff | Customers can cancel only while the order is `confirming` |
+
+- An order can only contain items from one vendor, and only items that are available.
+- Prices come from the menu at the moment of ordering (`unit_price`); later menu changes do not affect existing orders.
+- `orders.created_by` holds the customer's `student_id`.
+- Status flow: `confirming` -> `preparing` -> `ready` -> `picked up`. `cancelled` is possible any time before pick-up.
+  The table lives in `ALLOWED_TRANSITIONS` (`app/orders/states.py`).
+

@@ -6,6 +6,8 @@ from app.auth.router import router as auth_router
 from app.core.config import Settings, get_settings
 from app.core.db import get_engine
 from app.core.errors import AppError
+from app.menu.router import router as menu_router
+from app.orders.router import router as orders_router
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -31,5 +33,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     # Every endpoint lives under /api
     app.include_router(auth_router, prefix="/api")
+    app.include_router(menu_router, prefix="/api")
+    app.include_router(orders_router, prefix="/api")
 
     return app
