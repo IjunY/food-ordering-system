@@ -6,7 +6,11 @@ from app.auth.states import UserRole
 
 Headers = Callable[..., dict[str, str]]
 
-BEEF_NOODLES = {"vendor": "Noodle House", "item_name": "Beef Noodles", "price": 120}
+BEEF_NOODLES = {
+    "vendor": "Test Noodle House",
+    "item_name": "Beef Noodles",
+    "price": 120,
+}
 
 
 def test_anyone_can_browse_the_menu(client: TestClient, auth_headers: Headers) -> None:
@@ -14,13 +18,13 @@ def test_anyone_can_browse_the_menu(client: TestClient, auth_headers: Headers) -
     client.post("/api/menu-items", json=BEEF_NOODLES, headers=staff)
     client.post(
         "/api/menu-items",
-        json={"vendor": "Tea Shop", "item_name": "Milk Tea", "price": 45},
+        json={"vendor": "Test Tea Shop", "item_name": "Milk Tea", "price": 45},
         headers=staff,
     )
     client.post(
         "/api/menu-items",
         json={
-            "vendor": "Tea Shop",
+            "vendor": "Test Tea Shop",
             "item_name": "Seasonal Special",
             "price": 60,
             "is_available": False,
@@ -37,16 +41,16 @@ def test_anyone_can_browse_the_menu(client: TestClient, auth_headers: Headers) -
         "Seasonal Special",
     }
 
-    tea_shop = client.get("/api/menu-items", params={"vendor": "Tea Shop"}).json()
+    tea_shop = client.get("/api/menu-items", params={"vendor": "Test Tea Shop"}).json()
     assert {i["item_name"] for i in tea_shop} == {"Milk Tea", "Seasonal Special"}
 
     on_sale = client.get(
-        "/api/menu-items", params={"vendor": "Tea Shop", "available_only": True}
+        "/api/menu-items", params={"vendor": "Test Tea Shop", "available_only": True}
     ).json()
     assert [i["item_name"] for i in on_sale] == ["Milk Tea"]
 
     vendors = client.get("/api/vendors").json()
-    assert {"Noodle House", "Tea Shop"} <= set(vendors)
+    assert {"Test Noodle House", "Test Tea Shop"} <= set(vendors)
 
 
 def test_staff_can_create_update_and_delete(
@@ -78,7 +82,7 @@ def test_customers_and_guests_cannot_change_the_menu(
     client: TestClient, auth_headers: Headers
 ) -> None:
     staff = auth_headers("staff01", UserRole.STAFF)
-    customer = auth_headers("112012345")
+    customer = auth_headers("990000001")
     item_id = client.post("/api/menu-items", json=BEEF_NOODLES, headers=staff).json()[
         "id"
     ]
@@ -117,7 +121,7 @@ def test_item_used_in_an_order_cannot_be_deleted(
     client: TestClient, auth_headers: Headers
 ) -> None:
     staff = auth_headers("staff01", UserRole.STAFF)
-    customer = auth_headers("112012345")
+    customer = auth_headers("990000001")
     item_id = client.post("/api/menu-items", json=BEEF_NOODLES, headers=staff).json()[
         "id"
     ]

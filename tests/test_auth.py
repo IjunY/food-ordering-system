@@ -7,7 +7,7 @@ from app.auth.security import create_access_token
 from app.core.config import Settings
 
 ALICE = {
-    "student_id": "112012345",
+    "student_id": "990000001",
     "email": "alice@example.com",
     "phone_number": "0912345678",
     "password": "correct-horse-battery",
@@ -67,7 +67,7 @@ def test_register_rejects_duplicate_email_ignoring_case(client: TestClient) -> N
 
     response = client.post(
         "/api/auth/register",
-        json={**ALICE, "student_id": "112099999", "email": "Alice@Example.com"},
+        json={**ALICE, "student_id": "990000002", "email": "Alice@Example.com"},
     )
     assert response.status_code == 409
     assert "email" in response.json()["detail"]

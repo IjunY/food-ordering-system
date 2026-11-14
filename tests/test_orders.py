@@ -15,7 +15,7 @@ def staff(auth_headers: Headers) -> dict[str, str]:
 
 @pytest.fixture
 def customer(auth_headers: Headers) -> dict[str, str]:
-    return auth_headers("112012345")
+    return auth_headers("990000001")
 
 
 @pytest.fixture
@@ -23,18 +23,22 @@ def menu(client: TestClient, staff: dict[str, str]) -> dict[str, int]:
     """A small menu; maps a short name to the menu item id."""
     rows = {
         "noodles": {
-            "vendor": "Noodle House",
+            "vendor": "Test Noodle House",
             "item_name": "Beef Noodles",
             "price": 120,
         },
-        "dumplings": {"vendor": "Noodle House", "item_name": "Dumplings", "price": 60},
+        "dumplings": {
+            "vendor": "Test Noodle House",
+            "item_name": "Dumplings",
+            "price": 60,
+        },
         "sold_out": {
-            "vendor": "Noodle House",
+            "vendor": "Test Noodle House",
             "item_name": "Wontons",
             "price": 70,
             "is_available": False,
         },
-        "tea": {"vendor": "Tea Shop", "item_name": "Milk Tea", "price": 45},
+        "tea": {"vendor": "Test Tea Shop", "item_name": "Milk Tea", "price": 45},
     }
     ids = {}
     for key, body in rows.items():
@@ -67,8 +71,8 @@ def test_customer_places_an_order(
     order = place(client, customer, (menu["noodles"], 2), (menu["dumplings"], 1))
 
     assert order["status"] == "confirming"
-    assert order["created_by"] == "112012345"
-    assert order["vendor"] == "Noodle House"
+    assert order["created_by"] == "990000001"
+    assert order["vendor"] == "Test Noodle House"
     assert order["total"] == 2 * 120 + 60
     assert [
         (i["item_name"], i["quantity"], i["unit_price"], i["subtotal"])
@@ -159,7 +163,7 @@ def test_customers_only_see_their_own_orders(
     staff: dict[str, str],
     menu: dict[str, int],
 ) -> None:
-    other = auth_headers("112099999")
+    other = auth_headers("990000002")
     mine = place(client, customer, (menu["noodles"], 1))
     theirs = place(client, other, (menu["tea"], 1))
 

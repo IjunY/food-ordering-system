@@ -60,7 +60,7 @@ def auth_headers(
     client: TestClient, settings: Settings
 ) -> Callable[..., dict[str, str]]:
     def make(
-        student_id: str = "112012345", role: UserRole = UserRole.CUSTOMER
+        student_id: str = "990000001", role: UserRole = UserRole.CUSTOMER
     ) -> dict[str, str]:
         with client.app.state.session_factory() as session:  # type: ignore[attr-defined]
             user = register_user(

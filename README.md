@@ -8,10 +8,27 @@ cp .env.example .env          # then change POSTGRES_PASSWORD and JWT_SECRET
 docker compose up -d db       # Postgres on localhost:5433
 uv sync
 uv run alembic upgrade head   # create / update the tables
+uv run python scripts/seed_demo.py --password <demo-password>   # optional demo data
 uv run uvicorn app.main:create_app --factory --reload
 ```
 
-Interactive API docs: http://127.0.0.1:8000/docs
+- App (frontend + API on one address): http://127.0.0.1:8000
+- Interactive API docs: http://127.0.0.1:8000/docs
+
+`scripts/seed_demo.py` adds the demo menu (`scripts/demo_menu.json`, same items as the
+frontend's demo data) and three accounts that all use the password you give:
+`112012345` (customer), `staff` (vendor staff) and `admin`. Running it again adds nothing.
+
+## Frontend (`frontend/`)
+
+Plain HTML/CSS/JS, no build step. The backend serves it at `/`.
+
+On start-up it calls `GET /api/health`. With the backend there, these parts use the real API:
+sign up / sign in / profile, placing orders, my orders and order status, and the staff order board.
+Everything else (restaurant list, menus, wait times, payment, store settings, menu management,
+reports, platform admin) still uses the demo data in `frontend/js/mock/`. Without a backend
+(e.g. `python -m http.server -d frontend`) the whole app runs on demo data.
+See `frontend/README.md` for details.
 
 Tests run against the database in `DATABASE_URL` (default: the docker-compose one) and
 need the tables to exist, so run `uv run alembic upgrade head` first. Each test runs
