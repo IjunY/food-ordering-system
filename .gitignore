@@ -20,5 +20,6 @@ htmlcov/
 .impeccable/live/
 .impeccable/review/
 .impeccable/questions/
+.impeccable/mocks/
 **/skills/impeccable/scripts/.impeccable/
 

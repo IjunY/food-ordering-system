@@ -38,13 +38,14 @@ A campus-specific order-ahead system for NTHU vendors. Students see real-time or
 
 - Confirmed: multiple vendors, per-item availability, order-ahead with status tracking, pickup at the vendor.
 - Planned: online payment (the `payments` module exists but is empty; provider and flow are undecided).
-- Open: the authentication method (the `auth` module is empty), the scope of admin features, the currency display format, and whether notifications are sent when an order is ready.
+- Authentication (decided): students sign in with student ID + password. Sign-up asks for a student ID (exactly 9 digits) and a password (letters and numbers only, containing both, at least 8 characters). After sign-up, a short onboarding asks the student to add a payment method and to allow notifications (for order-ready alerts). Backend `auth` module is still empty.
+- Open: the payment provider and supported methods, the scope of admin features, and the currency display format.
 - Device split: the student UI is phone-first; the vendor UI is desktop/tablet-first.
 
 ## Brand Commitments
 
 - Working name: "Food Ordering System" (NTHU). There is no logo or other brand assets yet.
-- Bilingual interface: Traditional Chinese and English, for local and international students.
+- Bilingual interface: Traditional Chinese and English, for local and international students. One language is shown at a time; the user switches with a language toggle (no side-by-side bilingual labels).
 
 ## Evidence on Hand
 
@@ -55,10 +56,10 @@ A campus-specific order-ahead system for NTHU vendors. Students see real-time or
 1. **Status is the product.** A student's main question is "is it ready?"; order state must be legible at a glance, on a phone, on the move.
 2. **Peak-hour speed for both sides.** Students reorder in a few taps; vendors advance orders with no hesitation during a rush.
 3. **Honest availability.** What is shown as orderable must actually be available. Sold-out items and cancellations are explicit, never silent.
-4. **Two languages, one experience.** Traditional Chinese and English are both first-class; neither is an afterthought translation.
+4. **Two languages, one experience.** Traditional Chinese and English are both first-class and shown one at a time via a toggle; neither is an afterthought translation.
 
 ## Accessibility & Inclusion
 
-- Bilingual (zh-TW / en) content; layouts must hold up with both scripts and differing text lengths.
+- Bilingual (zh-TW / en) content, one language displayed at a time with a toggle; layouts must hold up with both scripts and differing text lengths.
 - The student UI must work on a phone used one-handed and outdoors; the vendor UI must be readable from a glance at a busy counter.
 - No formal conformance target has been set; WCAG 2.2 AA is the working assumption until one is decided.
