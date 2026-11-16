@@ -1,0 +1,122 @@
+[
+  {
+    "vendor": "水木自助餐",
+    "item_name": "招牌雞腿便當",
+    "price": 95,
+    "is_available": true
+  },
+  {
+    "vendor": "水木自助餐",
+    "item_name": "滷排骨便當",
+    "price": 85,
+    "is_available": true
+  },
+  {
+    "vendor": "水木自助餐",
+    "item_name": "素食什錦便當",
+    "price": 80,
+    "is_available": false
+  },
+  {
+    "vendor": "水木自助餐",
+    "item_name": "紅燒牛腩飯",
+    "price": 110,
+    "is_available": true
+  },
+  {
+    "vendor": "水木自助餐",
+    "item_name": "燙青菜",
+    "price": 35,
+    "is_available": true
+  },
+  {
+    "vendor": "水木自助餐",
+    "item_name": "滷蛋",
+    "price": 15,
+    "is_available": true
+  },
+  {
+    "vendor": "水木自助餐",
+    "item_name": "味噌湯",
+    "price": 30,
+    "is_available": true
+  },
+  {
+    "vendor": "水木自助餐",
+    "item_name": "冰紅茶",
+    "price": 25,
+    "is_available": true
+  },
+  {
+    "vendor": "水木自助餐",
+    "item_name": "豆漿",
+    "price": 25,
+    "is_available": true
+  },
+  {
+    "vendor": "風雲樓麵食館",
+    "item_name": "紅燒牛肉麵",
+    "price": 150,
+    "is_available": true
+  },
+  {
+    "vendor": "風雲樓麵食館",
+    "item_name": "炸醬麵",
+    "price": 90,
+    "is_available": true
+  },
+  {
+    "vendor": "風雲樓麵食館",
+    "item_name": "鮮蝦餛飩湯",
+    "price": 80,
+    "is_available": true
+  },
+  {
+    "vendor": "風雲樓麵食館",
+    "item_name": "燙青菜",
+    "price": 35,
+    "is_available": true
+  },
+  {
+    "vendor": "小吃部早午餐",
+    "item_name": "火腿蛋餅",
+    "price": 45,
+    "is_available": true
+  },
+  {
+    "vendor": "小吃部早午餐",
+    "item_name": "培根起司漢堡",
+    "price": 65,
+    "is_available": true
+  },
+  {
+    "vendor": "小吃部早午餐",
+    "item_name": "薯餅",
+    "price": 30,
+    "is_available": true
+  },
+  {
+    "vendor": "小吃部早午餐",
+    "item_name": "豆漿",
+    "price": 25,
+    "is_available": true
+  },
+  {
+    "vendor": "小吃部早午餐",
+    "item_name": "奶茶",
+    "price": 35,
+    "is_available": true
+  },
+  {
+    "vendor": "水木咖哩屋",
+    "item_name": "豬排咖哩飯",
+    "price": 110,
+    "is_available": true
+  },
+  {
+    "vendor": "水木咖哩屋",
+    "item_name": "雞肉咖哩飯",
+    "price": 100,
+    "is_available": true
+  }
+]

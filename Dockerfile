@@ -36,4 +36,5 @@ WORKDIR /code
 USER app
 
 EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# app/main.py exposes a factory (create_app), not a module-level `app`.
+CMD ["uvicorn", "app.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]
