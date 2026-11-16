@@ -1,0 +1,61 @@
+/* 設計 token：Broadside 的紙與墨，改成收據紙＋清華紫重點色；中文用 Noto Sans TC，數字用 IBM Plex Mono（收據印字） */
+:root {
+  color-scheme: light;
+  --space-3xs: 2px; --space-2xs: 4px; --space-xs: 8px; --space-sm: 12px; --space-md: 16px; --space-lg: 24px; --space-xl: 40px; --space-2xl: 64px; --space-3xl: 96px; --space-4xl: 144px;
+  --text-xs: 0.75rem; --text-sm: 0.875rem; --text-md: 1rem; --text-lg: 1.2rem; --text-xl: 1.44rem; --text-2xl: 1.728rem; --text-3xl: 2.074rem;
+  --text-display-s: 1.44rem; --text-display: 1.728rem; --text-section: 1.2rem; --text-title: 1rem; --text-lead: 1rem;
+  --text-ticket: 4.5rem;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1); --ease-in: cubic-bezier(0.7, 0, 0.84, 0); --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 120ms; --dur-short: 220ms; --dur-long: 420ms;
+  --container: 1440px; --gutter: 16px; --gap-columns: 24px;
+  --column-phone: 30rem;
+  --z-base: 1; --z-raised: 10; --z-dropdown: 100; --z-sticky: 200; --z-sticky-nav: 300; --z-modal: 400; --z-toast: 500; --z-tooltip: 600;
+
+  /* 紙：暖白收據紙；墨：帶一點紫的近黑 */
+  --color-paper: oklch(96.5% 0.012 85);
+  --color-paper-2: oklch(93.5% 0.015 85);
+  --color-paper-3: oklch(90% 0.018 84);
+  --color-slip: oklch(98.5% 0.006 85);
+  --color-ink: oklch(20% 0.014 305);
+  --color-ink-2: oklch(32% 0.014 305);
+  --color-muted: oklch(46% 0.016 300);
+  --color-rule: oklch(82% 0.016 85);
+  --color-rule-strong: var(--color-ink);
+
+  /* 清華紫：只用在主要按鈕、選取中、取餐號碼與「可取餐」 */
+  --color-accent: oklch(40% 0.14 315);
+  --color-accent-ink: oklch(98% 0.006 85);
+  --color-accent-soft: oklch(93% 0.03 315);
+  --color-focus: oklch(42% 0.18 315);
+  --color-error: oklch(48% 0.17 27);
+
+  --font-body: "Noto Sans TC", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: var(--font-body);
+  --font-figure: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+  --radius-card: 0; --radius-pill: 0;
+  --rule-hair: 1px; --rule-bar: 4px;
+  --display-weight: 700; --tracking-display: 0;
+}
+
+/* 深色：墨底、紙色字（衍生，不是反相） */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --color-paper: oklch(17% 0.01 305); --color-paper-2: oklch(21% 0.012 305); --color-paper-3: oklch(25% 0.014 305);
+    --color-slip: oklch(20% 0.011 305);
+    --color-ink: oklch(93% 0.014 85); --color-ink-2: oklch(84% 0.014 85); --color-muted: oklch(70% 0.014 300);
+    --color-rule: oklch(34% 0.012 305);
+    --color-accent: oklch(74% 0.11 315); --color-accent-ink: oklch(17% 0.01 305); --color-accent-soft: oklch(30% 0.05 315);
+    --color-focus: oklch(76% 0.13 315); --color-error: oklch(72% 0.14 27);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-paper: oklch(17% 0.01 305); --color-paper-2: oklch(21% 0.012 305); --color-paper-3: oklch(25% 0.014 305);
+  --color-slip: oklch(20% 0.011 305);
+  --color-ink: oklch(93% 0.014 85); --color-ink-2: oklch(84% 0.014 85); --color-muted: oklch(70% 0.014 300);
+  --color-rule: oklch(34% 0.012 305);
+  --color-accent: oklch(74% 0.11 315); --color-accent-ink: oklch(17% 0.01 305); --color-accent-soft: oklch(30% 0.05 315);
+  --color-focus: oklch(76% 0.13 315); --color-error: oklch(72% 0.14 27);
+}

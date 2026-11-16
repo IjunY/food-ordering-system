@@ -36,6 +36,7 @@ jobs:
     env:
       APP_ENV: test
       DATABASE_URL: postgresql://meal:ci-password@localhost:5432/meal
+      JWT_SECRET: ci-only-secret-not-used-anywhere-else-0123456789
 
     steps:
     - uses: actions/checkout@v7
