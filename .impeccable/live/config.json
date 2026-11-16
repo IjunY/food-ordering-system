@@ -1,0 +1,6 @@
+{
+  "files": ["mockups/student-ordering.html"],
+  "insertBefore": "</body>",
+  "commentSyntax": "html",
+  "cspChecked": true
+}
