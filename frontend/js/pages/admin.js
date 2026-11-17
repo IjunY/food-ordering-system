@@ -1,11 +1,11 @@
-// 店家端與平台管理畫面 A01–A06（收據版）
+// 店家端與平台管理畫面 A01–A06（紫色取餐券版；桌機／平板優先）
 import { api } from '../api.js';
 import { t } from '../i18n.js';
 import { actions, forms, inputs, rerender, poll, toast, openModal, closeModal, confirmDialog } from '../router.js';
 import { icon } from '../icons.js';
 import * as C from '../components.js';
 
-const { esc, money } = C;
+const { esc, money, unit } = C;
 
 async function layout(active, inner) {
   const me = await api.me();
@@ -14,15 +14,15 @@ async function layout(active, inner) {
     : [['orders', 'admin.nav.orders'], ['menu', 'admin.nav.menu'], ['settings', 'admin.nav.settings'], ['reports', 'admin.nav.reports']];
   return `<div class="admin">
     <header class="admin-bar">
-      <div class="admin-bar__brand"><span class="wordmark">${esc(t('app.name'))}</span>${me.role === 'staff' && me.store_name ? `<span class="small muted">${esc(me.store_name)}</span>` : ''}</div>
+      <div class="admin-bar__brand"><span class="wordmark">${esc(t('app.name'))}</span>${me.role === 'staff' && me.store_name ? `<span class="store">${esc(me.store_name)}</span>` : ''}</div>
       <nav class="admin-nav" aria-label="${esc(t('profile.dashboard'))}">${items.map(([k, key]) => `<a href="#admin-${k}"${k === active ? ' aria-current="page"' : ''}>${esc(t(key))}</a>`).join('')}</nav>
-      <div class="admin-bar__me"><span class="who muted">${esc(me.name)}</span>${C.LangSwitch()}<button type="button" class="link small" data-action="logout">${esc(t('profile.logout'))}</button></div>
+      <div class="admin-bar__me"><span class="who">${esc(me.name)}</span>${C.LangSwitch()}<button type="button" class="barlink" data-action="logout">${esc(t('profile.logout'))}</button></div>
     </header>
     <main class="admin-main">${inner}</main>
   </div>`;
 }
 function pageHeader(title, sub = '', right = '') {
-  return `<div class="page-head"><div class="stack stack--tight"><h1>${esc(title)}</h1>${sub ? `<p class="page-head__sub">${esc(sub)}</p>` : ''}</div>${right ? `<div class="page-head__right">${right}</div>` : ''}</div>`;
+  return `<div class="page-head"><div><h1>${esc(title)}</h1>${sub ? `<p class="page-head__sub">${esc(sub)}</p>` : ''}</div>${right ? `<div class="page-head__right">${right}</div>` : ''}</div>`;
 }
 
 // ======================= A01 接單看板：票軌 =======================
@@ -42,8 +42,8 @@ export async function adminBoard() {
     <div class="rails">${cols.map(([k, key]) => {
       const list = orders.filter((o) => C.boardColumn(o.status) === k);
       return `<section class="rail" aria-label="${esc(t(key))}">
-        <div class="rail__head"><h2>${esc(t(key))}</h2><span class="fig-strong">${list.length}</span></div>
-        ${list.map((o) => C.KitchenTicket(o, fresh.has(o.id))).join('') || `<p class="empty small">${esc(t('admin.col_empty'))}</p>`}
+        <div class="rail__head"><h2>${esc(t(key))}</h2><span class="cnt">${list.length}</span></div>
+        ${list.map((o) => C.KitchenTicket(o, fresh.has(o.id))).join('') || `<p class="rail__empty">${esc(t('admin.col_empty'))}</p>`}
       </section>`;
     }).join('')}</div>`);
 }
@@ -71,8 +71,8 @@ export async function adminMenu() {
   const L = (k) => esc(t(k));
   const rows = items.map((i) => `<tr>
       <td data-label="${L('admin.menu.col_item')}"><span class="cell-media">${C.Photo({ url: i.image_url, kind: 'mini' })}<span>${esc(i.name)}</span></span></td>
-      <td data-label="${L('admin.menu.col_category')}" class="muted">${esc(i.category_name)}</td>
-      <td data-label="${L('admin.menu.col_price')}" class="num">${money(i.price)}</td>
+      <td data-label="${L('admin.menu.col_category')}" class="mute">${esc(i.category_name)}</td>
+      <td data-label="${L('admin.menu.col_price')}" class="num">${unit(i.price)}</td>
       <td data-label="${L('admin.menu.col_prep')}" class="num">${esc(t('unit.minutes', { n: i.prep_minutes }))}</td>
       <td data-label="${L('admin.menu.col_listed')}">${C.Toggle({ on: i.is_available, action: 'menu-toggle', data: { id: i.id, field: 'is_available' }, label: `${i.name} ${t('admin.menu.col_listed')}` })}</td>
       <td data-label="${L('admin.menu.col_sold_out')}">${C.Toggle({ on: i.is_sold_out, action: 'menu-toggle', data: { id: i.id, field: 'is_sold_out' }, label: `${i.name} ${t('admin.menu.col_sold_out')}` })}</td>
@@ -98,7 +98,7 @@ function menuDialog(item) {
   const isNew = !item;
   const i = item ?? { id: '', name: '', description: '', price: '', prep_minutes: '', category_id: menuState.cat !== 'all' ? menuState.cat : cats[0]?.id, is_available: true, is_sold_out: false, option_groups: [] };
   const title = t(isNew ? 'admin.menu.new_title' : 'admin.menu.edit_title');
-  const groups = i.option_groups.map((g) => `<li><span class="strong">${esc(g.name)}</span> <span class="muted">${esc(t(g.required ? 'item.pick_one' : 'item.optional'))}</span><br><span class="small">${esc(g.choices.map((c) => `${c.label} +${c.price_delta}`).join(t('fmt.list_sep')))}</span></li>`).join('');
+  const groups = i.option_groups.map((g) => `<li><b>${esc(g.name)}</b> <span class="mute">${esc(t(g.required ? 'item.pick_one' : 'item.optional'))}</span><br><span class="small">${esc(g.choices.map((c) => `${c.label} +${c.price_delta}`).join(t('fmt.list_sep')))}</span></li>`).join('');
   return `<form class="dialog" data-form="menu-item" role="dialog" aria-modal="true" aria-label="${esc(title)}" novalidate>
     <input type="hidden" name="id" value="${esc(i.id)}">
     <div class="dialog__head"><h2>${esc(title)}</h2><button type="button" class="icon-btn" data-action="modal-close" aria-label="${esc(t('common.close'))}">${icon('x')}</button></div>
@@ -113,8 +113,8 @@ function menuDialog(item) {
     </div>
     ${C.TextField({ label: t('admin.menu.f_desc'), name: 'description', value: i.description, textarea: true })}
     ${C.PhotoField({ name: 'image_url', label: t('admin.menu.f_photo'), url: i.image_url, kind: 'hero' })}
-    ${groups ? `<div class="stack stack--tight"><span class="small muted">${esc(t('admin.menu.option_groups'))}</span><ul class="rows" style="padding-top:var(--space-2xs)">${groups}</ul></div>` : ''}
-    <div>
+    ${groups ? `<div class="field"><span class="field__label">${esc(t('admin.menu.option_groups'))}</span><ul class="rows">${groups}</ul></div>` : ''}
+    <div class="switch-rows">
       <label class="switch-row"><span>${esc(t('admin.menu.f_listed'))}</span><input type="checkbox" class="switch" name="is_available"${i.is_available ? ' checked' : ''}></label>
       <label class="switch-row"><span>${esc(t('admin.menu.f_sold_out'))}</span><input type="checkbox" class="switch" name="is_sold_out"${i.is_sold_out ? ' checked' : ''}></label>
     </div>
@@ -157,31 +157,31 @@ forms['menu-item'] = async (fd, form) => {
 export async function adminSettings() {
   const r = await api.admin.getRestaurant();
   const switchRow = (name, title, checked) => `<label class="switch-row"><span>${esc(title)}</span><input type="checkbox" class="switch" name="${name}"${checked ? ' checked' : ''}></label>`;
-  return layout('settings', `<form class="stack stack--loose" data-form="settings" novalidate>
+  return layout('settings', `<form class="settings-form" data-form="settings" novalidate>
     ${pageHeader(t('admin.nav.settings'), '', C.Button({ label: t('common.save'), style: 'primary', size: 'sm', type: 'submit' }))}
     <div class="settings">
-      <div class="stack stack--loose">
-      <section>
+      <div class="settings__col">
+      <section class="panel">
         <h2>${esc(t('admin.settings.profile'))}</h2>
         ${C.TextField({ label: t('admin.settings.f_name'), name: 'name', value: r.name, required: true, extra: 'autocomplete="organization"' })}
         ${C.TextField({ label: t('admin.settings.f_location'), name: 'location', value: r.location, required: true })}
         ${C.TextField({ label: t('admin.settings.f_desc'), name: 'description', value: r.description, textarea: true })}
         ${C.TextField({ label: t('admin.settings.f_phone'), name: 'phone', value: r.phone, type: 'tel', extra: 'autocomplete="tel" inputmode="tel"' })}
       </section>
-      <section>
+      <section class="panel">
         <h2>${esc(t('admin.settings.photos'))}</h2>
         ${C.PhotoField({ name: 'cover_image_url', label: t('admin.settings.cover'), url: r.cover_image_url, kind: 'cover' })}
         ${C.PhotoField({ name: 'image_url', label: t('admin.settings.thumb'), url: r.image_url, kind: 'thumb' })}
       </section>
       </div>
-      <div class="stack stack--loose">
-        <section>
+      <div class="settings__col">
+        <section class="panel">
           <h2>${esc(t('admin.settings.hours'))}</h2>
-          ${r.opening_hours.length ? `<dl class="hours">${r.opening_hours.map((h) => `<dt>${esc(h.days)}</dt><dd>${esc(h.hours)}</dd>`).join('')}</dl>` : `<p class="muted">${esc(r.opening_hours_label)}</p>`}
+          ${r.opening_hours.length ? `<dl class="hours">${r.opening_hours.map((h) => `<dt>${esc(h.days)}</dt><dd>${esc(h.hours)}</dd>`).join('')}</dl>` : `<p class="mute">${esc(r.opening_hours_label)}</p>`}
         </section>
-        <section>
+        <section class="panel">
           <h2>${esc(t('admin.settings.orders'))}</h2>
-          <div>
+          <div class="switch-rows">
             ${switchRow('is_accepting_orders', t('admin.settings.accept_online'), r.is_accepting_orders)}
             ${switchRow('allow_cash_on_pickup', t('admin.settings.cash'), r.allow_cash_on_pickup)}
             ${switchRow('allow_scheduled_pickup', t('admin.settings.scheduled'), r.allow_scheduled_pickup)}
@@ -231,7 +231,7 @@ export async function adminReports() {
   const ranges = [['today', 'reports.today'], ['week', 'reports.week'], ['month', 'reports.month']];
   const vs = t('reports.vs_' + reportState.range);
   const fig = (label, value, delta) => `<div><dt>${esc(label)}</dt><dd>${esc(value)}</dd><dd class="delta">${esc(delta)}</dd></div>`;
-  const seg = `<div class="seg" role="group" aria-label="${esc(t('admin.nav.reports'))}">${ranges.map(([k, key]) => `<button type="button" data-action="report-range" data-range="${k}" aria-pressed="${k === reportState.range}">${esc(t(key))}</button>`).join('')}</div>`;
+  const seg = `<div class="tog tog--light" role="group" aria-label="${esc(t('admin.nav.reports'))}">${ranges.map(([k, key]) => `<button type="button" data-action="report-range" data-range="${k}" aria-pressed="${k === reportState.range}">${esc(t(key))}</button>`).join('')}</div>`;
   return layout('reports', `
     ${pageHeader(t('admin.nav.reports'), '', seg)}
     <dl class="figures">
@@ -241,8 +241,8 @@ export async function adminReports() {
       ${fig(t('reports.cancel_rate'), `${s.cancel_rate}%`, `${vs} ${sign(s.delta_cancel)}%`)}
     </dl>
     <div class="reports-row">
-      <section><h2>${esc(t('reports.chart_title'))}</h2>${barChart(orders_by_slot)}</section>
-      <section><h2>${esc(t('reports.top_items'))}</h2>
+      <section class="panel"><h2>${esc(t('reports.chart_title'))}</h2>${barChart(orders_by_slot)}</section>
+      <section class="panel"><h2>${esc(t('reports.top_items'))}</h2>
         <table class="data"><thead><tr><th scope="col" class="num">#</th><th scope="col">${esc(t('admin.menu.col_item'))}</th><th scope="col" class="num">${esc(t('cart.qty'))}</th><th scope="col" class="num">${esc(t('reports.revenue'))}</th></tr></thead>
         <tbody>${top_items.map((x, k) => `<tr><td class="num">${k + 1}</td><td>${esc(x.name)}</td><td class="num">${esc(x.qty)}</td><td class="num">${money(x.revenue)}</td></tr>`).join('')}</tbody></table>
       </section>
@@ -259,9 +259,9 @@ export async function adminPlatform() {
     const act = r.status === 'pending' ? ['admin.platform.approve', 'active', 'primary'] : r.status === 'suspended' ? ['admin.platform.restore', 'active', 'secondary'] : ['admin.platform.suspend', 'suspended', 'danger'];
     return `<tr>
       <td data-label="${L('admin.platform.col_name')}"><span class="cell-media">${C.Photo({ url: r.image_url, kind: 'mini' })}<span>${esc(r.name)}</span></span></td>
-      <td data-label="${L('admin.settings.f_location')}" class="muted">${esc(r.location)}</td>
-      <td data-label="${L('admin.platform.col_account')}" class="fig">${esc(r.owner_account)}</td>
-      <td data-label="${L('admin.platform.col_status')}"><span class="status-word ${cls}">${esc(t(key))}</span></td>
+      <td data-label="${L('admin.settings.f_location')}" class="mute">${esc(r.location)}</td>
+      <td data-label="${L('admin.platform.col_account')}">${esc(r.owner_account)}</td>
+      <td data-label="${L('admin.platform.col_status')}"><span class="chip ${cls}">${esc(t(key))}</span></td>
       <td data-label="${L('admin.platform.col_orders')}" class="num">${r.status === 'pending' ? '' : esc(r.today_order_count)}</td>
       <td class="act">${C.Button({ label: t(act[0]), style: act[2], size: 'sm', action: 'restaurant-status', data: { id: r.id, to: act[1] } })}</td>
     </tr>`;

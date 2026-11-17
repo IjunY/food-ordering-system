@@ -17,9 +17,13 @@ htmlcov/
 # Secrets
 .env
 
+# impeccable related
 .impeccable/live/
 .impeccable/review/
 .impeccable/questions/
 .impeccable/mocks/
 **/skills/impeccable/scripts/.impeccable/
+.claude/skills/impeccable/scripts/bin/darwin-arm64/impeccable/
+
+.gitignore.swp
 

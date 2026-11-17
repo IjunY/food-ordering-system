@@ -45,6 +45,7 @@ export async function render() {
   const samePage = path === lastPath;
   if (!samePage) closeModal();
   const y = window.scrollY;
+  const focused = samePage ? focusKey() : null;
   // 換頁時資料超過 200 毫秒還沒回來，先放骨架（同一頁重畫不閃）
   const app = document.getElementById('app');
   const loadingTimer = samePage ? null : setTimeout(() => {
@@ -56,11 +57,13 @@ export async function render() {
     app.innerHTML = html;
     window.scrollTo(0, samePage ? y : 0);
     lastPath = path;
+    if (samePage) restoreFocus(focused);
+    else focusHeading();
   } catch (err) {
     console.error(err);
     if (samePage) { toast(err.message || String(err)); return; }
     app.innerHTML = `<div class="phone"><div class="main"><div class="state" role="alert">
-      <p class="strong">${escText(t('common.error'))}</p><p class="small">${escText(err.message || String(err))}</p>
+      <p class="state__title">${escText(t('common.error'))}</p><p>${escText(err.message || String(err))}</p>
       <button type="button" class="btn btn--primary" data-action="retry">${escText(t('common.retry'))}</button></div></div></div>`;
     lastPath = path;
   } finally {
@@ -68,6 +71,32 @@ export async function render() {
   }
 }
 actions.retry = () => render();
+
+// 重畫同一頁時把焦點放回原本的控制項（定時更新、選選項、改數量都會重畫整頁）
+function focusKey() {
+  const el = document.activeElement;
+  if (!el || !document.getElementById('app').contains(el)) return null;
+  if (el.id) return { id: el.id, start: el.selectionStart ?? null, end: el.selectionEnd ?? null };
+  if (el.dataset.action) return { selector: `[data-action="${el.dataset.action}"]`, data: JSON.stringify(el.dataset) };
+  if (el.tagName === 'A') return { selector: `a[href="${el.getAttribute('href')}"]`, data: null };
+  return null;
+}
+function restoreFocus(key) {
+  if (!key) return;
+  const el = key.id
+    ? document.getElementById(key.id)
+    : [...document.querySelectorAll(`#app ${key.selector}`)].find((x) => !key.data || JSON.stringify(x.dataset) === key.data);
+  if (!el) return;
+  el.focus({ preventScroll: true });
+  if (key.start != null) { try { el.setSelectionRange(key.start, key.end); } catch { /* 這種欄位不能設游標位置 */ } }
+}
+// 換頁後焦點移到新畫面的標題，螢幕報讀會從標題開始唸
+function focusHeading() {
+  const h = document.querySelector('#app h1');
+  if (!h) return;
+  h.tabIndex = -1;
+  h.focus({ preventScroll: true });
+}
 
 export const rerender = () => render();
 
@@ -131,9 +160,9 @@ export function startEvents() {
     const fn = forms[form.dataset.form];
     if (!fn) return;
     const btn = form.querySelector('[type=submit]');
-    if (btn) btn.disabled = true;
+    if (btn) { btn.disabled = true; btn.setAttribute('aria-busy', 'true'); }
     try { await fn(new FormData(form), form); } catch (err) { console.error(err); toast(err.message || String(err)); }
-    finally { if (btn && btn.isConnected) btn.disabled = false; }
+    finally { if (btn && btn.isConnected) { btn.disabled = false; btn.removeAttribute('aria-busy'); } }
   });
   document.addEventListener('input', (ev) => {
     const el = ev.target.closest('[data-input]');
