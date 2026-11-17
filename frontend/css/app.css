@@ -369,6 +369,7 @@ input.switch { appearance: none; border: 0; }
 .setrow:last-child { border-bottom: 0; }
 .setrow .tx b { display: block; font-size: 16px; font-weight: 500; }
 .setrow .tx small { display: block; font-size: 13px; color: var(--mute); }
+button.setrow { width: 100%; text-align: left; }
 .navrow { border-radius: 0 0 var(--r-card) var(--r-card); transition: background-color var(--dur-micro); }
 .navrow:hover { background: var(--fill); }
 .navrow .chev { color: var(--mute); }
@@ -525,3 +526,26 @@ table.data tbody tr:hover { background: var(--fill); }
 .chart__col:hover::after { opacity: 1; transition-delay: 300ms; }
 .chart__col:focus-visible::after { opacity: 1; }
 .chart__col:hover .chart__bar:not(.is-peak) { background: #C3A9E3; }
+
+/* ======================= 使用教學（js/tour.js） ======================= */
+/* 反白框：外圍用超大陰影把其他地方壓暗；本身不擋點擊，使用者直接操作被指到的東西 */
+#tour-root { position: relative; z-index: 450; }
+.tour-hole { position: fixed; z-index: 450; border-radius: var(--r-pill); box-shadow: 0 0 0 3px var(--sun-yellow), 0 0 0 9999px rgba(27, 20, 38, .52); pointer-events: none; transition: left .18s, top .18s, width .18s, height .18s; }
+.tour-dim { position: fixed; inset: 0; z-index: 450; background: rgba(27, 20, 38, .52); pointer-events: none; }
+.tour-dim--block { pointer-events: auto; }
+.tour-card { position: fixed; z-index: 460; display: grid; gap: 8px; max-height: calc(100dvh - 32px); overflow: auto; padding: 16px 16px 12px; border-radius: var(--r-pass); background: var(--card-white); color: var(--ink); box-shadow: var(--sh-overlap); }
+.tour-card--center { left: 50%; top: 50%; width: min(24rem, calc(100vw - 32px)); padding: 22px 20px 14px; transform: translate(-50%, -50%); }
+.tour-card__head { display: flex; align-items: center; gap: 8px; }
+.tour-card__n { font: 700 13px var(--font-num); color: var(--nthu-purple); }
+.tour-card__tag { padding: 2px 8px; border-radius: var(--r-tag); background: var(--sun-yellow); color: var(--sun-ink); font-size: 12px; font-weight: 700; }
+.tour-card h2 { font-size: 18px; line-height: 1.35; }
+.tour-card h2:focus { outline: none; }
+.tour-card p { font-size: 15px; line-height: 1.6; color: var(--mute); }
+.tour-card__foot { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.tour-card__foot .btn--text { margin-left: -10px; }
+.tour-card__do { font-size: 13px; font-weight: 700; color: var(--nthu-purple); }
+/* 離開教學那一頁時：頂列下方一條提示（不和底部的提示訊息、分頁列打架） */
+.tour-off { position: fixed; left: 50%; top: calc(var(--header-h) + 8px); z-index: 460; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; width: min(30rem, calc(100vw - 32px)); padding: 12px 14px; border-radius: var(--r-pill); background: var(--ink); color: #fff; font-size: 14px; box-shadow: var(--sh-overlap); transform: translateX(-50%); }
+.tour-off span { flex: 1 1 12rem; }
+.tour-off .btn--text { color: var(--lavender); }
+@media (prefers-reduced-motion: reduce) { .tour-hole { transition: none; } }

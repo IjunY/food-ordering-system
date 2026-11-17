@@ -218,6 +218,25 @@ export async function pay(order_id, method) {
 // ======================= 店家端 =======================
 const myRestaurantId = () => me().restaurant_id ?? fail('No restaurant');
 
+// 店家教學用的練習單：直接放進自己店的「新訂單」，不會自己往下走（auto: false）
+export async function addPracticeOrder() {
+  const d = db();
+  const rid = myRestaurantId();
+  const item = d.menus[rid].items.find((i) => i.is_available && !i.is_sold_out) ?? d.menus[rid].items[0];
+  const now = iso();
+  const o = {
+    id: 'o' + Date.now(), pickup_number: 'A' + String(d.seq++).padStart(3, '0'), restaurant_id: rid, user_id: 'practice',
+    status: 'paid', payment_method: 'line_pay', payment_status: 'paid', payment_confirmed: true,
+    items: [{ menu_item_id: item.id, name: item.name, qty: 1, unit_price: item.price, subtotal: item.price, option_ids: [], options_label: null, note: '' }],
+    total: item.price, note: { zh: '教學練習單', en: 'Practice order' },
+    pickup_type: 'asap', pickup_time: null, created_at: now, estimated_ready_at: iso(new Date(Date.now() + 10 * 60000)),
+    status_history: [{ status: 'paid', at: now }], auto: false, confirmed_at: now,
+  };
+  d.orders.push(o);
+  save(d);
+  return { id: o.id, pickup_number: o.pickup_number };
+}
+
 export async function adminListOrders() {
   await sleep(60);
   const d = db();

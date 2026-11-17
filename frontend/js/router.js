@@ -10,6 +10,11 @@ const routes = [];
 let timers = [];
 let lastPath = null;
 
+// 每次畫面畫好之後要做的事（使用教學靠這個重新對準要指的元素）
+const renderHooks = [];
+export const onRender = (fn) => renderHooks.push(fn);
+const runRenderHooks = () => renderHooks.forEach((fn) => { try { fn(); } catch (err) { console.error(err); } });
+
 export function addRoute(pattern, page, opts = {}) {
   const keys = [];
   const re = new RegExp('^' + pattern.replace(/:(\w+)/g, (_, k) => { keys.push(k); return '([A-Za-z0-9]+)'; }) + '$');
@@ -33,7 +38,9 @@ export function poll(fn, ms) {
 let guard = () => null;
 export function setGuard(fn) { guard = fn; }
 
+let renderSeq = 0;
 export async function render() {
+  const seq = ++renderSeq;
   timers.forEach(clearInterval);
   timers = [];
   const path = currentPath();
@@ -53,7 +60,8 @@ export async function render() {
   }, 200);
   try {
     const html = await match.r.page(params);
-    if (currentPath() !== path) return; // 等資料時使用者已經換頁
+    // 等資料時使用者已經換頁，或同一頁又重畫了一次（定時更新、切換練習模式）：舊的結果不要蓋掉新的
+    if (currentPath() !== path || seq !== renderSeq) return;
     app.innerHTML = html;
     window.scrollTo(0, samePage ? y : 0);
     lastPath = path;
@@ -61,6 +69,7 @@ export async function render() {
     else focusHeading();
   } catch (err) {
     console.error(err);
+    if (seq !== renderSeq) return; // 已經有更新的一次重畫，這次的錯誤不用管
     if (samePage) { toast(err.message || String(err)); return; }
     app.innerHTML = `<div class="phone"><div class="main"><div class="state" role="alert">
       <p class="state__title">${escText(t('common.error'))}</p><p>${escText(err.message || String(err))}</p>
@@ -68,6 +77,7 @@ export async function render() {
     lastPath = path;
   } finally {
     clearTimeout(loadingTimer);
+    if (currentPath() === path && seq === renderSeq) runRenderHooks();
   }
 }
 actions.retry = () => render();
