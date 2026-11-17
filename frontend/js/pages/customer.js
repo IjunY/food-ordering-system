@@ -328,6 +328,7 @@ export async function cartPage() {
         </div>
         ${scheduled ? `<div class="slots" role="group" aria-label="${esc(t('cart.pick_slot'))}">${slots.map((s) => `<button type="button" class="slot num" aria-pressed="${s === checkout.pickup_time}" data-action="pickup-slot" data-time="${esc(s)}">${hhmm(s)}</button>`).join('')}</div>` : ''}
       </fieldset>
+      ${C.Note({ text: t('cart.mock_note') })}
     </main>
     <div class="dock">${C.Cta({ label: t('cart.checkout'), figure: money(total), action: 'checkout' })}</div>`);
 }
@@ -372,6 +373,7 @@ export async function payPage({ oid }) {
         <b>${money(o.total)}</b>
         <span class="mt">${esc(t('pay.order_meta', { no: o.pickup_number, name: o.restaurant_name }))}</span>
       </section>
+      ${C.Note({ text: t('pay.mock_note') })}
       <div class="sec"><h2>${esc(t('pay.choose'))}</h2></div>
       <div class="opts" role="radiogroup" aria-label="${esc(t('pay.choose'))}">
         ${list.map((m) => C.OptRow({ label: m.label, sub: m.hint, ic: METHOD_ICON[m.method] || 'wallet', selected: m.method === payState.method, action: 'pick-method', data: { method: m.method } })).join('')}
