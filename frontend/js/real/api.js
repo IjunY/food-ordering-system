@@ -5,6 +5,7 @@
 //
 // 菜單仍顯示前端的示範資料，所以下單時要把示範品項換成資料庫裡的品項編號：
 // 兩邊用「餐廳中文名＋品項中文名」對應（scripts/seed_demo.py 照 mock/data.js 灌進資料庫）。
+// 後端回傳的名稱都是 {zh, en}，對應時一律用 zh。
 // 付款仍是模擬的，付款紀錄只存在這台瀏覽器（paid_orders）。
 import { getLang } from '../i18n.js';
 import { session, read, write } from '../store.js';
@@ -57,12 +58,13 @@ const restaurantByVendor = (vendor) => SEED_RESTAURANTS.find((r) => r.name.zh ==
 let catalog = null; // { byDbId: Map<dbId, {restaurant, item, row}>, byMockId: Map<"rid/iid", dbId> }
 async function getCatalog(force = false) {
   if (catalog && !force) return catalog;
-  const rows = await http('GET', '/menu-items');
+  const [rows, vendors] = await Promise.all([http('GET', '/menu-items'), http('GET', '/vendors')]);
+  const vendorName = new Map(vendors.map((v) => [v.id, v.name.zh]));
   const byDbId = new Map();
   const byMockId = new Map();
   for (const row of rows) {
-    const restaurant = restaurantByVendor(row.vendor);
-    const item = restaurant ? SEED_MENUS[restaurant.id]?.items.find((i) => i.name.zh === row.item_name) : null;
+    const restaurant = restaurantByVendor(vendorName.get(row.vendor_id));
+    const item = restaurant ? SEED_MENUS[restaurant.id]?.items.find((i) => i.name.zh === row.item_name.zh) : null;
     byDbId.set(row.id, { restaurant, item, row });
     if (item) byMockId.set(`${restaurant.id}/${item.id}`, row.id);
   }
@@ -84,7 +86,7 @@ const paidOrders = {
 async function toOrder(o, view = 'customer') {
   const { byDbId } = await getCatalog();
   const first = byDbId.get(o.items[0]?.item_id);
-  const r = first?.restaurant ?? restaurantByVendor(o.vendor);
+  const r = first?.restaurant ?? restaurantByVendor(o.vendor_name.zh);
   const id = String(o.id);
   const method = view === 'customer' ? paidOrders.get()[id] ?? null : null;
 
@@ -99,7 +101,7 @@ async function toOrder(o, view = 'customer') {
     id,
     pickup_number: 'A' + String(o.id).padStart(3, '0'),
     restaurant_id: r?.id ?? null,
-    restaurant_name: r ? loc(r.name) : o.vendor,
+    restaurant_name: r ? loc(r.name) : loc(o.vendor_name),
     restaurant_location: r ? loc(r.location) : '',
     status,
     payment_method: view === 'staff' ? 'mock' : method,
@@ -112,7 +114,7 @@ async function toOrder(o, view = 'customer') {
       const hit = byDbId.get(i.item_id);
       return {
         menu_item_id: hit?.item?.id ?? String(i.item_id),
-        name: hit?.item ? loc(hit.item.name) : i.item_name,
+        name: hit?.item ? loc(hit.item.name) : loc(i.item_name),
         qty: i.quantity,
         unit_price: i.unit_price,
         subtotal: i.subtotal,
@@ -194,7 +196,7 @@ export async function adminListOrders() {
   const rid = session.get()?.user?.restaurant_id;
   const vendor = SEED_RESTAURANTS.find((r) => r.id === rid)?.name.zh;
   const list = await http('GET', '/orders?limit=200');
-  const active = list.filter((o) => o.vendor === vendor && ['confirming', 'preparing', 'ready'].includes(o.status));
+  const active = list.filter((o) => o.vendor_name.zh === vendor && ['confirming', 'preparing', 'ready'].includes(o.status));
   const orders = await Promise.all(active.map((o) => toOrder(o, 'staff')));
   return orders.sort((a, b) => a.created_at.localeCompare(b.created_at));
 }

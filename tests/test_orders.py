@@ -19,26 +19,36 @@ def customer(auth_headers: Headers) -> dict[str, str]:
 
 
 @pytest.fixture
-def menu(client: TestClient, staff: dict[str, str]) -> dict[str, int]:
+def vendors(make_vendor: Callable[..., int]) -> dict[str, int]:
+    return {
+        "noodles": make_vendor("Test Noodle House", "測試麵館"),
+        "tea": make_vendor("Test Tea Shop", "測試茶飲"),
+    }
+
+
+@pytest.fixture
+def menu(
+    client: TestClient, staff: dict[str, str], vendors: dict[str, int]
+) -> dict[str, int]:
     """A small menu; maps a short name to the menu item id."""
+
+    def row(vendor: str, zh: str, en: str, price: int, **extra: object) -> dict:
+        return {
+            "vendor_id": vendors[vendor],
+            "item_name_zh": zh,
+            "item_name_en": en,
+            "category_zh": "主餐",
+            "category_en": "Mains",
+            "price": price,
+            "prep_minutes": 5,
+            **extra,
+        }
+
     rows = {
-        "noodles": {
-            "vendor": "Test Noodle House",
-            "item_name": "Beef Noodles",
-            "price": 120,
-        },
-        "dumplings": {
-            "vendor": "Test Noodle House",
-            "item_name": "Dumplings",
-            "price": 60,
-        },
-        "sold_out": {
-            "vendor": "Test Noodle House",
-            "item_name": "Wontons",
-            "price": 70,
-            "is_available": False,
-        },
-        "tea": {"vendor": "Test Tea Shop", "item_name": "Milk Tea", "price": 45},
+        "noodles": row("noodles", "牛肉麵", "Beef Noodles", 120),
+        "dumplings": row("noodles", "水餃", "Dumplings", 60),
+        "sold_out": row("noodles", "餛飩", "Wontons", 70, is_available=False),
+        "tea": row("tea", "奶茶", "Milk Tea", 45),
     }
     ids = {}
     for key, body in rows.items():
@@ -66,18 +76,25 @@ def set_status(client: TestClient, headers: dict[str, str], order_id: int, statu
 
 # ---------- placing an order ----------
 def test_customer_places_an_order(
-    client: TestClient, customer: dict[str, str], menu: dict[str, int]
+    client: TestClient,
+    customer: dict[str, str],
+    vendors: dict[str, int],
+    menu: dict[str, int],
 ) -> None:
     order = place(client, customer, (menu["noodles"], 2), (menu["dumplings"], 1))
 
     assert order["status"] == "confirming"
     assert order["created_by"] == "990000001"
-    assert order["vendor"] == "Test Noodle House"
+    assert order["vendor_id"] == vendors["noodles"]
+    assert order["vendor_name"] == {"zh": "測試麵館", "en": "Test Noodle House"}
     assert order["total"] == 2 * 120 + 60
     assert [
         (i["item_name"], i["quantity"], i["unit_price"], i["subtotal"])
         for i in order["items"]
-    ] == [("Beef Noodles", 2, 120, 240), ("Dumplings", 1, 60, 60)]
+    ] == [
+        ({"zh": "牛肉麵", "en": "Beef Noodles"}, 2, 120, 240),
+        ({"zh": "水餃", "en": "Dumplings"}, 1, 60, 60),
+    ]
     assert order["created_at"]
 
 

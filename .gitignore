@@ -25,5 +25,5 @@ htmlcov/
 **/skills/impeccable/scripts/.impeccable/
 .claude/skills/impeccable/scripts/bin/darwin-arm64/impeccable/
 
-.gitignore.swp
+*.swp
 
