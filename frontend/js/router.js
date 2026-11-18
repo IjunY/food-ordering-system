@@ -10,6 +10,11 @@ const routes = [];
 let timers = [];
 let lastPath = null;
 
+// 每次畫面畫好之後要做的事（使用教學靠這個重新對準要指的元素）
+const renderHooks = [];
+export const onRender = (fn) => renderHooks.push(fn);
+const runRenderHooks = () => renderHooks.forEach((fn) => { try { fn(); } catch (err) { console.error(err); } });
+
 export function addRoute(pattern, page, opts = {}) {
   const keys = [];
   const re = new RegExp('^' + pattern.replace(/:(\w+)/g, (_, k) => { keys.push(k); return '([A-Za-z0-9]+)'; }) + '$');
@@ -33,7 +38,9 @@ export function poll(fn, ms) {
 let guard = () => null;
 export function setGuard(fn) { guard = fn; }
 
+let renderSeq = 0;
 export async function render() {
+  const seq = ++renderSeq;
   timers.forEach(clearInterval);
   timers = [];
   const path = currentPath();
@@ -45,6 +52,7 @@ export async function render() {
   const samePage = path === lastPath;
   if (!samePage) closeModal();
   const y = window.scrollY;
+  const focused = samePage ? focusKey() : null;
   // 換頁時資料超過 200 毫秒還沒回來，先放骨架（同一頁重畫不閃）
   const app = document.getElementById('app');
   const loadingTimer = samePage ? null : setTimeout(() => {
@@ -52,22 +60,53 @@ export async function render() {
   }, 200);
   try {
     const html = await match.r.page(params);
-    if (currentPath() !== path) return; // 等資料時使用者已經換頁
+    // 等資料時使用者已經換頁，或同一頁又重畫了一次（定時更新、切換練習模式）：舊的結果不要蓋掉新的
+    if (currentPath() !== path || seq !== renderSeq) return;
     app.innerHTML = html;
     window.scrollTo(0, samePage ? y : 0);
     lastPath = path;
+    if (samePage) restoreFocus(focused);
+    else focusHeading();
   } catch (err) {
     console.error(err);
+    if (seq !== renderSeq) return; // 已經有更新的一次重畫，這次的錯誤不用管
     if (samePage) { toast(err.message || String(err)); return; }
     app.innerHTML = `<div class="phone"><div class="main"><div class="state" role="alert">
-      <p class="strong">${escText(t('common.error'))}</p><p class="small">${escText(err.message || String(err))}</p>
+      <p class="state__title">${escText(t('common.error'))}</p><p>${escText(err.message || String(err))}</p>
       <button type="button" class="btn btn--primary" data-action="retry">${escText(t('common.retry'))}</button></div></div></div>`;
     lastPath = path;
   } finally {
     clearTimeout(loadingTimer);
+    if (currentPath() === path && seq === renderSeq) runRenderHooks();
   }
 }
 actions.retry = () => render();
+
+// 重畫同一頁時把焦點放回原本的控制項（定時更新、選選項、改數量都會重畫整頁）
+function focusKey() {
+  const el = document.activeElement;
+  if (!el || !document.getElementById('app').contains(el)) return null;
+  if (el.id) return { id: el.id, start: el.selectionStart ?? null, end: el.selectionEnd ?? null };
+  if (el.dataset.action) return { selector: `[data-action="${el.dataset.action}"]`, data: JSON.stringify(el.dataset) };
+  if (el.tagName === 'A') return { selector: `a[href="${el.getAttribute('href')}"]`, data: null };
+  return null;
+}
+function restoreFocus(key) {
+  if (!key) return;
+  const el = key.id
+    ? document.getElementById(key.id)
+    : [...document.querySelectorAll(`#app ${key.selector}`)].find((x) => !key.data || JSON.stringify(x.dataset) === key.data);
+  if (!el) return;
+  el.focus({ preventScroll: true });
+  if (key.start != null) { try { el.setSelectionRange(key.start, key.end); } catch { /* 這種欄位不能設游標位置 */ } }
+}
+// 換頁後焦點移到新畫面的標題，螢幕報讀會從標題開始唸
+function focusHeading() {
+  const h = document.querySelector('#app h1');
+  if (!h) return;
+  h.tabIndex = -1;
+  h.focus({ preventScroll: true });
+}
 
 export const rerender = () => render();
 
@@ -131,9 +170,9 @@ export function startEvents() {
     const fn = forms[form.dataset.form];
     if (!fn) return;
     const btn = form.querySelector('[type=submit]');
-    if (btn) btn.disabled = true;
+    if (btn) { btn.disabled = true; btn.setAttribute('aria-busy', 'true'); }
     try { await fn(new FormData(form), form); } catch (err) { console.error(err); toast(err.message || String(err)); }
-    finally { if (btn && btn.isConnected) btn.disabled = false; }
+    finally { if (btn && btn.isConnected) { btn.disabled = false; btn.removeAttribute('aria-busy'); } }
   });
   document.addEventListener('input', (ev) => {
     const el = ev.target.closest('[data-input]');

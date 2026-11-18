@@ -1,0 +1,648 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-14T01:29:18+00:00",
+  "title": "Design System: NTHU Food Ordering System",
+  "extensions": {
+    "colorMeta": {
+      "nthu-purple": {
+        "role": "primary",
+        "displayName": "NTHU Purple",
+        "canonical": "#5B2A86",
+        "oklch": "oklch(40.0% 0.148 305)",
+        "tonalRamp": [
+          "#120221",
+          "#301647",
+          "#502E71",
+          "#74499E",
+          "#966BC3",
+          "#B692DE",
+          "#D7BBF9",
+          "#F3EAFF"
+        ]
+      },
+      "purple-deep": {
+        "role": "primary",
+        "displayName": "Deep Purple",
+        "canonical": "#45206A",
+        "oklch": "oklch(33.7% 0.124 303)",
+        "tonalRamp": [
+          "#10041E",
+          "#2D1A43",
+          "#4D336B",
+          "#6F4F96",
+          "#9170BA",
+          "#B196D6",
+          "#D3BEF2",
+          "#F2EAFF"
+        ]
+      },
+      "purple-tint": {
+        "role": "primary",
+        "displayName": "Purple Tint",
+        "canonical": "#F1EBF7",
+        "oklch": "oklch(94.8% 0.017 308)",
+        "tonalRamp": [
+          "#0C0A0E",
+          "#262429",
+          "#444047",
+          "#645F68",
+          "#85808A",
+          "#A7A3AC",
+          "#CBC7CE",
+          "#F0EDF3"
+        ]
+      },
+      "lavender": {
+        "role": "primary",
+        "displayName": "Lavender",
+        "canonical": "#D9C8EE",
+        "oklch": "oklch(85.9% 0.055 305)",
+        "tonalRamp": [
+          "#0E0814",
+          "#292132",
+          "#473C54",
+          "#685A79",
+          "#897B9B",
+          "#AB9FBB",
+          "#CEC4DB",
+          "#F2EBFC"
+        ]
+      },
+      "sun-yellow": {
+        "role": "secondary",
+        "displayName": "Sun Yellow",
+        "canonical": "#FFC23D",
+        "oklch": "oklch(84.8% 0.156 82)",
+        "tonalRamp": [
+          "#110A00",
+          "#322201",
+          "#553E09",
+          "#7C5B11",
+          "#A67A0C",
+          "#CA9D42",
+          "#E8C480",
+          "#FEECCC"
+        ]
+      },
+      "sun-ink": {
+        "role": "secondary",
+        "displayName": "Sun Ink",
+        "canonical": "#3D2A00",
+        "oklch": "oklch(30.0% 0.062 82)",
+        "tonalRamp": [
+          "#110A01",
+          "#2E230E",
+          "#4F4024",
+          "#715E3B",
+          "#947F5B",
+          "#B4A384",
+          "#D6C7AE",
+          "#F8EDDA"
+        ]
+      },
+      "ready-green": {
+        "role": "tertiary",
+        "displayName": "Ready Green",
+        "canonical": "#17703F",
+        "oklch": "oklch(48.2% 0.113 154)",
+        "tonalRamp": [
+          "#000F05",
+          "#032E16",
+          "#104F2C",
+          "#267245",
+          "#4B9465",
+          "#7AB58C",
+          "#A7D7B5",
+          "#D5F9DF"
+        ]
+      },
+      "cancel-grey": {
+        "role": "tertiary",
+        "displayName": "Cancel Grey",
+        "canonical": "#8A8395",
+        "oklch": "oklch(62.2% 0.028 303)",
+        "tonalRamp": [
+          "#0C0A10",
+          "#27232C",
+          "#443F4C",
+          "#645E6E",
+          "#857F8F",
+          "#A8A2B0",
+          "#CBC7D2",
+          "#F0EDF6"
+        ]
+      },
+      "alert-red": {
+        "role": "tertiary",
+        "displayName": "Alert Red",
+        "canonical": "#B42828",
+        "oklch": "oklch(50.6% 0.177 26)",
+        "tonalRamp": [
+          "#1F0001",
+          "#4D0004",
+          "#7A1516",
+          "#AA2D2B",
+          "#D2534B",
+          "#EE8177",
+          "#FBB5AC",
+          "#FEE9E6"
+        ]
+      },
+      "red-tint": {
+        "role": "tertiary",
+        "displayName": "Red Tint",
+        "canonical": "#FBEDED",
+        "oklch": "oklch(95.7% 0.015 17)",
+        "tonalRamp": [
+          "#0E0A0A",
+          "#292323",
+          "#484040",
+          "#695E5E",
+          "#8B7F7F",
+          "#ACA2A2",
+          "#CFC7C7",
+          "#F3EDED"
+        ]
+      },
+      "success-tint": {
+        "role": "tertiary",
+        "displayName": "Success Tint",
+        "canonical": "#E8F5EC",
+        "oklch": "oklch(95.8% 0.018 156)",
+        "tonalRamp": [
+          "#080C0A",
+          "#212723",
+          "#3C443F",
+          "#5A645D",
+          "#7B857E",
+          "#9EA8A1",
+          "#C4CBC6",
+          "#EAF0EC"
+        ]
+      },
+      "lilac-ground": {
+        "role": "neutral",
+        "displayName": "Lilac Ground",
+        "canonical": "#FAF8FC",
+        "oklch": "oklch(98.2% 0.006 308)",
+        "tonalRamp": [
+          "#0B0B0C",
+          "#252526",
+          "#434144",
+          "#626063",
+          "#838185",
+          "#A6A4A7",
+          "#CAC8CB",
+          "#EFEEF0"
+        ]
+      },
+      "card-white": {
+        "role": "neutral",
+        "displayName": "Card White",
+        "canonical": "#FFFFFF",
+        "oklch": "oklch(100.0% 0.000 90)",
+        "tonalRamp": [
+          "#0B0B0B",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#A5A5A5",
+          "#C9C9C9",
+          "#EEEEEE"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#1B1426",
+        "oklch": "oklch(20.9% 0.036 301)",
+        "tonalRamp": [
+          "#0C0A11",
+          "#27232E",
+          "#443F4F",
+          "#645D71",
+          "#867E94",
+          "#A8A1B4",
+          "#CBC6D6",
+          "#F0ECF8"
+        ]
+      },
+      "mute": {
+        "role": "neutral",
+        "displayName": "Mute",
+        "canonical": "#655E70",
+        "oklch": "oklch(49.5% 0.030 303)",
+        "tonalRamp": [
+          "#0C0A10",
+          "#27232C",
+          "#443F4C",
+          "#645E6E",
+          "#857F90",
+          "#A8A2B1",
+          "#CBC7D3",
+          "#F0ECF6"
+        ]
+      },
+      "faint": {
+        "role": "neutral",
+        "displayName": "Faint",
+        "canonical": "#B3ABBD",
+        "oklch": "oklch(75.4% 0.027 306)",
+        "tonalRamp": [
+          "#0C0A0F",
+          "#27232C",
+          "#453F4B",
+          "#655E6D",
+          "#867F8E",
+          "#A8A2B0",
+          "#CCC7D2",
+          "#F0ECF5"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#E6E1EC",
+        "oklch": "oklch(91.7% 0.016 306)",
+        "tonalRamp": [
+          "#0C0A0E",
+          "#262429",
+          "#434047",
+          "#635F68",
+          "#848089",
+          "#A7A3AB",
+          "#CBC8CE",
+          "#F0EDF2"
+        ]
+      },
+      "field-stroke": {
+        "role": "neutral",
+        "displayName": "Field Stroke",
+        "canonical": "#D5CDDF",
+        "oklch": "oklch(86.0% 0.026 306)",
+        "tonalRamp": [
+          "#0C0A0F",
+          "#27232B",
+          "#443F4B",
+          "#645E6C",
+          "#867F8E",
+          "#A8A2AF",
+          "#CBC7D2",
+          "#F0EDF5"
+        ]
+      },
+      "control-off": {
+        "role": "neutral",
+        "displayName": "Control Off",
+        "canonical": "#CFC6DA",
+        "oklch": "oklch(84.0% 0.029 306)",
+        "tonalRamp": [
+          "#0C0A10",
+          "#27232C",
+          "#453F4C",
+          "#655E6E",
+          "#867E8F",
+          "#A8A2B0",
+          "#CCC6D3",
+          "#F0ECF6"
+        ]
+      },
+      "fill": {
+        "role": "neutral",
+        "displayName": "Fill",
+        "canonical": "#F7F5FA",
+        "oklch": "oklch(97.3% 0.007 304)",
+        "tonalRamp": [
+          "#0B0B0C",
+          "#252527",
+          "#424144",
+          "#626064",
+          "#838185",
+          "#A6A4A8",
+          "#CAC8CB",
+          "#EFEEF0"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "code-display": {
+        "displayName": "Code Display",
+        "purpose": "Pickup code on the full pass (84px). Prefix letter in sun-yellow."
+      },
+      "code-mini": {
+        "displayName": "Code Mini",
+        "purpose": "Pickup code on the mini pass and the student ID on the ID card (40px)."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Auth hero headline only."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Onboarding questions and item page name (22px); 20px for auth card and menu header."
+      },
+      "title-sm": {
+        "displayName": "Header Title",
+        "purpose": "Purple header bar title, single line with ellipsis."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Default text, option labels; 15px for descriptions and leads."
+      },
+      "body-sm": {
+        "displayName": "Meta",
+        "purpose": "Meta lines, hints and secondary text in mute."
+      },
+      "status-chip": {
+        "displayName": "Status Chip",
+        "purpose": "Pass status word; 20px mini, 26px full."
+      },
+      "price": {
+        "displayName": "Price",
+        "purpose": "Unit prices written \"$120\" on cards, item header, checkout and pass lines."
+      },
+      "total": {
+        "displayName": "Total",
+        "purpose": "Totals written \"NT$\"; CTA amounts use Archivo at 22px."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Field labels on the pass and ID card, SAMPLE DATA tag; uppercase in English."
+      },
+      "label-zh": {
+        "displayName": "Label (Chinese)",
+        "purpose": "Same labels in Chinese: 12px, 0.04em, no case transform."
+      }
+    },
+    "shadows": [
+      {
+        "name": "card-rest",
+        "value": "0 1px 2px rgba(27,20,38,.06), 0 4px 14px rgba(91,42,134,.08)",
+        "purpose": "Stall cards, item cards, account groups at rest."
+      },
+      {
+        "name": "card-hover",
+        "value": "0 1px 2px rgba(27,20,38,.08), 0 8px 22px rgba(91,42,134,.16)",
+        "purpose": "Clickable stall and item cards on hover."
+      },
+      {
+        "name": "pass",
+        "value": "0 1px 2px rgba(27,20,38,.06), 0 6px 18px rgba(91,42,134,.10)",
+        "purpose": "Pickup pass and account ID card."
+      },
+      {
+        "name": "pass-hover",
+        "value": "0 1px 2px rgba(27,20,38,.08), 0 10px 24px rgba(91,42,134,.16)",
+        "purpose": "Mini pass on hover."
+      },
+      {
+        "name": "overlap",
+        "value": "0 1px 2px rgba(27,20,38,.06), 0 8px 24px rgba(91,42,134,.12)",
+        "purpose": "Auth card over the hero band; notification preview. Menu header card uses 0 6px 18px at .12."
+      },
+      {
+        "name": "quiet-group",
+        "value": "0 1px 2px rgba(27,20,38,.06), 0 4px 14px rgba(91,42,134,.06)",
+        "purpose": "Option groups and quantity row on the item page."
+      },
+      {
+        "name": "field-focus",
+        "value": "0 0 0 3px #F1EBF7",
+        "purpose": "Focus halo on inputs and the notes box, with a purple border."
+      },
+      {
+        "name": "focus-outline",
+        "value": "outline: 2px solid #5B2A86; outline-offset: 2px",
+        "purpose": "Keyboard focus everywhere; white inside the purple header."
+      }
+    ],
+    "motion": [
+      {
+        "name": "status-snap",
+        "value": "90ms steps(2,end); keyframes opacity .3 + translateY(2px) -> rest",
+        "purpose": "Signature: status chip and current legs snap on a status change. Never a fade. Off under reduced motion."
+      },
+      {
+        "name": "switch",
+        "value": "transform .15s",
+        "purpose": "Switch knob slide."
+      },
+      {
+        "name": "field-border",
+        "value": "border-color .12s",
+        "purpose": "Input border change on focus and validation."
+      },
+      {
+        "name": "spinner",
+        "value": "rotate .8s linear infinite",
+        "purpose": "Busy state inside a CTA."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "prefers-reduced-motion: reduce -> animation and transition none",
+        "purpose": "Global kill switch."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "phone-frame",
+        "value": "390px",
+        "purpose": "Reference app width; the app is a single phone column that fills the viewport on a real phone."
+      }
+    ],
+    "stallTints": {
+      "purpose": "Per-stall purple shade used only to tint photo placeholders (ground 12-16% over white, icon 65-70%, caption 75% toward black). Sample-data values.",
+      "sampleValues": [
+        "#4A2370",
+        "#5B2A86",
+        "#6A2C9E",
+        "#7A3DAA",
+        "#7B3FB0",
+        "#9050C8"
+      ]
+    },
+    "statusStates": {
+      "confirming": {
+        "band": "#5B2A86",
+        "chip": "rgba(255,255,255,.16) / #FFFFFF",
+        "labels": "#D9C8EE"
+      },
+      "preparing": {
+        "band": "#5B2A86",
+        "chip": "#FFC23D / #3D2A00",
+        "labels": "#D9C8EE"
+      },
+      "ready": {
+        "band": "#17703F",
+        "chip": "#FFFFFF / #1B1426",
+        "labels": "#FFFFFF",
+        "prefix": "#FFC23D"
+      },
+      "cancelled": {
+        "band": "#8A8395",
+        "chip": "#FFFFFF / #1B1426",
+        "labels": "#FFFFFF",
+        "prefix": "#FFFFFF",
+        "code": "#E9E5EE, line-through 3px"
+      }
+    }
+  },
+  "components": [
+    {
+      "name": "Primary CTA",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Full-width purple action; splits label and NT$ amount when it carries a total.",
+      "html": "<button class=\"ds-cta\"><span>加入購物車</span><span class=\"ds-cta-amt\">NT$240</span></button>",
+      "css": ".ds-cta{font-family:\"Noto Sans TC\",system-ui,sans-serif;display:flex;align-items:center;justify-content:space-between;width:100%;height:56px;padding:0 24px;border:0;border-radius:10px;background:#5B2A86;color:#fff;font-weight:700;font-size:17px;cursor:pointer;transition:background .12s}.ds-cta:hover{background:#45206A}.ds-cta:focus-visible{outline:2px solid #5B2A86;outline-offset:2px}.ds-cta:disabled{background:#CFC6DA;cursor:not-allowed}.ds-cta-amt{font-family:\"Archivo\",\"Noto Sans TC\",sans-serif;font-stretch:78%;font-variant-numeric:tabular-nums;font-size:22px}"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary action beside a primary (onboarding Back, change).",
+      "html": "<button class=\"ds-btn-outline\">上一步</button>",
+      "css": ".ds-btn-outline{font-family:\"Noto Sans TC\",system-ui,sans-serif;height:56px;padding:0 20px;border-radius:10px;border:1.5px solid #5B2A86;background:#fff;color:#5B2A86;font-weight:700;font-size:16px;cursor:pointer}.ds-btn-outline:hover{background:#F1EBF7}.ds-btn-outline:focus-visible{outline:2px solid #5B2A86;outline-offset:2px}"
+    },
+    {
+      "name": "Sign-out Button",
+      "kind": "button",
+      "refersTo": "button-signout",
+      "description": "Red outlined destructive action at the end of the account screen.",
+      "html": "<button class=\"ds-signout\">登出</button>",
+      "css": ".ds-signout{font-family:\"Noto Sans TC\",system-ui,sans-serif;width:100%;height:52px;border-radius:10px;border:1.5px solid #B42828;background:#fff;color:#B42828;font-weight:700;font-size:16px;cursor:pointer}.ds-signout:hover{background:#FBEDED}.ds-signout:focus-visible{outline:2px solid #5B2A86;outline-offset:2px}"
+    },
+    {
+      "name": "Stepper",
+      "kind": "custom",
+      "refersTo": "stepper",
+      "description": "Purple quantity stepper with tabular count.",
+      "html": "<div class=\"ds-step\"><button aria-label=\"less\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\"><path d=\"M5 12h14\"/></svg></button><output>2</output><button aria-label=\"more\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\"><path d=\"M12 5v14M5 12h14\"/></svg></button></div>",
+      "css": ".ds-step{display:inline-flex;align-items:center;height:40px;border-radius:10px;background:#5B2A86;color:#fff}.ds-step button{width:40px;height:100%;display:grid;place-items:center;border:0;border-radius:10px;background:none;color:inherit;cursor:pointer}.ds-step button:hover{background:rgba(255,255,255,.16)}.ds-step button:focus-visible{outline:2px solid #5B2A86;outline-offset:2px}.ds-step output{min-width:20px;text-align:center;font:700 16px \"Archivo\",sans-serif;font-variant-numeric:tabular-nums}"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "52px field with bold label, purple focus border and tint halo; red or green on validation.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-l\">學號</span><span class=\"ds-input\"><input placeholder=\"9 位數字\" inputmode=\"numeric\"></span><span class=\"ds-hint\">輸入 9 位數學號</span></label>",
+      "css": ".ds-field{font-family:\"Noto Sans TC\",system-ui,sans-serif;display:grid;gap:6px;color:#1B1426}.ds-field-l{font-size:14px;font-weight:700}.ds-input{display:flex;align-items:center;height:52px;border:1.5px solid #D5CDDF;border-radius:6px;background:#fff;padding:0 14px;transition:border-color .12s}.ds-input:focus-within{border-color:#5B2A86;box-shadow:0 0 0 3px #F1EBF7}.ds-input input{flex:1;border:0;outline:0;background:none;font-family:\"Noto Sans TC\",system-ui,sans-serif;font-size:17px;color:#1B1426}.ds-input input::placeholder{font-family:\"Noto Sans TC\",system-ui,sans-serif;color:#9A93A5}.ds-hint{font-size:13px;color:#655E70}"
+    },
+    {
+      "name": "Item Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Whole card opens the item page; tinted photo placeholder, in-cart badge, Archivo unit price.",
+      "html": "<button class=\"ds-icard\"><span class=\"ds-iimg\"><svg width=\"28\" height=\"28\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\"/><circle cx=\"9\" cy=\"10\" r=\"1.5\"/><path d=\"M21 16l-5-5-8 8\"/></svg><span class=\"ds-incart\">已加入 2</span></span><span class=\"ds-ibody\"><span class=\"ds-nm\">排骨便當</span><span class=\"ds-p\">$95</span></span></button>",
+      "css": ".ds-icard{font-family:\"Noto Sans TC\",system-ui,sans-serif;display:flex;flex-direction:column;width:180px;padding:0;border:0;text-align:left;background:#fff;border-radius:8px;overflow:hidden;color:#1B1426;cursor:pointer;box-shadow:0 1px 2px rgba(27,20,38,.06),0 4px 14px rgba(91,42,134,.08)}.ds-icard:hover{box-shadow:0 1px 2px rgba(27,20,38,.08),0 8px 22px rgba(91,42,134,.16)}.ds-icard:focus-visible{outline:2px solid #5B2A86;outline-offset:3px}.ds-iimg{position:relative;aspect-ratio:4/3;display:grid;place-items:center;background:color-mix(in srgb,#7B3FB0 12%,#fff);color:color-mix(in srgb,#7B3FB0 65%,#fff)}.ds-incart{position:absolute;top:8px;right:8px;background:#5B2A86;color:#fff;font-size:12px;font-weight:700;padding:3px 8px;border-radius:5px}.ds-ibody{display:flex;flex-direction:column;gap:2px;padding:10px 10px 10px 12px}.ds-nm{font-size:15px;font-weight:500;line-height:1.35}.ds-p{font-family:\"Archivo\",\"Noto Sans TC\",sans-serif;font-stretch:78%;font-variant-numeric:tabular-nums;font-weight:600;font-size:19px}"
+    },
+    {
+      "name": "Info Chip",
+      "kind": "chip",
+      "refersTo": "chip-info",
+      "description": "Purple-tint fact chip on the menu header card.",
+      "html": "<span class=\"ds-chip\">營業中</span>",
+      "css": ".ds-chip{font-family:\"Noto Sans TC\",system-ui,sans-serif;display:inline-block;font-size:12px;background:#F1EBF7;color:#45206A;border-radius:10px;padding:4px 10px}"
+    },
+    {
+      "name": "Area Tabs",
+      "kind": "nav",
+      "refersTo": "tab-bar-active",
+      "description": "Stall area filter with Archivo count chips; active is purple with a 3px underline.",
+      "html": "<nav class=\"ds-tabs\"><button aria-current=\"true\">全部<span class=\"ds-cnt\">6</span></button><button>水木<span class=\"ds-cnt\">3</span></button><button>小吃部<span class=\"ds-cnt\">2</span></button><button>風雲<span class=\"ds-cnt\">1</span></button></nav>",
+      "css": ".ds-tabs{font-family:\"Noto Sans TC\",system-ui,sans-serif;display:flex;gap:14px;padding:0 20px;border-bottom:1px solid #E6E1EC;background:#FAF8FC}.ds-tabs button{font-family:\"Noto Sans TC\",system-ui,sans-serif;padding:14px 0 11px;border:0;background:none;color:#655E70;font-size:15px;cursor:pointer}.ds-tabs button:hover{color:#5B2A86}.ds-tabs button:focus-visible{outline:2px solid #5B2A86;outline-offset:2px}.ds-tabs button[aria-current=true]{color:#5B2A86;font-weight:700;box-shadow:inset 0 -3px 0 #5B2A86}.ds-cnt{display:inline-block;margin-left:4px;font:700 12px \"Archivo\",sans-serif;color:#655E70;background:#fff;border-radius:5px;padding:0 6px}.ds-tabs button[aria-current=true] .ds-cnt{background:#5B2A86;color:#fff}"
+    },
+    {
+      "name": "Pickup Pass (mini)",
+      "kind": "custom",
+      "refersTo": "pass-band",
+      "description": "Signature boarding pass: purple band, yellow prefix, vendor beside the code, large status chip, one perforation, four legs. Band turns green when ready, grey when cancelled.",
+      "html": "<div class=\"ds-pass\"><div class=\"ds-top\"><span class=\"ds-lab\">取餐碼</span><span class=\"ds-lab ds-r\">狀態</span><span class=\"ds-code\"><span class=\"ds-pfx\">A</span>-042</span><span class=\"ds-vend\">便當屋</span><b class=\"ds-stat\">製作中</b></div><div class=\"ds-perf\"></div><div class=\"ds-legs\"><div class=\"ds-d\"><i></i><span>確認</span></div><div class=\"ds-n\"><i></i><span>製作中</span></div><div><i></i><span>可取餐</span></div><div><i></i><span>已取餐</span></div></div></div>",
+      "css": ".ds-pass{font-family:\"Noto Sans TC\",system-ui,sans-serif;width:350px;background:#fff;border-radius:14px;box-shadow:0 1px 2px rgba(27,20,38,.06),0 6px 18px rgba(91,42,134,.10)}.ds-pass:hover{box-shadow:0 1px 2px rgba(27,20,38,.08),0 10px 24px rgba(91,42,134,.16)}.ds-top{display:grid;grid-template-columns:auto 1fr auto;gap:6px 12px;align-items:end;padding:14px 16px 16px;background:#5B2A86;color:#fff;border-radius:14px 14px 0 0;position:relative;overflow:hidden}.ds-top:after{content:\"\";position:absolute;right:-30px;top:-30px;width:120px;height:120px;border-radius:50%;border:18px solid rgba(255,255,255,.07)}.ds-lab{font:700 12px/1.2 \"Archivo\",\"Noto Sans TC\",sans-serif;letter-spacing:.04em;color:#D9C8EE;grid-column:1/3}.ds-lab.ds-r{grid-column:3;text-align:right}.ds-code{font:800 40px/.9 \"Archivo\",sans-serif;font-stretch:78%;letter-spacing:.01em}.ds-pfx{color:#FFC23D}.ds-vend{font-size:15px;font-weight:700;line-height:1.2;padding-bottom:3px}.ds-stat{font-size:20px;line-height:1;padding:8px 14px;border-radius:10px;background:#FFC23D;color:#3D2A00;white-space:nowrap}.ds-perf{border-top:1px dashed #D5CDDF}.ds-legs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:10px 16px 13px}.ds-legs i{display:block;height:4px;border-radius:2px;background:#E6E1EC}.ds-legs span{display:block;font-size:12px;color:#655E70;margin-top:6px}.ds-d i{background:#5B2A86}.ds-n i{background:#FFC23D}.ds-n span{color:#1B1426;font-weight:700}"
+    },
+    {
+      "name": "Notes",
+      "kind": "custom",
+      "refersTo": "note",
+      "description": "Neutral, error and success notes; error is announced as an alert.",
+      "html": "<div class=\"ds-note\">付款為模擬流程（mockup）。</div><div class=\"ds-note ds-err\">紅燒排骨 剛剛售完 <button class=\"ds-act\">移除</button></div><div class=\"ds-note ds-ok\">已新增付款方式。</div>",
+      "css": ".ds-note{font-family:\"Noto Sans TC\",system-ui,sans-serif;display:flex;gap:10px;align-items:flex-start;margin-top:8px;padding:12px 14px;border-radius:5px;background:#F7F5FA;color:#1B1426;font-size:14px}.ds-err{background:#FBEDED;color:#7E1C1C}.ds-ok{background:#E8F5EC;color:#0F4D2A}.ds-act{margin-left:auto;border:0;background:none;color:inherit;font-family:\"Noto Sans TC\",system-ui,sans-serif;font-weight:700;text-decoration:underline;text-underline-offset:3px;cursor:pointer}.ds-act:focus-visible{outline:2px solid #5B2A86;outline-offset:2px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Purple Boarding Pass",
+    "overview": "Every order becomes a ticket. The pickup pass is the loudest object on any screen: a purple band carrying a huge condensed code with a sun-yellow prefix letter, a status chip big enough to read at arm's length, a perforation, and four progress legs. Around it sits a friendly, photo-led ordering tool on a near-white lilac ground, wrapped in a purple shell (header, primary buttons, active tabs, steppers). The mood is colourful and lively but never noisy: one strong hue, one warm accent, white cards that float on soft purple-tinted shadows.\n\nDensity is phone-first and thumb-sized: a single 390px-wide column, 20px gutters, two-column card grids, 44px minimum touch targets, a three-tab bar at the bottom. Type splits cleanly in two: Archivo, condensed to width 78, speaks every numeral, code, price and small field label; Noto Sans TC speaks every word of Chinese and all body text. Status changes do not fade; they snap.\n\nThe world refuses the delivery-app default of orange accents and floating carts. Cart presence is shown inline (counts on stall cards, an \"in cart\" badge on item photos, the checkout CTA), never as a floating button.",
+    "keyCharacteristics": [
+      "Purple shell (header, CTAs, active tabs, steppers) over a near-white lilac ground.",
+      "White cards with soft, two-layer, purple-tinted shadows; no borders on cards.",
+      "Sun-yellow is a small, deliberate accent tied to the pass and to progress.",
+      "Status bands: purple by default, green when ready, grey when cancelled.",
+      "Small radii (10 / 8 / 6 / 4-5px); only the pickup pass is rounder (14px).",
+      "Condensed Archivo numerals beside Noto Sans TC text; one language at a time.",
+      "A stepped 90ms two-frame snap on status change, never a fade."
+    ],
+    "rules": [
+      {
+        "name": "The Purple Shell Rule",
+        "body": "Purple is the frame and the action: header, primary buttons, steppers, active tabs, checked controls. Body surfaces stay lilac and white so the shell reads as one object.",
+        "section": "colors"
+      },
+      {
+        "name": "The Sun Accent Rule",
+        "body": "Sun-yellow marks only the pass and progress: the code prefix, the preparing chip and leg, the orders badge, the onboarding step bar. It is never a general highlight colour and never text on a light ground.",
+        "section": "colors"
+      },
+      {
+        "name": "The Stall Tint Rule",
+        "body": "Each stall carries its own purple shade (the sample set spans #4A2370 to #9050C8), used only to tint its photo placeholder (12-16% over white for the ground, 65-70% for the icon, 75% toward black for the caption). It never becomes a badge, a band or a number tile. No vendor numbers appear anywhere.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Voices Rule",
+        "body": "Archivo condensed speaks numerals, codes, prices, counts and small field labels; Noto Sans TC speaks every word. Chinese never falls to a system face: Noto Sans TC is set explicitly on html, body, button, input, textarea, select, legend, label and on input and textarea placeholders, because form controls do not inherit fonts.",
+        "section": "typography"
+      },
+      {
+        "name": "The Two Prices Rule",
+        "body": "Unit prices read \"$120\": on item cards, the item page header, checkout lines and pass lines. Totals read \"NT$\": the checkout total, every CTA amount (add to cart, place order) and order history rows.",
+        "section": "typography"
+      },
+      {
+        "name": "The One Language Rule",
+        "body": "Exactly one language shows at a time, switched by the 中|EN toggle in the header (or the account language row). Labels never pair Chinese and English side by side.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tinted Bloom Rule",
+        "body": "Shadows are always two layers and the outer layer is purple at 6-16% alpha. A grey-only or single-layer shadow is off-world.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Ticket Exception Rule",
+        "body": "Only the pickup pass is rounder (14px). Its single dashed perforation is notched with two half-circle cut-outs in the ground colour, and every purple band (pass, ID card, auth hero) carries one faint white ring (rgba 255,255,255 at .07) bleeding off its top-right corner.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "**Do** keep the shell purple (#5B2A86) and the ground lilac (#FAF8FC); put content on white cards with the two-layer purple-tinted shadow.",
+      "**Do** keep sun-yellow (#FFC23D) to the code prefix, the preparing chip and leg, the orders badge and onboarding progress, always with sun-ink text when it is a ground.",
+      "**Do** switch the pass band by state: purple default, green ready, grey cancelled; keep the status chip on ready and cancelled white with ink text.",
+      "**Do** follow the radius ladder: 10px pills and buttons, 8px cards, 6px fields and option rows, 4-5px tags, 14px only for the pickup pass.",
+      "**Do** set numerals, codes, prices and field labels in Archivo condensed (wdth 78) and every word in Noto Sans TC, including form controls and placeholders.",
+      "**Do** write unit prices as \"$120\" and totals, CTA amounts and order history as \"NT$\".",
+      "**Do** snap status changes in the stepped 90ms two-frame step, and turn it off under reduced motion.",
+      "**Do** restore focus across re-renders, move it to the heading on a screen change, and announce through the single live region.",
+      "**Do** label placeholder content SAMPLE DATA and mark mocked payment, account and permission flows as mockups."
+    ],
+    "donts": [
+      "**Don't** use orange accents or a floating cart button; show cart state inline.",
+      "**Don't** show vendor or stall numbers anywhere; a stall's purple shade only tints its photo placeholder.",
+      "**Don't** fade or slide status changes; the change snaps.",
+      "**Don't** use sun-yellow as text on white or lilac, or as a general highlight.",
+      "**Don't** separate cards with borders or use grey-only, single-layer or hard offset shadows.",
+      "**Don't** show Chinese and English side by side; one language at a time via the 中|EN toggle.",
+      "**Don't** let form controls fall back to a system CJK face."
+    ]
+  }
+}

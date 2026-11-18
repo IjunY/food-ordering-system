@@ -1,33 +1,62 @@
-// 顧客端畫面 C01–C11（收據版）＋註冊頁
+// 顧客端畫面 C01–C11＋註冊頁（紫色取餐券版）
 import { api } from '../api.js';
-import { t, getLang, setLang } from '../i18n.js';
+import { t, setLang } from '../i18n.js';
 import { session, cart, cartCount, cartTotal, homeOf } from '../store.js';
 import { actions, forms, inputs, navigate, rerender, poll, toast, confirmDialog } from '../router.js';
+import { icon } from '../icons.js';
 import * as C from '../components.js';
+import { maybeStartTour } from '../tour.js';
 
-const { esc, money, hhmm } = C;
+const { esc, money, unit, hhmm } = C;
 const phone = (inner) => `<div class="phone">${inner}</div>`;
+
+// 定時更新用：使用者正在打字時不重畫（重畫會打斷中文輸入法選字）
+const idleRerender = () => {
+  const a = document.activeElement;
+  if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return;
+  rerender();
+};
+
+// 訂單狀態剛變的那一次重畫，券上的狀態要「跳」一下
+const ACTIVE = ['pending_payment', 'paid', 'accepted', 'preparing', 'ready'];
+const lastStatus = {};
+function changed(o) {
+  const was = lastStatus[o.id];
+  lastStatus[o.id] = o.status;
+  return !!was && was !== o.status;
+}
+const passHref = (o) => (o.status === 'pending_payment' && !o.payment_method ? `pay-${o.id}` : `order-${o.id}`);
+const miniPass = (o) => C.Pass(o, { href: passHref(o), snapping: changed(o) });
 
 // 共用動作
 actions.back = () => (history.length > 1 ? history.back() : navigate('home'));
 actions.go = (d) => navigate(d.to);
 actions['set-lang'] = (d) => { setLang(d.lang); rerender(); };
-actions.logout = () => { session.clear(); cart.clear(); navigate('login'); };
+actions.logout = () => { session.clear(); cart.clear(); C.navState.activeOrders = 0; navigate('login'); };
+actions['toggle-password'] = (d, el) => {
+  const input = document.getElementById(d.for);
+  const show = input.type === 'password';
+  input.type = show ? 'text' : 'password';
+  el.setAttribute('aria-pressed', String(show));
+  el.setAttribute('aria-label', t(show ? 'auth.pw_hide' : 'auth.pw_show'));
+  el.innerHTML = icon(show ? 'eyeOff' : 'eye');
+};
 
 // ======================= C01 登入 =======================
+// 標題裡的「NTHU」用黃色，呼應取餐號的字首
+const brand = () => esc(t('app.name')).replace(/^NTHU/, '<span class="pfx">NTHU</span>');
+
 export async function loginPage() {
-  return phone(`<div class="login">
-    <div class="login__top">${C.LangSwitch()}</div>
-    <div class="login__brand">
-      <h1>${esc(t('app.name'))}</h1>
-      <p>${esc(t('login.lead'))}</p>
-    </div>
-    <form data-form="login" novalidate>
-      ${C.TextField({ label: t('login.student_id'), name: 'student_id', extra: 'autocomplete="username" inputmode="text" autocapitalize="off"' })}
-      ${C.TextField({ label: t('login.password'), name: 'password', type: 'password', extra: 'autocomplete="current-password"' })}
-      ${C.Button({ label: t('login.submit'), style: 'primary', type: 'submit', block: true })}
+  return phone(`<div class="auth">
+    <section class="ahero"><div class="bar"><span></span>${C.LangSwitch()}</div>
+      <h1>${brand()}</h1><p>${esc(t('login.lead'))}</p></section>
+    <form class="acard" data-form="login" novalidate>
+      <h2>${esc(t('login.title'))}</h2>
+      ${C.TextField({ label: t('login.student_id'), name: 'student_id', num: true, extra: 'autocomplete="username" inputmode="text" autocapitalize="off" spellcheck="false"' })}
+      ${C.TextField({ label: t('login.password'), name: 'password', type: 'password', reveal: true, extra: 'autocomplete="current-password"' })}
+      ${C.Cta({ label: t('login.submit'), type: 'submit' })}
+      <p class="alink">${esc(t('login.no_account'))} <a href="#register">${esc(t('login.to_register'))}</a></p>
     </form>
-    <p class="small muted">${esc(t('login.no_account'))} <a class="link" href="#register">${esc(t('login.to_register'))}</a></p>
   </div>`);
 }
 forms.login = async (fd, form) => {
@@ -35,27 +64,35 @@ forms.login = async (fd, form) => {
   if (!id) { toast(t('login.need_id')); form.querySelector('[name=student_id]')?.focus(); return; }
   const res = await api.login(id, fd.get('password'));
   session.set({ access_token: res.access_token, user: res.user });
+  await maybeStartTour(res.user); // 這個帳號第一次登入：開始使用教學
   navigate(homeOf(res.user.role));
 };
 
-// ======================= 註冊（新） =======================
+// ======================= 註冊 =======================
 export async function registerPage() {
-  return phone(`<div class="login">
-    <div class="login__top">${C.LangSwitch()}</div>
-    <div class="login__brand">
-      <h1>${esc(t('register.title'))}</h1>
-      <p>${esc(t('register.lead'))}</p>
-    </div>
-    <form data-form="register" novalidate>
-      ${C.TextField({ label: t('login.student_id'), name: 'student_id', extra: 'autocomplete="username" autocapitalize="off" maxlength="20"' })}
+  const rule = `<ul class="checks" id="pw-rules"><li>${icon('dot')}${esc(t('register.pw_rule'))}</li></ul>`;
+  return phone(`<div class="auth">
+    <section class="ahero"><div class="bar"><a class="back" href="#login" aria-label="${esc(t('a11y.back'))}">${icon('back')}</a>${C.LangSwitch()}</div>
+      <h1>${esc(t('register.title'))}</h1><p>${esc(t('register.lead'))}</p></section>
+    <form class="acard" data-form="register" novalidate>
+      ${C.TextField({ label: t('login.student_id'), name: 'student_id', num: true, extra: 'autocomplete="username" autocapitalize="off" spellcheck="false" maxlength="20"' })}
       ${C.TextField({ label: t('register.email'), name: 'email', type: 'email', extra: 'autocomplete="email"' })}
-      ${C.TextField({ label: t('register.phone'), name: 'phone_number', type: 'tel', extra: 'autocomplete="tel" inputmode="tel"' })}
-      ${C.TextField({ label: t('register.password_hint'), name: 'password', type: 'password', extra: 'autocomplete="new-password" minlength="8"' })}
-      ${C.Button({ label: t('register.submit'), style: 'primary', type: 'submit', block: true })}
+      ${C.TextField({ label: t('register.phone'), name: 'phone_number', type: 'tel', num: true, extra: 'autocomplete="tel" inputmode="tel"' })}
+      ${C.TextField({ label: t('login.password'), name: 'password', type: 'password', reveal: true, input: 'password-rule', extra: 'autocomplete="new-password" minlength="8" aria-describedby="pw-rules"', hint: rule })}
+      ${C.Cta({ label: t('register.submit'), type: 'submit' })}
+      <p class="alink">${esc(t('register.have_account'))} <a href="#login">${esc(t('register.to_login'))}</a></p>
     </form>
-    <p class="small muted">${esc(t('register.have_account'))} <a class="link" href="#login">${esc(t('register.to_login'))}</a></p>
   </div>`);
 }
+// 邊打邊檢查密碼長度，不重畫（焦點留在欄位裡）
+inputs['password-rule'] = (el) => {
+  const li = document.querySelector('#pw-rules li');
+  if (!li) return;
+  const ok = el.value.length >= 8;
+  if (li.classList.contains('ok') === ok) return;
+  li.classList.toggle('ok', ok);
+  li.querySelector('svg').outerHTML = icon(ok ? 'check' : 'dot');
+};
 forms.register = async (fd, form) => {
   const data = Object.fromEntries(['student_id', 'email', 'phone_number'].map((k) => [k, String(fd.get(k) || '').trim()]));
   data.password = String(fd.get('password') || '');
@@ -64,46 +101,46 @@ forms.register = async (fd, form) => {
   if (data.password.length < 8) { toast(t('register.short_password')); form.querySelector('[name=password]')?.focus(); return; }
   const res = await api.register(data);
   session.set({ access_token: res.access_token, user: res.user });
+  await maybeStartTour(res.user);
   navigate(homeOf(res.user.role));
 };
 
-// ======================= C02 首頁：等候看板 =======================
+// ======================= C02 首頁：取餐券＋攤位 =======================
 const home = { location: 'all', sort: 'wait', q: '', list: [] };
-const LOCATIONS = [['all', 'home.loc_all'], ['shuimu', 'home.loc_shuimu'], ['fengyun', 'home.loc_fengyun'], ['snack', 'home.loc_snack']];
+const LOCATIONS = [['all', 'home.loc_all'], ['shuimu', 'home.loc_shuimu'], ['snack', 'home.loc_snack'], ['fengyun', 'home.loc_fengyun']];
 
 function restaurantListHtml() {
   const q = home.q.trim().toLowerCase();
-  const list = home.list.filter((r) => !q || r.name.toLowerCase().includes(q));
-  return list.length ? list.map(C.WaitRow).join('') : `<li class="empty">${esc(t('home.empty'))}</li>`;
+  const c = cart.get();
+  const list = home.list.filter((r) => (home.location === 'all' || r.area === home.location) && (!q || r.name.toLowerCase().includes(q)));
+  return list.length
+    ? list.map((r) => C.StallCard(r, c.restaurant_id === r.id ? cartCount(c) : 0)).join('')
+    : `<li class="empty">${esc(t('home.empty'))}</li>`;
 }
 
 export async function homePage() {
-  const list = await api.listRestaurants({ location: home.location, sort: home.sort });
+  const [list, orders] = await Promise.all([api.listRestaurants({ location: 'all', sort: home.sort }), api.listMyOrders().catch(() => [])]);
   home.list = list;
-  const openCount = list.filter((r) => r.is_open && r.is_accepting_orders).length;
-  poll(refreshRestaurantList, 30000);
-  return phone(`
-    <header class="topbar"><a class="wordmark grow" href="#home">${esc(t('app.name'))}</a></header>
+  const active = orders.filter((o) => ACTIVE.includes(o.status));
+  C.navState.activeOrders = active.length;
+  poll(idleRerender, active.length ? 5000 : 30000);
+  const areas = LOCATIONS.map(([k, key]) => ({
+    name: t(key), selected: home.location === k, action: 'home-location', data: { loc: k },
+    count: k === 'all' ? list.length : list.filter((r) => r.area === k).length,
+  }));
+  return phone(`${C.TopBar({ title: t('nav.home') })}
     <main class="main">
-      <div class="home-head">
-        <div class="search field"><label class="visually-hidden" for="home-q">${esc(t('home.search_ph'))}</label>
-          <input id="home-q" type="search" class="input" data-input="home-search" value="${esc(home.q)}" placeholder="${esc(t('home.search_ph'))}" autocomplete="off"></div>
-        ${C.Tabs(LOCATIONS.map(([k, key]) => ({ name: t(key), selected: home.location === k, action: 'home-location', data: { loc: k } })))}
+      ${active.length ? `<div class="sec"><h2>${esc(t('home.passes'))}</h2></div><div class="stack">${active.map(miniPass).join('')}</div>` : ''}
+      <div class="sec"><h2>${esc(t('home.all'))}</h2>${C.SampleTag()}</div>
+      <div class="tools">
+        <label class="input input--sm search">${icon('search')}<span class="visually-hidden">${esc(t('home.search_ph'))}</span>
+          <input id="home-q" type="search" data-input="home-search" value="${esc(home.q)}" placeholder="${esc(t('home.search_ph'))}" autocomplete="off"></label>
+        <button type="button" class="lnk" data-action="home-sort">${esc(t(home.sort === 'wait' ? 'home.sort_wait' : 'home.sort_name'))}</button>
       </div>
-      <section class="stack stack--tight" aria-labelledby="open-count">
-        <div class="count-row">
-          <h2 id="open-count" class="section-title">${esc(t('home.open_count', { n: openCount }))}</h2>
-          <button type="button" class="link small" data-action="home-sort">${esc(t(home.sort === 'wait' ? 'home.sort_wait' : 'home.sort_name'))}</button>
-        </div>
-        <ul class="waitboard" id="restaurant-list">${restaurantListHtml()}</ul>
-      </section>
+      ${C.Tabs(areas, { area: true, label: t('home.all') })}
+      <ul class="sgrid" id="restaurant-list">${restaurantListHtml()}</ul>
     </main>
     ${C.BottomNav({ active: 'home' })}`);
-}
-async function refreshRestaurantList() {
-  home.list = await api.listRestaurants({ location: home.location, sort: home.sort });
-  const el = document.getElementById('restaurant-list');
-  if (el) el.innerHTML = restaurantListHtml();
 }
 actions['home-location'] = (d) => { home.location = d.loc; rerender(); };
 actions['home-sort'] = () => { home.sort = home.sort === 'wait' ? 'name' : 'wait'; rerender(); };
@@ -112,12 +149,9 @@ inputs['home-search'] = (el) => {
   document.getElementById('restaurant-list').innerHTML = restaurantListHtml();
 };
 
-// ======================= C03 餐廳頁：印刷菜單 =======================
+// ======================= C03 攤位頁：菜單 =======================
 const selectedCategory = {};
-
-function waitLine(w) {
-  return `<dt>${esc(t('restaurant.wait_label'))}</dt><dd>${esc(t('wait.banner', { n: w.wait_minutes, q: w.queue_count }))}</dd>`;
-}
+const waitText = (w) => `${t('wait.minutes', { n: w.wait_minutes })} · ${t('home.ahead', { n: w.queue_count })}`;
 
 export async function restaurantPage({ rid }) {
   const [r, menu, wait] = await Promise.all([api.getRestaurant(rid), api.getMenu(rid), api.getWaitEstimate(rid)]);
@@ -125,37 +159,41 @@ export async function restaurantPage({ rid }) {
   const cat = selectedCategory[rid] ?? menu.categories[0]?.id;
   const items = menu.categories.find((c) => c.id === cat)?.items ?? [];
   const c = cart.get();
-  const bar = c.items.length
-    ? `<a class="cart-bar" href="#cart"><span>${esc(t('cart.view'))}</span><span class="small">${esc(t('cart.count', { n: cartCount(c) }))}</span><span class="fig-strong">${money(cartTotal(c))}</span></a>`
-    : '';
+  const mine = c.restaurant_id === rid ? c.items : [];
+  const inCart = (id) => mine.filter((i) => i.menu_item_id === id).reduce((s, i) => s + i.qty, 0);
+  const closedText = r.is_open ? t('restaurant.paused') : t('restaurant.closed_now', { hours: r.opening_hours_label });
   if (canOrder) {
     poll(async () => {
       const el = document.getElementById('wait-slot');
-      if (el) el.innerHTML = waitLine(await api.getWaitEstimate(rid));
+      if (el) el.textContent = waitText(await api.getWaitEstimate(rid));
     }, 30000);
   }
   return phone(`${C.TopBar({ title: r.name, back: true })}
-    <main class="main">
-      ${C.Photo({ url: r.cover_image_url, alt: r.name, kind: 'cover', cls: 'bleed' })}
-      <section class="r-intro">
-        ${r.description ? `<p>${esc(r.description)}</p>` : ''}
-        <dl class="facts">
-          <dt>${esc(t('order.place'))}</dt><dd>${esc(r.location_detail)}</dd>
-          <dt>${esc(t('admin.settings.hours'))}</dt><dd>${esc(r.opening_hours_label)}</dd>
-          ${canOrder ? `<div id="wait-slot" style="display:contents">${waitLine(wait)}</div>` : ''}
-        </dl>
-        ${canOrder ? '' : `<p class="band band--stop">${esc(r.is_open ? t('restaurant.paused') : t('restaurant.closed_now', { hours: r.opening_hours_label }))}</p>`}
+    <main class="main" style="--sc:${C.tint(r.id)}">
+      <section class="hero${canOrder ? '' : ' closed'}">
+        ${C.Photo({ url: r.cover_image_url, alt: r.name, kind: 'cover' })}
+        <div class="hcard">
+          <h2>${esc(r.name)}</h2>
+          ${r.description ? `<p class="desc">${esc(r.description)}</p>` : ''}
+          <div class="chips">
+            <span>${esc(r.location_detail)}</span><span>${esc(r.opening_hours_label)}</span>
+            <span><b class="${canOrder ? 'on' : 'off'}">${esc(canOrder ? t('home.open') : r.is_open ? t('restaurant.paused') : t('wait.closed'))}</b></span>
+            ${canOrder ? `<span id="wait-slot">${esc(waitText(wait))}</span>` : ''}
+          </div>
+          ${C.SampleTag()}
+        </div>
       </section>
-      <section>
-        ${C.Tabs(menu.categories.map((x) => ({ name: x.name, selected: x.id === cat, action: 'menu-category', data: { rid, cat: x.id } })), { sticky: true, label: r.name })}
-        <ul class="menu">${items.map((i) => C.MenuRow(i, rid)).join('') || `<li class="empty">${esc(t('menu.empty'))}</li>`}</ul>
-      </section>
-    </main>${bar}`);
+      ${canOrder ? '' : C.Note({ text: closedText })}
+      ${C.Tabs(menu.categories.map((x) => ({ name: x.name, selected: x.id === cat, action: 'menu-category', data: { rid, cat: x.id } })), { sticky: true, label: r.name })}
+      <ul class="igrid">${items.map((i) => C.ItemCard(i, rid, { inCart: inCart(i.id), canOrder })).join('') || `<li class="empty">${esc(t('menu.empty'))}</li>`}</ul>
+    </main>
+    ${c.items.length ? `<div class="dock">${C.Cta({ label: `${t('menu.checkout')} · ${t('cart.count', { n: cartCount(c) })}`, figure: money(cartTotal(c)), href: 'cart' })}</div>` : ''}`);
 }
 actions['menu-category'] = (d) => { selectedCategory[d.rid] = d.cat; rerender(); };
 
 // ======================= C04 品項 =======================
 const itemDraft = {}; // `${rid}/${iid}` → { sel: { groupId: [choiceId] }, qty, note }
+const NOTE_MAX = 60;
 
 async function loadItem(rid, iid) {
   const [r, menu] = await Promise.all([api.getRestaurant(rid), api.getMenu(rid)]);
@@ -177,30 +215,33 @@ export async function itemPage({ rid, iid }) {
   if (!item) return phone(`${C.TopBar({ title: t('item.title'), back: true })}<main class="main"><p class="empty">${esc(t('common.not_found'))}</p></main>`);
   const key = `${rid}/${iid}`;
   const d = draftFor(key, item);
-  const canOrder = r.is_open && r.is_accepting_orders && item.is_available && !item.is_sold_out;
-  const groups = item.option_groups.map((g) => `<fieldset class="group">
-      <legend class="group__head"><span>${esc(g.name)}</span><span class="small">${esc(t(g.required ? 'item.pick_one' : 'item.optional').replace(/[（）()]/g, '').trim())}</span></legend>
-      <div class="choices" role="${g.required ? 'radiogroup' : 'group'}" aria-label="${esc(g.name)}">
-      ${g.choices.map((c) => C.Choice({ label: c.label, aside: c.price_delta ? `+${money(c.price_delta)}` : '', selected: d.sel[g.id].includes(c.id), multi: !g.required, action: 'pick-option', data: { key, group: g.id, choice: c.id, max: g.max_select, required: g.required ? 1 : 0 } })).join('')}
+  const sold = item.is_sold_out || !item.is_available;
+  const open = r.is_open && r.is_accepting_orders;
+  const canOrder = open && !sold;
+  const groups = item.option_groups.map((g) => `<fieldset class="ogroup"${canOrder ? '' : ' disabled'}>
+      <legend>${esc(g.name)}<small>${esc(g.required ? t('item.required') : t('item.multi', { n: g.max_select }))}</small></legend>
+      <div role="${g.required ? 'radiogroup' : 'group'}" aria-label="${esc(g.name)}">
+      ${g.choices.map((c) => C.Choice({ label: c.label, aside: c.price_delta ? `+${unit(c.price_delta)}` : '', selected: d.sel[g.id].includes(c.id), multi: !g.required, action: 'pick-option', data: { key, group: g.id, choice: c.id, max: g.max_select, required: g.required ? 1 : 0 }, disabled: !canOrder })).join('')}
       </div>
     </fieldset>`).join('');
-  const hint = canOrder ? '' : `<p class="hint" role="status">${esc(t(item.is_sold_out ? 'item.sold_out_hint' : 'item.closed_hint'))}</p>`;
-  return phone(`${C.TopBar({ title: r.name, back: true })}
-    <main class="main">
-      ${C.Photo({ url: item.image_url, alt: item.name, kind: 'hero', cls: 'bleed' })}
-      <section class="item-head">
-        <h1>${esc(item.name)}</h1>
-        ${item.description ? `<p class="muted">${esc(item.description)}</p>` : ''}
-        <div class="item-head__price"><span class="fig-strong">${money(item.price)}</span><span class="small muted">${esc(t('item.prep', { n: item.prep_minutes }))}</span></div>
+  const label = sold ? t('menu.sold_out') : open ? t('item.add') : t(r.is_open ? 'restaurant.paused' : 'wait.closed');
+  return phone(`${C.TopBar({ title: item.name, back: true })}
+    <main class="main itempage" style="--sc:${C.tint(r.id)}">
+      <div class="himg">${C.Photo({ url: item.image_url, alt: item.name, kind: 'hero' })}${sold ? `<span class="sold sold--big">${esc(t('menu.sold_out'))}</span>` : ''}</div>
+      <section class="ihead">
+        <h2>${esc(item.name)}</h2><span class="p">${unit(item.price)}</span>
+        <p class="mt">${esc(r.name)} · ${esc(r.location)} · ${esc(t('item.prep', { n: item.prep_minutes }))}</p>
+        ${item.description ? `<p class="desc">${esc(item.description)}</p>` : ''}
+        ${C.SampleTag()}
       </section>
+      ${canOrder ? '' : C.Note({ text: t(sold ? 'item.sold_out_hint' : 'item.closed_hint'), kind: sold ? 'err' : '' })}
       ${groups}
-      ${C.TextField({ label: t('item.note'), name: 'note', value: d.note, placeholder: t('item.note_ph'), input: 'item-note', data: { key } })}
+      <div class="ogroup"><label class="legend" for="f-note">${esc(t('item.note'))}<small>${esc(t('item.note_optional'))}</small></label>
+        <textarea id="f-note" name="note" rows="3" maxlength="${NOTE_MAX}" placeholder="${esc(t('item.note_ph'))}" data-input="item-note" data-key="${esc(key)}"${canOrder ? '' : ' disabled'}>${esc(d.note)}</textarea>
+        <span class="hint cnt num" id="note-cnt">${d.note.length} / ${NOTE_MAX}</span></div>
+      <div class="qrow"><span>${esc(t('item.qty'))}</span>${canOrder ? C.QtyStepper({ qty: d.qty, action: 'item-qty', data: { key }, min: 1, max: 20 }) : ''}</div>
     </main>
-    <div class="action-bar">
-      <div class="action-bar__row">${C.QtyStepper({ qty: d.qty, action: 'item-qty', data: { key }, min: 1 })}
-        ${C.Button({ label: t('item.add'), style: 'primary', block: true, action: 'add-to-cart', data: { rid, iid }, disabled: !canOrder, figure: money(unitPrice(item, d) * d.qty) })}</div>
-      ${hint}
-    </div>`);
+    <div class="dock">${C.Cta({ label, figure: canOrder ? money(unitPrice(item, d) * d.qty) : '', action: 'add-to-cart', data: { rid, iid }, disabled: !canOrder })}</div>`);
 }
 actions['pick-option'] = (d) => {
   const sel = itemDraft[d.key].sel;
@@ -216,7 +257,11 @@ actions['item-qty'] = (d) => {
   draft.qty = Math.max(1, Math.min(20, draft.qty + Number(d.delta)));
   rerender();
 };
-inputs['item-note'] = (el) => { itemDraft[el.dataset.key].note = el.value; };
+inputs['item-note'] = (el) => {
+  itemDraft[el.dataset.key].note = el.value;
+  const cnt = document.getElementById('note-cnt');
+  if (cnt) cnt.textContent = `${el.value.length} / ${NOTE_MAX}`;
+};
 actions['add-to-cart'] = async (d) => {
   const { r, item } = await loadItem(d.rid, d.iid);
   const key = `${d.rid}/${d.iid}`;
@@ -241,7 +286,7 @@ actions['add-to-cart'] = async (d) => {
   navigate(`r-${r.id}`);
 };
 
-// ======================= C05 購物車：收據 =======================
+// ======================= C05 確認訂單 =======================
 const checkout = { pickup_type: 'asap', pickup_time: null };
 function nextSlots() {
   const d = new Date(Date.now() + 15 * 60000);
@@ -249,44 +294,43 @@ function nextSlots() {
   return [0, 1, 2, 3].map((k) => new Date(d.getTime() + k * 15 * 60000).toISOString());
 }
 
-function slipLine(line) {
+function cartLine(line) {
   const meta = [line.options_label, line.note ? t('cart.note_prefix') + line.note : ''].filter(Boolean);
-  return `<div class="slip-line">
-    <span class="slip-line__name">${esc(line.name)}</span>
-    <span class="slip-line__price">${money(line.unit_price * line.qty)}</span>
-    ${meta.map((m) => `<span class="slip-line__meta">${esc(m)}</span>`).join('')}
-    <div class="slip-line__ctrl"><span class="small muted fig">${esc(t('cart.unit', { price: money(line.unit_price) }))}</span>${C.QtyStepper({ qty: line.qty, action: 'cart-qty', data: { line: line.line_id }, small: true })}</div>
-  </div>`;
+  return `<li class="line">
+    <span class="nm">${esc(line.name)}${meta.map((m) => `<span class="lopt">${esc(m)}</span>`).join('')}</span>
+    ${C.QtyStepper({ qty: line.qty, action: 'cart-qty', data: { line: line.line_id } })}
+    <span class="sub">${unit(line.unit_price * line.qty)}</span>
+  </li>`;
 }
 
 export async function cartPage() {
   const c = cart.get();
   if (!c.items.length) {
-    return phone(`${C.TopBar({ title: t('cart.title'), back: true })}
-      <main class="main"><div class="state"><p class="strong">${esc(t('cart.empty'))}</p>${C.Button({ label: t('cart.browse'), style: 'primary', action: 'go', data: { to: 'home' } })}</div></main>`);
+    return phone(`${C.TopBar({ title: t('cart.review'), back: true })}
+      <main class="main"><div class="empty">${esc(t('cart.empty'))}<br><a class="textlink" href="#home">${esc(t('cart.browse'))}</a></div></main>`);
   }
   const [r, wait] = await Promise.all([api.getRestaurant(c.restaurant_id), api.getWaitEstimate(c.restaurant_id)]);
   const total = cartTotal(c);
   const slots = nextSlots();
   const scheduled = checkout.pickup_type === 'scheduled';
   if (scheduled && !slots.includes(checkout.pickup_time)) checkout.pickup_time = slots[0];
-  return phone(`${C.TopBar({ title: t('cart.title'), back: true })}
+  return phone(`${C.TopBar({ title: t('cart.review'), back: true })}
     <main class="main">
-      <section class="slip" aria-label="${esc(c.restaurant_name)}">
-        <div class="slip__head"><h2>${esc(c.restaurant_name)}</h2><span class="small muted">${esc(t('cart.count', { n: cartCount(c) }))}</span></div>
-        ${c.items.map(slipLine).join('')}
-        <div class="slip__total"><span class="strong">${esc(t('cart.total'))}</span><span class="fig-strong">${money(total)}</span></div>
-      </section>
-      <fieldset class="group">
-        <legend class="group__head"><span>${esc(t('cart.pickup_time'))}</span></legend>
-        <div class="choices" role="radiogroup" aria-label="${esc(t('cart.pickup_time'))}">
+      <div class="meta"><span>${esc(c.restaurant_name)} · ${esc(r.location)}</span>${C.SampleTag()}</div>
+      <div class="sec"><h2>${esc(t('cart.lines'))}</h2><span class="aside">${esc(t('cart.count', { n: cartCount(c) }))}</span></div>
+      <ul class="linelist">${c.items.map(cartLine).join('')}</ul>
+      <div class="sum"><span>${esc(t('cart.total'))}</span><b>${money(total)}</b></div>
+      <fieldset class="ogroup">
+        <legend>${esc(t('cart.pickup_time'))}</legend>
+        <div role="radiogroup" aria-label="${esc(t('cart.pickup_time'))}">
           ${C.Choice({ label: t('cart.asap'), aside: t('cart.around', { time: hhmm(wait.estimated_ready_at) }), selected: !scheduled, action: 'pickup-type', data: { type: 'asap' } })}
           ${C.Choice({ label: t('cart.scheduled'), aside: r.allow_scheduled_pickup ? '' : t('cart.scheduled_off'), selected: scheduled, action: 'pickup-type', data: { type: 'scheduled' }, disabled: !r.allow_scheduled_pickup })}
         </div>
-        ${scheduled ? `<div class="slots" role="group" aria-label="${esc(t('cart.pick_slot'))}">${slots.map((s) => `<button type="button" class="slot" aria-pressed="${s === checkout.pickup_time}" data-action="pickup-slot" data-time="${esc(s)}">${hhmm(s)}</button>`).join('')}</div>` : ''}
+        ${scheduled ? `<div class="slots" role="group" aria-label="${esc(t('cart.pick_slot'))}">${slots.map((s) => `<button type="button" class="slot num" aria-pressed="${s === checkout.pickup_time}" data-action="pickup-slot" data-time="${esc(s)}">${hhmm(s)}</button>`).join('')}</div>` : ''}
       </fieldset>
+      ${C.Note({ text: t('cart.mock_note') })}
     </main>
-    <div class="action-bar">${C.Button({ label: t('cart.checkout'), style: 'primary', block: true, action: 'checkout', figure: money(total) })}</div>`);
+    <div class="dock">${C.Cta({ label: t('cart.checkout'), figure: money(total), action: 'checkout' })}</div>`);
 }
 actions['cart-qty'] = (d) => {
   const c = cart.get();
@@ -315,6 +359,7 @@ actions.checkout = async (_, el) => {
 
 // ======================= C06 付款（模擬） =======================
 const payState = { method: 'line_pay' };
+const METHOD_ICON = { credit_card: 'card', cash_on_pickup: 'store' };
 export async function payPage({ oid }) {
   const [o, methods] = await Promise.all([api.getOrder(oid), api.listPaymentMethods()]);
   if (o.status !== 'pending_payment' || o.payment_method) { navigate(`order-${oid}`); return ''; }
@@ -324,18 +369,17 @@ export async function payPage({ oid }) {
   return phone(`${C.TopBar({ title: t('pay.title'), back: true })}
     <main class="main">
       <section class="due">
-        <span class="small muted">${esc(t('pay.amount_due'))}</span>
-        <span class="fig-strong">${money(o.total)}</span>
-        <span class="small muted">${esc(t('pay.order_meta', { no: o.pickup_number, name: o.restaurant_name }))}</span>
+        <span class="lab">${esc(t('pay.amount_due'))}</span>
+        <b>${money(o.total)}</b>
+        <span class="mt">${esc(t('pay.order_meta', { no: o.pickup_number, name: o.restaurant_name }))}</span>
       </section>
-      <fieldset class="group">
-        <legend class="group__head"><span>${esc(t('pay.choose'))}</span></legend>
-        <div class="choices" role="radiogroup" aria-label="${esc(t('pay.choose'))}">
-          ${list.map((m) => C.Choice({ label: m.label, sub: m.hint, selected: m.method === payState.method, action: 'pick-method', data: { method: m.method } })).join('')}
-        </div>
-      </fieldset>
+      ${C.Note({ text: t('pay.mock_note') })}
+      <div class="sec"><h2>${esc(t('pay.choose'))}</h2></div>
+      <div class="opts" role="radiogroup" aria-label="${esc(t('pay.choose'))}">
+        ${list.map((m) => C.OptRow({ label: m.label, sub: m.hint, ic: METHOD_ICON[m.method] || 'wallet', selected: m.method === payState.method, action: 'pick-method', data: { method: m.method } })).join('')}
+      </div>
     </main>
-    <div class="action-bar">${C.Button({ label: t('pay.confirm', { price: '' }).trim(), style: 'primary', block: true, action: 'pay', data: { oid }, figure: money(o.total) })}</div>`);
+    <div class="dock">${C.Cta({ label: t('pay.confirm', { price: '' }).trim(), figure: money(o.total), action: 'pay', data: { oid } })}</div>`);
 }
 actions['pick-method'] = (d) => { payState.method = d.method; rerender(); };
 actions.pay = async (d, el) => {
@@ -348,109 +392,90 @@ actions.pay = async (d, el) => {
   navigate(`paid-${d.oid}`);
 };
 
-// ======================= 取餐票（C07、C08 共用） =======================
-function ticket(o, { state, eta, sub, done = false }) {
-  return `<section class="ticket${done ? ' is-done' : ''}" aria-label="${esc(t('order.pickup_number'))} ${esc(o.pickup_number)}">
-    <div class="ticket__top">
-      <span class="small muted">${esc(t('order.pickup_number'))}</span>
-      <span class="ticket__no">${esc(o.pickup_number)}</span>
-      <span class="ticket__state">${esc(state)}</span>
-    </div>
-    <div class="ticket__stub">
-      ${eta ? `<span class="ticket__eta">${esc(eta)}</span>` : ''}
-      ${sub ? `<span class="small muted">${esc(sub)}</span>` : ''}
-      <span class="small">${esc(o.restaurant_name)}${t('fmt.paren', { x: o.restaurant_location })}</span>
-    </div>
-  </section>`;
+// ======================= 取餐券下半：明細（C07、C08 共用） =======================
+function passLines(o) {
+  return `<div class="rule"></div><div class="lines">
+    ${o.items.map((i) => `<div><span>${esc(i.name)} × ${esc(i.qty)}${i.options_label ? `<small class="lopt">${esc(i.options_label)}</small>` : ''}</span><span class="num">${unit(i.subtotal ?? i.unit_price * i.qty)}</span></div>`).join('')}
+    <div class="t"><span>${esc(t('cart.total'))}</span><span class="num">${money(o.total)}</span></div>
+    <div class="pay"><span>${esc(t('order.payment'))}</span><span>${esc(C.paymentText(o))}</span></div>
+  </div>`;
 }
 
 // ======================= C07 付款完成 =======================
 export async function paidPage({ oid }) {
   const o = await api.getOrder(oid);
+  lastStatus[o.id] = o.status;
   const cash = o.payment_method === 'cash_on_pickup';
   return phone(`${C.TopBar({ title: t(cash ? 'paid.title_cash' : 'paid.title') })}
     <main class="main">
-      ${ticket(o, { state: t(cash ? 'paid.title_cash' : 'paid.title'), eta: t('order.ready_around', { time: hhmm(o.estimated_ready_at) }), sub: cash ? t('order.pay_at_pickup') : '' })}
+      ${cash ? C.Note({ text: t('order.pay_at_pickup') }) : ''}
+      <div class="passwrap">
+        ${C.Pass(o, { mode: 'full', extra: passLines(o) })}
+        <p class="msg">${esc(t('order.ready_around', { time: hhmm(o.estimated_ready_at) }))}</p>
+      </div>
     </main>
-    <div class="action-bar">
-      ${C.Button({ label: t('paid.track'), style: 'primary', block: true, action: 'go', data: { to: `order-${oid}` } })}
-      ${C.Button({ label: t('paid.home'), style: 'text', block: true, action: 'go', data: { to: 'home' } })}
+    <div class="dock">
+      ${C.Cta({ label: t('paid.track'), href: `order-${oid}` })}
+      <a class="btn btn--text btn--block" href="#home">${esc(t('paid.home'))}</a>
     </div>`);
 }
 
-// ======================= C08 / C09 訂單進度 =======================
-const STEPS = ['paid', 'accepted', 'preparing', 'ready', 'picked_up'];
-const seenStatus = {};
+// ======================= C08 / C09 訂單：整張取餐券 =======================
 export async function orderStatusPage({ oid }) {
   const o = await api.getOrder(oid);
-  const prev = seenStatus[oid];
-  seenStatus[oid] = o.status;
-  if (prev && prev !== 'ready' && o.status === 'ready') toast(t('order.ready_toast'));
-  if (!['picked_up', 'cancelled'].includes(o.status)) poll(rerender, 3000);
+  const was = lastStatus[o.id];
+  const snapping = changed(o);
+  if (was && was !== 'ready' && o.status === 'ready') toast(t('order.ready_toast'));
+  const live = !['picked_up', 'cancelled'].includes(o.status);
+  if (live) poll(idleRerender, 3000);
 
-  const ready = o.status === 'ready';
-  const cancelled = o.status === 'cancelled';
-  const finished = o.status === 'picked_up' || cancelled;
+  const unpaid = o.status === 'pending_payment' && !o.payment_method;
   const when = Object.fromEntries(o.status_history.map((h) => [h.status, h.at]));
-  const cur = o.status === 'pending_payment' ? 0 : STEPS.indexOf(o.status);
-  const steps = STEPS.map((s, i) => {
-    let state = i < cur ? 'done' : i === cur ? 'current' : 'todo';
-    if (o.status === 'picked_up') state = 'done';
-    let time = when[s] ? hhmm(when[s]) : '';
-    if (s === 'paid' && o.payment_method === 'cash_on_pickup') time = '';
-    if (s === 'ready' && !when.ready) time = hhmm(o.estimated_ready_at);
-    const label = s === 'paid' && o.payment_method === 'cash_on_pickup' ? t('order.pay_at_pickup') : t('step.' + s);
-    return `<li class="is-${state}"${state === 'current' ? ' aria-current="step"' : ''}><span class="fig">${esc(time) || '&nbsp;'}</span><span class="log__label">${esc(label)}</span></li>`;
-  }).join('');
-
-  const eta = ready ? t('order.ready_at', { time: hhmm(when.ready || o.estimated_ready_at) })
-    : finished ? '' : t('order.ready_around', { time: hhmm(o.estimated_ready_at) });
-  const sub = ready ? t('order.hold') : finished ? '' : t('order.queue_ahead', { n: o.queue_ahead });
-  return phone(`${C.TopBar({ title: t('order.title'), back: true })}
+  const eta = [t('order.ready_around', { time: hhmm(o.estimated_ready_at) }), o.queue_ahead ? t('order.queue_ahead', { n: o.queue_ahead }) : ''].filter(Boolean).join(' · ');
+  const msg = o.status === 'ready' ? `<p class="msg msg--ready" role="status">${esc(t('order.ready_alert', { place: o.restaurant_location }))}</p><p class="upd">${esc(t('order.ready_at', { time: hhmm(when.ready || o.estimated_ready_at) }))} · ${esc(t('order.hold'))}</p>`
+    : o.status === 'cancelled' ? `<p class="msg msg--cancel">${esc(t('pass.cancel_msg'))}</p>`
+    : o.status === 'picked_up' ? `<p class="msg">${esc(t('pass.picked_msg'))}</p>`
+    : unpaid ? `<p class="msg">${esc(t('pass.unpaid_msg'))}</p>`
+    : `<p class="msg">${esc(t('pass.show'))}</p><p class="upd">${esc(eta)}</p>`;
+  const dock = unpaid ? C.Cta({ label: t('orders.pay_now'), href: `pay-${o.id}` })
+    : o.status === 'cancelled' && o.restaurant_id ? C.Cta({ label: t('pass.back_to_stall'), href: `r-${o.restaurant_id}` }) : '';
+  return phone(`${C.TopBar({ title: o.restaurant_name, back: true })}
     <main class="main">
-      ${ready ? `<p class="band band--ready" role="status">${esc(t('order.ready_alert', { place: o.restaurant_location }))}</p>` : ''}
-      ${ticket(o, { state: t('status.' + o.status), eta, sub, done: finished })}
-      ${cancelled ? '' : `<section class="stack stack--tight"><h2 class="section-title">${esc(t('order.progress'))}</h2><ol class="log">${steps}</ol></section>`}
-      <section class="stack stack--tight">
-        <h2 class="section-title">${esc(t('order.items'))}</h2>
-        <dl class="facts">
-          ${o.items.map((i) => `<dt class="fig">×${esc(i.qty)}</dt><dd>${esc(i.name)}${i.options_label ? `<span class="muted">${esc(t('fmt.paren', { x: i.options_label }))}</span>` : ''}</dd>`).join('')}
-          <dt>${esc(t('cart.total'))}</dt><dd class="fig-strong">${money(o.total)}</dd>
-          <dt>${esc(t('order.payment'))}</dt><dd>${esc(C.paymentText(o))}</dd>
-        </dl>
-      </section>
-    </main>`);
+      <div class="passwrap">
+        ${C.Pass(o, { mode: 'full', extra: passLines(o), snapping })}
+        ${msg}
+        ${live ? `<p class="upd num">${esc(t('pass.updated', { time: C.hhmmss() }))}</p>` : ''}
+      </div>
+    </main>
+    ${dock ? `<div class="dock">${dock}</div>` : ''}`);
 }
 
 // ======================= C10 我的訂單 =======================
-const ACTIVE = ['pending_payment', 'paid', 'accepted', 'preparing', 'ready'];
 export async function ordersPage() {
   const orders = await api.listMyOrders();
   const active = orders.filter((o) => ACTIVE.includes(o.status));
   const past = orders.filter((o) => !ACTIVE.includes(o.status));
-  if (active.length) poll(rerender, 5000);
-  const row = (o) => {
-    const unpaid = o.status === 'pending_payment' && !o.payment_method;
-    const btn = unpaid
-      ? C.Button({ label: t('orders.pay_now'), style: 'primary', size: 'sm', action: 'go', data: { to: `pay-${o.id}` } })
-      : ACTIVE.includes(o.status)
-        ? C.Button({ label: t('orders.track'), size: 'sm', action: 'go', data: { to: `order-${o.id}` } })
-        : C.Button({ label: t('orders.reorder'), size: 'sm', action: 'reorder', data: { id: o.id } });
-    return `<li class="order-row">
-      <span class="order-row__name">${esc(o.restaurant_name)}</span>${C.statusWord(o.status)}
-      <span class="order-row__meta fig">${esc(o.pickup_number)}&emsp;${C.mmdd(o.created_at)} ${hhmm(o.created_at)}</span>
-      <span class="order-row__items">${esc(C.itemsSummary(o.items, t('fmt.list_sep')))}</span>
-      <div class="order-row__foot"><span class="fig-strong">${money(o.total)}</span>${btn}</div>
+  C.navState.activeOrders = active.length;
+  if (active.length) poll(idleRerender, 5000);
+  if (!orders.length) {
+    return phone(`${C.TopBar({ title: t('nav.orders') })}
+      <main class="main"><div class="empty">${esc(t('orders.empty'))}<br><a class="textlink" href="#home">${esc(t('cart.browse'))}</a></div></main>
+      ${C.BottomNav({ active: 'orders' })}`);
+  }
+  const hist = (o) => `<li class="hist">
+      <span class="code">${esc(o.pickup_number)}</span>
+      <a class="nm" href="#order-${esc(o.id)}">${esc(o.restaurant_name)}</a>
+      <span class="r"><b>${money(o.total)}</b><span${o.status === 'cancelled' ? ' class="x"' : ''}>${esc(t('pass.st.' + o.status))}</span></span>
+      <span class="mt num">${C.mmdd(o.created_at)} · ${hhmm(o.created_at)}</span>
+      <span class="its">${esc(C.itemsSummary(o.items, t('fmt.list_sep')))}</span>
+      <button type="button" class="lnk" data-action="reorder" data-id="${esc(o.id)}">${esc(t('orders.reorder'))}</button>
     </li>`;
-  };
-  const block = (title, list, none) => `<section class="stack stack--tight">
-      <h2 class="section-title">${esc(title)}<span class="fig">${list.length}</span></h2>
-      ${list.length ? `<ul class="orders">${list.map(row).join('')}</ul>` : `<p class="empty">${esc(none)}</p>`}
-    </section>`;
   return phone(`${C.TopBar({ title: t('nav.orders') })}
     <main class="main">
-      ${block(t('orders.active'), active, t('orders.none_active'))}
-      ${block(t('orders.past'), past, t('orders.none_past'))}
+      <div class="sec"><h2>${esc(t('orders.active'))}</h2></div>
+      ${active.length ? `<div class="stack">${active.map(miniPass).join('')}</div>` : `<p class="quiet">${esc(t('orders.none_active'))}</p>`}
+      <div class="sec"><h2>${esc(t('orders.past'))}</h2>${past.length ? `<span class="aside num">${past.length}</span>` : ''}</div>
+      ${past.length ? `<ul class="histlist">${past.map(hist).join('')}</ul>` : `<p class="quiet">${esc(t('orders.none_past'))}</p>`}
     </main>
     ${C.BottomNav({ active: 'orders' })}`);
 }
@@ -465,26 +490,29 @@ actions.reorder = async (d) => {
   navigate('cart');
 };
 
-// ======================= C11 我的 =======================
+// ======================= C11 我的帳號 =======================
 export async function profilePage() {
   const me = await api.me();
   const staff = me.role === 'staff' || me.role === 'admin';
-  return phone(`${C.TopBar({ title: t('nav.profile') })}
-    <main class="main me">
-      <section class="stack stack--tight">
-        <h1>${esc(me.name)}</h1>
-        <dl class="facts">
-          <dt>${esc(t('profile.student_id'))}</dt><dd class="fig">${esc(me.student_id)}</dd>
-          ${me.department ? `<dt>${esc(t('profile.dept'))}</dt><dd>${esc(me.department)}</dd>` : ''}
-          ${me.email ? `<dt>${esc(t('profile.email'))}</dt><dd>${esc(me.email)}</dd>` : ''}
-          ${me.phone_number ? `<dt>${esc(t('profile.phone'))}</dt><dd class="fig">${esc(me.phone_number)}</dd>` : ''}
-        </dl>
+  const fields = [
+    me.email && [t('profile.email'), me.email, ''],
+    me.phone_number && [t('profile.phone'), me.phone_number, 'num'],
+    me.department && [t('profile.dept'), me.department, ''],
+  ].filter(Boolean);
+  return phone(`${C.TopBar({ title: t('profile.title') })}
+    <main class="main">
+      <section class="idcard" aria-label="${esc(t('profile.student_id'))} ${esc(me.student_id)}">
+        <div class="top"><span class="lab">${esc(t('profile.student_id'))}</span><span class="lab">${esc(t('profile.role'))}</span>
+          <span class="code">${esc(me.student_id)}</span><div class="stat"><b>${esc(t('profile.role.' + me.role))}</b></div></div>
+        ${fields.length ? `<div class="perf"></div><dl class="fields">${fields.map(([k, v, cls]) => `<div><dt class="lab">${esc(k)}</dt><dd${cls ? ` class="${cls}"` : ''}>${esc(v)}</dd></div>`).join('')}</dl>` : ''}
       </section>
-      <ul class="rows">
-        <li><span>${esc(t('lang.switch'))}</span>${C.LangSwitch()}</li>
-        ${staff ? `<li><a href="#${homeOf(me.role)}"><span>${esc(t('profile.dashboard'))}</span><span class="muted" aria-hidden="true">›</span></a></li>` : ''}
-      </ul>
-      <div>${C.Button({ label: t('profile.logout'), action: 'logout' })}</div>
+      <div class="sec"><h2>${esc(t('profile.settings'))}</h2></div>
+      <div class="acct">
+        <div class="setrow"><span class="oi">${icon('lang')}</span><span class="tx"><b>${esc(t('lang.name'))}</b><small>${esc(t('lang.current'))}</small></span>${C.LangSwitch({ light: true })}</div>
+        ${me.role === 'admin' ? '' : `<button type="button" class="setrow navrow" data-action="tour-replay"><span class="oi">${icon('info')}</span><span class="tx"><b>${esc(t('tour.replay'))}</b><small>${esc(t('tour.replay_sub'))}</small></span><span class="chev">${icon('chev')}</span></button>`}
+        ${staff ? `<a class="setrow navrow" href="#${homeOf(me.role)}"><span class="oi">${icon('store')}</span><span class="tx"><b>${esc(t('profile.dashboard'))}</b></span><span class="chev">${icon('chev')}</span></a>` : ''}
+      </div>
+      <button type="button" class="signout" data-action="logout">${esc(t('profile.logout'))}</button>
     </main>
     ${C.BottomNav({ active: 'profile' })}`);
 }
