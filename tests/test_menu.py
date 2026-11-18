@@ -113,6 +113,7 @@ def test_staff_can_create_update_and_delete(
         "price": 120,
         "prep_minutes": 5,
         "is_available": True,
+        "image_url": None,
     }
 
     # PATCH changes only what is sent

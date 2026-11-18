@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey, String, Text
+from sqlalchemy import ForeignKey, String, Text, true
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
@@ -20,7 +20,11 @@ class Vendor(Base):
     opening_hours_en: Mapped[str] = mapped_column(String(100))
     location_zh: Mapped[str] = mapped_column(String(100))
     location_en: Mapped[str] = mapped_column(String(100))
-    is_accepting_orders: Mapped[bool] = mapped_column(default=True)
+    is_accepting_orders: Mapped[bool] = mapped_column(
+        default=True, server_default=true()
+    )
+    # Photo for the vendor card; a path under the frontend (e.g. /img/...) or a URL
+    image_url: Mapped[str | None] = mapped_column(String(500))
 
     @property
     def name(self) -> dict[str, str]:
@@ -51,6 +55,7 @@ class MenuItem(Base):
     price: Mapped[int] = mapped_column()
     prep_minutes: Mapped[int] = mapped_column()
     is_available: Mapped[bool] = mapped_column(default=True)
+    image_url: Mapped[str | None] = mapped_column(String(500))
 
     @property
     def item_name(self) -> dict[str, str]:

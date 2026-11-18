@@ -40,6 +40,7 @@ def test_staff_registers_their_vendor(
         "opening_hours": {"zh": "", "en": ""},
         "location": {"zh": "綜二館 1F", "en": "General Building II 1F"},
         "is_accepting_orders": True,
+        "image_url": None,
     }
 
     # The account is now linked to it

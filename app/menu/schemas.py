@@ -9,6 +9,8 @@ Name = Annotated[
 ShortText = Annotated[str, StringConstraints(strip_whitespace=True, max_length=100)]
 Price = Annotated[int, Field(ge=0, le=100_000)]  # NT dollars, whole numbers
 Minutes = Annotated[int, Field(ge=0, le=180)]
+# Same 500-character limit as the image_url columns
+ImageUrl = Annotated[str, StringConstraints(strip_whitespace=True, max_length=500)]
 
 # The same text in both languages, as returned by the API
 Localized = dict[str, str]
@@ -25,6 +27,7 @@ class VendorCreate(BaseModel):
     location_zh: ShortText = ""
     location_en: ShortText = ""
     is_accepting_orders: bool = True
+    image_url: ImageUrl | None = None
 
 
 class VendorUpdate(BaseModel):
@@ -39,6 +42,7 @@ class VendorUpdate(BaseModel):
     location_zh: ShortText | None = None
     location_en: ShortText | None = None
     is_accepting_orders: bool | None = None
+    image_url: ImageUrl | None = None
 
 
 class VendorRead(BaseModel):
@@ -50,6 +54,7 @@ class VendorRead(BaseModel):
     opening_hours: Localized
     location: Localized
     is_accepting_orders: bool
+    image_url: str | None
 
 
 # ---------- Menu items ----------
@@ -62,6 +67,7 @@ class MenuItemCreate(BaseModel):
     price: Price
     prep_minutes: Minutes
     is_available: bool = True
+    image_url: ImageUrl | None = None
 
 
 class MenuItemUpdate(BaseModel):
@@ -75,6 +81,7 @@ class MenuItemUpdate(BaseModel):
     price: Price | None = None
     prep_minutes: Minutes | None = None
     is_available: bool | None = None
+    image_url: ImageUrl | None = None
 
 
 class MenuItemRead(BaseModel):
@@ -87,3 +94,4 @@ class MenuItemRead(BaseModel):
     price: int
     prep_minutes: int
     is_available: bool
+    image_url: str | None
