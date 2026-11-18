@@ -33,12 +33,16 @@ def create_order(session: Session, user: User, data: OrderCreate) -> Order:
         if menu_item is None:
             raise NotFoundError(f"Menu item {item_id} does not exist")
         if not menu_item.is_available:
-            raise ConflictError(f"'{menu_item.item_name}' is not available right now")
-    if len({m.vendor for m in menu_items.values()}) > 1:
+            raise ConflictError(
+                f"'{menu_item.item_name_zh}' is not available right now"
+            )
+    if len({m.vendor_id for m in menu_items.values()}) > 1:
         raise BadRequestError("An order can only contain items from one vendor")
 
     order = Order(
         created_by=user.student_id,
+        # every item has the same vendor (checked just above)
+        vendor_id=next(iter(menu_items.values())).vendor_id,
         items=[
             # unit_price is copied now so later menu price changes do not alter this order
             OrderItem(
@@ -117,6 +121,8 @@ def to_read(session: Session, orders: Sequence[Order]) -> list[OrderRead]:
     """Builds the API response, adding item names, vendor and totals from the menu."""
     item_ids = {item.item_id for order in orders for item in order.items}
     menu_items = {m.id: m for m in menu_repo.get_many(session, item_ids)}
+    vendor_ids = {order.vendor_id for order in orders}
+    vendors = {v.id: v for v in menu_repo.get_vendors(session, vendor_ids)}
 
     result = []
     for order in orders:
@@ -137,8 +143,8 @@ def to_read(session: Session, orders: Sequence[Order]) -> list[OrderRead]:
                 status=order.status,
                 created_at=order.created_at,
                 created_by=order.created_by,
-                # one order = one vendor (checked in create_order)
-                vendor=menu_items[order.items[0].item_id].vendor if order.items else "",
+                vendor_id=order.vendor_id,
+                vendor_name=vendors[order.vendor_id].name,
                 items=lines,
                 total=sum(line.subtotal for line in lines),
             )

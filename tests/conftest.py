@@ -12,6 +12,8 @@ from app.auth.service import register_user
 from app.auth.states import UserRole
 from app.core.config import Settings
 from app.main import create_app
+from app.menu.models import Vendor
+from app.menu.schemas import VendorCreate
 
 # Same database the migrations ran on: CI sets DATABASE_URL, locally it is the
 # docker-compose one. Run `uv run alembic upgrade head` first so the tables exist.
@@ -74,5 +76,23 @@ def auth_headers(
                 role=role,
             )
         return {"Authorization": f"Bearer {create_access_token(user.id, settings)}"}
+
+    return make
+
+
+# Creates a vendor and returns its id. There is no API for adding vendors yet,
+# so tests (like the seed script) insert them directly.
+@pytest.fixture
+def make_vendor(client: TestClient) -> Callable[..., int]:
+    def make(name_en: str, name_zh: str | None = None, **fields: object) -> int:
+        with client.app.state.session_factory() as session:  # type: ignore[attr-defined]
+            vendor = Vendor(
+                **VendorCreate(
+                    name_zh=name_zh or name_en, name_en=name_en, **fields
+                ).model_dump()
+            )
+            session.add(vendor)
+            session.commit()
+            return vendor.id
 
     return make

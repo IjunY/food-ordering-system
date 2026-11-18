@@ -22,7 +22,7 @@ class OrderStatusUpdate(BaseModel):
 class OrderItemRead(BaseModel):
     id: int
     item_id: int
-    item_name: str
+    item_name: dict[str, str]
     quantity: int
     unit_price: int  # price at the time of ordering
     subtotal: int
@@ -33,6 +33,7 @@ class OrderRead(BaseModel):
     status: OrderStatus
     created_at: datetime
     created_by: str  # student_id of the customer
-    vendor: str
+    vendor_id: int
+    vendor_name: dict[str, str]  # {"zh": ..., "en": ...}
     items: list[OrderItemRead]
     total: int

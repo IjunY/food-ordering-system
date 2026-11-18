@@ -6,9 +6,15 @@ from sqlalchemy import delete, func, select
 
 from app.auth.models import User
 from app.auth.states import UserRole
-from app.menu.models import MenuItem
-from app.menu.schemas import MenuItemCreate
-from scripts.seed_demo import DEMO_ACCOUNTS, MENU_FILE, seed_accounts, seed_menu
+from app.menu.models import MenuItem, Vendor
+from app.menu.schemas import MenuItemCreate, VendorCreate
+from scripts.seed_demo import (
+    DEMO_ACCOUNTS,
+    MENU_FILE,
+    seed_accounts,
+    seed_menu,
+    seed_vendors,
+)
 
 
 def test_health(client: TestClient) -> None:
@@ -30,16 +36,32 @@ def test_frontend_is_served_at_root(client: TestClient) -> None:
 
 
 def test_demo_menu_file_is_valid() -> None:
-    rows = json.loads(Path(MENU_FILE).read_text(encoding="utf-8"))
-    assert rows, "demo_menu.json should not be empty"
-    for row in rows:
-        MenuItemCreate.model_validate(row)
+    demo = json.loads(Path(MENU_FILE).read_text(encoding="utf-8"))
+    assert demo["vendors"], "demo_menu.json should list vendors"
+    assert demo["items"], "demo_menu.json should list menu items"
+    vendor_names = set()
+    for row in demo["vendors"]:
+        vendor_names.add(VendorCreate.model_validate(row).name_zh)
+    for row in demo["items"]:
+        # items name their vendor; the seed script swaps that for the vendor's id
+        assert row["vendor"] in vendor_names, row
+        fields = {key: value for key, value in row.items() if key != "vendor"}
+        MenuItemCreate.model_validate({**fields, "vendor_id": 1})
 
 
 def test_seed_is_idempotent(client: TestClient) -> None:
-    rows = [
-        {"vendor": "Seed Test Vendor", "item_name": "A", "price": 10},
-        {"vendor": "Seed Test Vendor", "item_name": "B", "price": 20},
+    vendors = [{"name_zh": "種子測試店", "name_en": "Seed Test Vendor"}]
+    items = [
+        {
+            "vendor": "種子測試店",
+            "item_name_zh": name_zh,
+            "item_name_en": name_en,
+            "category_zh": "主餐",
+            "category_en": "Mains",
+            "price": price,
+            "prep_minutes": 5,
+        }
+        for name_zh, name_en, price in (("甲", "A", 10), ("乙", "B", 20))
     ]
     demo_ids = [student_id for student_id, _ in DEMO_ACCOUNTS]
 
@@ -49,16 +71,19 @@ def test_seed_is_idempotent(client: TestClient) -> None:
         session.execute(delete(User).where(User.student_id.in_(demo_ids)))
         session.commit()
 
-        assert seed_menu(session, rows) == 2
+        assert seed_vendors(session, vendors) == 1
+        assert seed_menu(session, items) == 2
         assert seed_accounts(session, "demo-password-1") == 3
         # running again adds nothing
-        assert seed_menu(session, rows) == 0
+        assert seed_vendors(session, vendors) == 0
+        assert seed_menu(session, items) == 0
         assert seed_accounts(session, "demo-password-1") == 0
 
         vendor_rows = session.scalar(
             select(func.count())
             .select_from(MenuItem)
-            .where(MenuItem.vendor == "Seed Test Vendor")
+            .join(Vendor, MenuItem.vendor_id == Vendor.id)
+            .where(Vendor.name_en == "Seed Test Vendor")
         )
         assert vendor_rows == 2
         roles = dict(
