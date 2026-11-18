@@ -55,11 +55,24 @@ def other_customer(auth_headers: Headers) -> dict[str, str]:
 
 
 @pytest.fixture
-def order(client: TestClient, staff: dict[str, str], customer: dict[str, str]) -> dict:
+def order(
+    client: TestClient,
+    staff: dict[str, str],
+    customer: dict[str, str],
+    make_vendor: Callable[..., int],
+) -> dict:
     """一張 customer 下的訂單：兩個 80 元的便當，總共 160 元。"""
     item = client.post(
         "/api/menu-items",
-        json={"vendor": "Test Bento", "item_name": "Chicken Bento", "price": 80},
+        json={
+            "vendor_id": make_vendor("Test Bento", "測試便當"),
+            "item_name_zh": "雞腿便當",
+            "item_name_en": "Chicken Bento",
+            "category_zh": "便當",
+            "category_en": "Bento",
+            "price": 80,
+            "prep_minutes": 5,
+        },
         headers=staff,
     )
     assert item.status_code == 201, item.text

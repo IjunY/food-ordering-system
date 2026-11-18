@@ -1,7 +1,7 @@
 """create payments table
 
 Revision ID: 79476f52b809
-Revises: 98a9c9588462
+Revises: 62059638ead6
 Create Date: 2026-11-16 16:39:59.870959
 
 """
@@ -13,7 +13,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "79476f52b809"
-down_revision: str | Sequence[str] | None = "98a9c9588462"
+down_revision: str | Sequence[str] | None = "62059638ead6"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
