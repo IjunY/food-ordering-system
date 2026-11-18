@@ -23,7 +23,7 @@ htmlcov/
 .impeccable/questions/
 .impeccable/mocks/
 **/skills/impeccable/scripts/.impeccable/
-.claude/skills/impeccable/scripts/bin/darwin-arm64/impeccable/
 
+.claude/
 *.swp
 
