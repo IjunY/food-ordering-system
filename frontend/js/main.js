@@ -5,6 +5,7 @@ import { USE_MOCK } from './api.js';
 import { resetMockDb, login } from './mock/api.js';
 import * as P from './pages/customer.js';
 import * as A from './pages/admin.js';
+import './tour.js'; // 使用教學：登入後第一次使用時帶一遍
 
 // 路由表：畫面編號對應 Figma
 addRoute('login', P.loginPage, { public: true });           // C01
