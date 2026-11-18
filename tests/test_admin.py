@@ -1,4 +1,4 @@
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 
 import pytest
 from fastapi.testclient import TestClient
@@ -96,3 +96,100 @@ def test_deleting_users_keeps_the_table_consistent(session: Session) -> None:
     session.execute(delete(User).where(User.id == grantee_id))
     session.commit()
     assert session.scalar(select(Admin).where(Admin.user_id == grantee_id)) is None
+
+
+# ---------- admins create vendor staff accounts ----------
+NEW_STAFF = {
+    "student_id": "staff01",
+    "email": "Staff01@Example.com",
+    "phone_number": "0912345678",
+    "password": "first-password-123",
+}
+
+
+def test_admin_creates_a_staff_account_that_can_set_up_its_vendor(
+    client: TestClient, auth_headers: Callable[..., dict[str, str]]
+) -> None:
+    admin = auth_headers("admin01", UserRole.ADMIN)
+
+    created = client.post("/api/admin/staff", json=NEW_STAFF, headers=admin)
+    assert created.status_code == 201, created.text
+    staff = created.json()
+    assert staff["role"] == "staff"
+    assert staff["student_id"] == "staff01"
+    assert staff["email"] == "staff01@example.com"  # lower-cased, like sign-up
+    assert staff["vendor_id"] is None
+    assert "password" not in staff and "password_hash" not in staff
+
+    # The admin can see it in the staff list (which may hold seeded accounts too)
+    def listed() -> dict[str, dict]:
+        rows = client.get("/api/admin/staff", headers=admin).json()
+        return {row["student_id"]: row for row in rows}
+
+    assert listed()["staff01"] == staff
+    assert all(row["role"] == "staff" for row in listed().values())
+
+    # The new account signs in with the password the admin chose ...
+    login = client.post(
+        "/api/auth/login",
+        json={"student_id": "staff01", "password": NEW_STAFF["password"]},
+    )
+    assert login.status_code == 200
+    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+    # ... and registers its vendor
+    vendor = client.post(
+        "/api/vendors",
+        json={"name_zh": "測試便當", "name_en": "Test Bento"},
+        headers=headers,
+    )
+    assert vendor.status_code == 201, vendor.text
+    assert listed()["staff01"]["vendor_id"] == vendor.json()["id"]
+
+
+def test_staff_account_rules(
+    client: TestClient, auth_headers: Callable[..., dict[str, str]]
+) -> None:
+    admin = auth_headers("admin01", UserRole.ADMIN)
+    assert client.post(
+        "/api/admin/staff", json=NEW_STAFF, headers=admin
+    ).status_code == (201)
+
+    # Same uniqueness rules as sign-up
+    assert client.post(
+        "/api/admin/staff", json=NEW_STAFF, headers=admin
+    ).status_code == (409)
+    same_email = {**NEW_STAFF, "student_id": "staff02"}
+    assert (
+        client.post("/api/admin/staff", json=same_email, headers=admin).status_code
+        == 409
+    )
+    # ... and the same validation
+    for bad in ({"password": "short"}, {"email": "nope"}, {"student_id": "a b"}):
+        response = client.post(
+            "/api/admin/staff", json={**NEW_STAFF, **bad}, headers=admin
+        )
+        assert response.status_code == 422, bad
+
+    # The role is fixed: a request cannot ask for an admin account
+    sneaky = {**NEW_STAFF, "student_id": "staff03", "email": "s3@example.com"}
+    made = client.post(
+        "/api/admin/staff", json={**sneaky, "role": "admin"}, headers=admin
+    )
+    assert made.status_code == 201
+    assert made.json()["role"] == "staff"
+
+
+def test_only_admins_manage_staff_accounts(
+    client: TestClient, auth_headers: Callable[..., dict[str, str]]
+) -> None:
+    staff = auth_headers("staff09", UserRole.STAFF)
+    customer = auth_headers("990000001")
+
+    assert client.post("/api/admin/staff", json=NEW_STAFF).status_code == 401
+    assert client.get("/api/admin/staff").status_code == 401
+    for headers in (staff, customer):
+        assert (
+            client.post("/api/admin/staff", json=NEW_STAFF, headers=headers).status_code
+            == 403
+        )
+        assert client.get("/api/admin/staff", headers=headers).status_code == 403

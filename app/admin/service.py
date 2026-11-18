@@ -1,9 +1,13 @@
+from collections.abc import Sequence
+
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.admin import repo
 from app.admin.models import Admin
+from app.admin.schemas import StaffCreate
 from app.auth.models import User
+from app.auth.service import register_user
 from app.auth.states import UserRole
 from app.core.errors import ConflictError
 
@@ -30,3 +34,15 @@ def grant_admin(
         session.rollback()
         raise ConflictError("This user is already an admin") from exc
     return admin
+
+
+def create_staff(session: Session, data: StaffCreate) -> User:
+    """Creates a vendor staff account (no vendor yet; the staff registers it).
+
+    Duplicate student IDs or emails raise the same 409 as customer sign-up.
+    """
+    return register_user(session, data, role=UserRole.STAFF)
+
+
+def list_staff(session: Session) -> Sequence[User]:
+    return repo.list_staff(session)

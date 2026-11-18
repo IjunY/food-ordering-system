@@ -51,3 +51,6 @@ def require_roles(*roles: UserRole) -> Callable[[User], User]:
 # Vendor staff only. Admins can monitor (read everything) but not change vendors,
 # menus or orders, so they are deliberately not let through here.
 StaffUser = Annotated[User, Depends(require_roles(UserRole.STAFF))]
+
+# Platform admins: read-only monitoring, plus creating vendor staff accounts
+AdminUser = Annotated[User, Depends(require_roles(UserRole.ADMIN))]
