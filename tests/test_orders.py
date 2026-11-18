@@ -176,6 +176,36 @@ def test_order_rules(
     assert client.get("/api/orders", headers=customer).json() == []
 
 
+def test_cannot_order_from_a_vendor_that_is_not_taking_orders(
+    client: TestClient,
+    customer: dict[str, str],
+    staff: dict[str, str],
+    vendors: dict[str, int],
+    menu: dict[str, int],
+) -> None:
+    def switch(on: bool) -> None:
+        response = client.patch(
+            f"/api/vendors/{vendors['noodles']}",
+            json={"is_accepting_orders": on},
+            headers=staff,
+        )
+        assert response.status_code == 200, response.text
+
+    switch(False)
+    response = client.post(
+        "/api/orders",
+        json={"items": [{"item_id": menu["noodles"], "quantity": 1}]},
+        headers=customer,
+    )
+    assert response.status_code == 409
+    assert client.get("/api/orders", headers=customer).json() == []
+    # other vendors are not affected
+    place(client, customer, (menu["tea"], 1))
+
+    switch(True)
+    place(client, customer, (menu["noodles"], 1))
+
+
 def test_client_cannot_set_the_price(
     client: TestClient, customer: dict[str, str], menu: dict[str, int]
 ) -> None:

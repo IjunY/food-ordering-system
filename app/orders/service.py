@@ -52,11 +52,15 @@ def create_order(session: Session, user: User, data: OrderCreate) -> Order:
             )
     if len({m.vendor_id for m in menu_items.values()}) > 1:
         raise BadRequestError("An order can only contain items from one vendor")
+    # every item has the same vendor (checked just above)
+    vendor_id = next(iter(menu_items.values())).vendor_id
+    vendor = menu_repo.get_vendor(session, vendor_id)
+    if vendor is None or not vendor.is_accepting_orders:
+        raise ConflictError("This vendor is not taking orders right now")
 
     order = Order(
         created_by=user.student_id,
-        # every item has the same vendor (checked just above)
-        vendor_id=next(iter(menu_items.values())).vendor_id,
+        vendor_id=vendor_id,
         items=[
             # unit_price is copied now so later menu price changes do not alter this order
             OrderItem(
