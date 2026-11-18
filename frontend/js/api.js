@@ -4,17 +4,22 @@
 // - 有真後端（用 uvicorn 開，網址同一個）→ 登入、註冊、下單、訂單、店家接單看板走 js/real/api.js
 // - 沒有（直接開檔案、python -m http.server、claude.ai 上的示範頁）→ 全部用 js/mock/api.js 的假資料
 // 其餘功能（餐廳、菜單、等候時間、付款、店家設定、菜單管理、報表、平台管理）兩種情況都是假資料。
+//
+// 使用教學進行中（練習模式）時，下單、付款、訂單、接單看板一律走假資料：
+// 練習下的單不會送到真的店家，店家練習接單也不會改到真的訂單。
 import * as mock from './mock/api.js';
 import * as real from './real/api.js';
+import { inPractice } from './store.js';
 
 export const USE_MOCK = !(await real.isAvailable());
-const pick = (name) => (USE_MOCK ? mock[name] : real[name]);
+const pick = (name) => (USE_MOCK || inPractice() ? mock[name] : real[name]);
 
 export const api = {
   // auth（真後端）
-  login: (student_id, password) => pick('login')(student_id, password),
+  // 帳號不受練習模式影響，一律照有沒有真後端
+  login: (student_id, password) => (USE_MOCK ? mock : real).login(student_id, password),
   register: (data) => (USE_MOCK ? mock.login(data.student_id, data.password) : real.register(data)),
-  me: () => pick('getMe')(),
+  me: () => (USE_MOCK ? mock : real).getMe(),
 
   // menu（假資料：菜單畫面先沿用示範資料）
   listRestaurants: (params = {}) => mock.listRestaurants(params),

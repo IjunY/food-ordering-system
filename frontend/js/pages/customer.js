@@ -5,6 +5,7 @@ import { session, cart, cartCount, cartTotal, homeOf } from '../store.js';
 import { actions, forms, inputs, navigate, rerender, poll, toast, confirmDialog } from '../router.js';
 import { icon } from '../icons.js';
 import * as C from '../components.js';
+import { maybeStartTour } from '../tour.js';
 
 const { esc, money, unit, hhmm } = C;
 const phone = (inner) => `<div class="phone">${inner}</div>`;
@@ -63,6 +64,7 @@ forms.login = async (fd, form) => {
   if (!id) { toast(t('login.need_id')); form.querySelector('[name=student_id]')?.focus(); return; }
   const res = await api.login(id, fd.get('password'));
   session.set({ access_token: res.access_token, user: res.user });
+  await maybeStartTour(res.user); // 這個帳號第一次登入：開始使用教學
   navigate(homeOf(res.user.role));
 };
 
@@ -99,6 +101,7 @@ forms.register = async (fd, form) => {
   if (data.password.length < 8) { toast(t('register.short_password')); form.querySelector('[name=password]')?.focus(); return; }
   const res = await api.register(data);
   session.set({ access_token: res.access_token, user: res.user });
+  await maybeStartTour(res.user);
   navigate(homeOf(res.user.role));
 };
 
@@ -325,6 +328,7 @@ export async function cartPage() {
         </div>
         ${scheduled ? `<div class="slots" role="group" aria-label="${esc(t('cart.pick_slot'))}">${slots.map((s) => `<button type="button" class="slot num" aria-pressed="${s === checkout.pickup_time}" data-action="pickup-slot" data-time="${esc(s)}">${hhmm(s)}</button>`).join('')}</div>` : ''}
       </fieldset>
+      ${C.Note({ text: t('cart.mock_note') })}
     </main>
     <div class="dock">${C.Cta({ label: t('cart.checkout'), figure: money(total), action: 'checkout' })}</div>`);
 }
@@ -369,6 +373,7 @@ export async function payPage({ oid }) {
         <b>${money(o.total)}</b>
         <span class="mt">${esc(t('pay.order_meta', { no: o.pickup_number, name: o.restaurant_name }))}</span>
       </section>
+      ${C.Note({ text: t('pay.mock_note') })}
       <div class="sec"><h2>${esc(t('pay.choose'))}</h2></div>
       <div class="opts" role="radiogroup" aria-label="${esc(t('pay.choose'))}">
         ${list.map((m) => C.OptRow({ label: m.label, sub: m.hint, ic: METHOD_ICON[m.method] || 'wallet', selected: m.method === payState.method, action: 'pick-method', data: { method: m.method } })).join('')}
@@ -504,6 +509,7 @@ export async function profilePage() {
       <div class="sec"><h2>${esc(t('profile.settings'))}</h2></div>
       <div class="acct">
         <div class="setrow"><span class="oi">${icon('lang')}</span><span class="tx"><b>${esc(t('lang.name'))}</b><small>${esc(t('lang.current'))}</small></span>${C.LangSwitch({ light: true })}</div>
+        ${me.role === 'admin' ? '' : `<button type="button" class="setrow navrow" data-action="tour-replay"><span class="oi">${icon('info')}</span><span class="tx"><b>${esc(t('tour.replay'))}</b><small>${esc(t('tour.replay_sub'))}</small></span><span class="chev">${icon('chev')}</span></button>`}
         ${staff ? `<a class="setrow navrow" href="#${homeOf(me.role)}"><span class="oi">${icon('store')}</span><span class="tx"><b>${esc(t('profile.dashboard'))}</b></span><span class="chev">${icon('chev')}</span></a>` : ''}
       </div>
       <button type="button" class="signout" data-action="logout">${esc(t('profile.logout'))}</button>

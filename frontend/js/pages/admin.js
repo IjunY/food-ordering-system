@@ -16,7 +16,7 @@ async function layout(active, inner) {
     <header class="admin-bar">
       <div class="admin-bar__brand"><span class="wordmark">${esc(t('app.name'))}</span>${me.role === 'staff' && me.store_name ? `<span class="store">${esc(me.store_name)}</span>` : ''}</div>
       <nav class="admin-nav" aria-label="${esc(t('profile.dashboard'))}">${items.map(([k, key]) => `<a href="#admin-${k}"${k === active ? ' aria-current="page"' : ''}>${esc(t(key))}</a>`).join('')}</nav>
-      <div class="admin-bar__me"><span class="who">${esc(me.name)}</span>${C.LangSwitch()}<button type="button" class="barlink" data-action="logout">${esc(t('profile.logout'))}</button></div>
+      <div class="admin-bar__me"><span class="who">${esc(me.name)}</span>${C.LangSwitch()}${me.role === 'staff' ? `<button type="button" class="barlink" data-action="tour-replay">${esc(t('tour.replay_short'))}</button>` : ''}<button type="button" class="barlink" data-action="logout">${esc(t('profile.logout'))}</button></div>
     </header>
     <main class="admin-main">${inner}</main>
   </div>`;
