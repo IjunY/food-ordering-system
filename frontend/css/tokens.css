@@ -1,61 +1,78 @@
-/* 設計 token：Broadside 的紙與墨，改成收據紙＋清華紫重點色；中文用 Noto Sans TC，數字用 IBM Plex Mono（收據印字） */
+/* 設計 token：名稱與數值照根目錄的 DESIGN.md（The Purple Boarding Pass）。 */
 :root {
   color-scheme: light;
-  --space-3xs: 2px; --space-2xs: 4px; --space-xs: 8px; --space-sm: 12px; --space-md: 16px; --space-lg: 24px; --space-xl: 40px; --space-2xl: 64px; --space-3xl: 96px; --space-4xl: 144px;
-  --text-xs: 0.75rem; --text-sm: 0.875rem; --text-md: 1rem; --text-lg: 1.2rem; --text-xl: 1.44rem; --text-2xl: 1.728rem; --text-3xl: 2.074rem;
-  --text-display-s: 1.44rem; --text-display: 1.728rem; --text-section: 1.2rem; --text-title: 1rem; --text-lead: 1rem;
-  --text-ticket: 4.5rem;
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1); --ease-in: cubic-bezier(0.7, 0, 0.84, 0); --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-  --dur-micro: 120ms; --dur-short: 220ms; --dur-long: 420ms;
-  --container: 1440px; --gutter: 16px; --gap-columns: 24px;
+
+  /* 主色：外殼與主要動作 */
+  --nthu-purple: #5B2A86;
+  --purple-deep: #45206A;
+  --purple-tint: #F1EBF7;
+  --lavender: #D9C8EE;
+  --on-purple-soft: #EDE4F7;
+
+  /* 點綴：只用在取餐號字首與進度 */
+  --sun-yellow: #FFC23D;
+  --sun-ink: #3D2A00;
+
+  /* 狀態 */
+  --ready-green: #17703F;
+  --cancel-grey: #8A8395;
+  --alert-red: #B42828;
+  --red-deep: #962020;
+  --red-tint: #FBEDED;
+  --red-ink: #7E1C1C;
+  --success-tint: #E8F5EC;
+  --success-ink: #0F4D2A;
+
+  /* 中性 */
+  --lilac-ground: #FAF8FC;
+  --desk: #ECE7F2;
+  --card-white: #FFFFFF;
+  --ink: #1B1426;
+  --mute: #655E70;
+  --placeholder: #766E82;
+  --faint: #B3ABBD;
+  --hairline: #E6E1EC;
+  --field-stroke: #D5CDDF;
+  --control-off: #CFC6DA;
+  --fill: #F7F5FA;
+  --selected-ground: #FBF8FE;
+
+  /* 字：Archivo（壓窄）說數字、代碼、價格、小標；Noto Sans TC 說每一個字 */
+  --font-body: "Noto Sans TC", system-ui, sans-serif;
+  --font-num: "Archivo", "Noto Sans TC", sans-serif;
+
+  /* 圓角階梯 */
+  --r-tag: 4px;
+  --r-tag-lg: 5px;
+  --r-field: 6px;
+  --r-card: 8px;
+  --r-pill: 10px;
+  --r-pass: 14px;
+
+  /* 間距 */
+  --sp-xs: 6px;
+  --sp-sm: 10px;
+  --sp-md: 12px;
+  --sp-inset: 16px;
+  --gutter: 20px;
+  --sp-section: 28px;
+
+  /* 陰影：一律兩層，外層帶紫 */
+  --sh-card: 0 1px 2px rgba(27, 20, 38, .06), 0 4px 14px rgba(91, 42, 134, .08);
+  --sh-card-hover: 0 1px 2px rgba(27, 20, 38, .08), 0 8px 22px rgba(91, 42, 134, .16);
+  --sh-pass: 0 1px 2px rgba(27, 20, 38, .06), 0 6px 18px rgba(91, 42, 134, .10);
+  --sh-pass-hover: 0 1px 2px rgba(27, 20, 38, .08), 0 10px 24px rgba(91, 42, 134, .16);
+  --sh-overlap: 0 1px 2px rgba(27, 20, 38, .06), 0 8px 24px rgba(91, 42, 134, .12);
+  --sh-quiet: 0 1px 2px rgba(27, 20, 38, .06), 0 4px 14px rgba(91, 42, 134, .06);
+  --sh-halo: 0 0 0 3px var(--purple-tint);
+
+  /* 動態：狀態改變用兩格跳動，不淡入 */
+  --snap: 90ms steps(2, end);
+  --dur-micro: 120ms;
+
   --column-phone: 30rem;
-  --z-base: 1; --z-raised: 10; --z-dropdown: 100; --z-sticky: 200; --z-sticky-nav: 300; --z-modal: 400; --z-toast: 500; --z-tooltip: 600;
+  --container: 1440px;
+  --header-h: 64px;
 
-  /* 紙：暖白收據紙；墨：帶一點紫的近黑 */
-  --color-paper: oklch(96.5% 0.012 85);
-  --color-paper-2: oklch(93.5% 0.015 85);
-  --color-paper-3: oklch(90% 0.018 84);
-  --color-slip: oklch(98.5% 0.006 85);
-  --color-ink: oklch(20% 0.014 305);
-  --color-ink-2: oklch(32% 0.014 305);
-  --color-muted: oklch(46% 0.016 300);
-  --color-rule: oklch(82% 0.016 85);
-  --color-rule-strong: var(--color-ink);
-
-  /* 清華紫：只用在主要按鈕、選取中、取餐號碼與「可取餐」 */
-  --color-accent: oklch(40% 0.14 315);
-  --color-accent-ink: oklch(98% 0.006 85);
-  --color-accent-soft: oklch(93% 0.03 315);
-  --color-focus: oklch(42% 0.18 315);
-  --color-error: oklch(48% 0.17 27);
-
-  --font-body: "Noto Sans TC", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-display: var(--font-body);
-  --font-figure: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
-
-  --radius-card: 0; --radius-pill: 0;
-  --rule-hair: 1px; --rule-bar: 4px;
-  --display-weight: 700; --tracking-display: 0;
-}
-
-/* 深色：墨底、紙色字（衍生，不是反相） */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --color-paper: oklch(17% 0.01 305); --color-paper-2: oklch(21% 0.012 305); --color-paper-3: oklch(25% 0.014 305);
-    --color-slip: oklch(20% 0.011 305);
-    --color-ink: oklch(93% 0.014 85); --color-ink-2: oklch(84% 0.014 85); --color-muted: oklch(70% 0.014 300);
-    --color-rule: oklch(34% 0.012 305);
-    --color-accent: oklch(74% 0.11 315); --color-accent-ink: oklch(17% 0.01 305); --color-accent-soft: oklch(30% 0.05 315);
-    --color-focus: oklch(76% 0.13 315); --color-error: oklch(72% 0.14 27);
-  }
-}
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --color-paper: oklch(17% 0.01 305); --color-paper-2: oklch(21% 0.012 305); --color-paper-3: oklch(25% 0.014 305);
-  --color-slip: oklch(20% 0.011 305);
-  --color-ink: oklch(93% 0.014 85); --color-ink-2: oklch(84% 0.014 85); --color-muted: oklch(70% 0.014 300);
-  --color-rule: oklch(34% 0.012 305);
-  --color-accent: oklch(74% 0.11 315); --color-accent-ink: oklch(17% 0.01 305); --color-accent-soft: oklch(30% 0.05 315);
-  --color-focus: oklch(76% 0.13 315); --color-error: oklch(72% 0.14 27);
+  --z-sticky: 200; --z-sticky-nav: 300; --z-modal: 400; --z-toast: 500; --z-tooltip: 600;
 }

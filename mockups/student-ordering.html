@@ -1,0 +1,1155 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Student Ordering Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=Noto+Sans+TC:wght@100..900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --w:#FFFFFF; --pur:#5B2A86; --pur-ink:#45206A; --pur-tint:#F1EBF7;
+  --ink:#1B1426; --mute:#655E70; --faint:#B3ABBD; --rule:#E6E1EC; --fill:#F7F5FA;
+  --amb:#8F5E00; --amb-bar:#E0A100; --grn:#17703F; --red:#B42828; --red-tint:#FBEDED;
+  --desk:#ECE7F2; --lilac:#FAF8FC; --lav:#D9C8EE; --sun:#FFC23D; --sun-ink:#3D2A00;
+  --num:"Archivo","Noto Sans TC",system-ui,sans-serif;
+  --snap:90ms steps(2,end);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--desk);color:var(--ink);font:16px/1.45 "Noto Sans TC",system-ui,sans-serif;caret-color:var(--pur);min-height:100vh}
+::selection{background:var(--pur-tint);color:var(--pur-ink)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+button:disabled{cursor:not-allowed}
+:focus-visible{outline:2px solid var(--pur);outline-offset:2px;border-radius:3px}
+.num{font-family:var(--num);font-stretch:78%;font-variant-numeric:tabular-nums}
+.lab{font:700 11px/1.2 var(--num);letter-spacing:.16em;text-transform:uppercase;color:var(--mute)}
+.lab:lang(zh-Hant){letter-spacing:.04em;font-size:12px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.ico{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* stage */
+.stage{display:flex;gap:40px;justify-content:center;align-items:flex-start;padding:40px 24px}
+.device{width:390px;height:844px;border-radius:44px;background:var(--w);box-shadow:0 0 0 10px var(--ink),0 24px 60px rgba(27,20,38,.28);overflow:hidden;flex:none}
+.app{height:100%;display:flex;flex-direction:column;background:var(--lilac)}
+@media (max-width:899px){
+  .stage{flex-direction:column;align-items:stretch;padding:0;gap:0}
+  .device{width:100%;height:100dvh;border-radius:0;box-shadow:none}
+}
+
+/* chrome */
+.hdr{display:flex;align-items:center;gap:10px;padding:12px 16px 12px 20px;min-height:64px;flex:none;background:var(--pur);color:#fff}
+.hdr .back{width:44px;height:44px;margin-left:-12px;display:grid;place-items:center;border-radius:6px}
+.hdr .back:hover{background:rgba(255,255,255,.14)}
+.hdr :focus-visible{outline-color:#fff}
+.hdr .ttl{display:flex;align-items:baseline;gap:10px;flex:1;min-width:0}
+.hdr .ttl .no{font-weight:700;font-size:15px;color:#fff;border-radius:4px;padding:1px 7px;align-self:center;background:var(--sc,rgba(255,255,255,.2))}
+.hdr h1{font-size:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tog{display:flex;border:1px solid rgba(255,255,255,.45);border-radius:10px;overflow:hidden;flex:none}
+.tog button{font-size:13px;padding:0 12px;min-width:44px;height:32px;color:#EDE4F7}
+.tog button[aria-pressed=true]{background:#fff;color:var(--pur);font-weight:700}
+main{flex:1;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--rule) transparent}
+main::-webkit-scrollbar{width:6px}main::-webkit-scrollbar-thumb{background:var(--rule);border-radius:3px}
+.meta{padding:12px 20px 0;font-size:13px;color:var(--mute);display:flex;justify-content:space-between;gap:12px}
+.sample{font:700 11px var(--num);letter-spacing:.12em;color:var(--mute);white-space:nowrap}
+.sec{padding:28px 20px 10px;display:flex;justify-content:space-between;align-items:baseline}
+.sec h2{font-size:15px;font-weight:700}
+.sec span{font-size:13px;color:var(--mute)}
+.stack{display:grid;gap:10px;padding:0 20px}
+
+.tabbar{display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid var(--rule);background:var(--w);padding-bottom:env(safe-area-inset-bottom);flex:none}
+.tabbar button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 0 12px;font-size:12px;color:var(--mute);position:relative}
+.tabbar button[aria-current=page]{color:var(--pur);font-weight:700}
+.badge{position:absolute;top:5px;left:calc(50% + 8px);min-width:18px;height:18px;border-radius:5px;background:var(--sun);color:var(--sun-ink)!important;color:#fff;font:700 11px/18px var(--num);padding:0 5px}
+
+/* the pass */
+.pass{border:0;border-radius:14px;background:var(--w);display:block;width:100%;text-align:left;--bgp:var(--lilac);box-shadow:0 1px 2px rgba(27,20,38,.06),0 6px 18px rgba(91,42,134,.10);overflow:visible}
+button.pass:hover{box-shadow:0 1px 2px rgba(27,20,38,.08),0 10px 24px rgba(91,42,134,.16)}
+.pass .top{display:grid;grid-template-columns:1fr auto;gap:6px 16px;padding:14px 16px 16px;align-items:end;background:var(--band,var(--pur));color:#fff;border-radius:14px 14px 0 0;position:relative;overflow:hidden}
+.pass .top:after{content:"";position:absolute;right:-30px;top:-30px;width:120px;height:120px;border-radius:50%;border:18px solid rgba(255,255,255,.07);pointer-events:none}
+.pass .top .lab{color:var(--lav)}
+.pass .code{font:800 52px/0.9 var(--num);font-stretch:78%;color:#fff;letter-spacing:.01em}
+.pass .code .pfx{color:var(--sun)}
+.pass .stat{text-align:right}
+.pass .stat b{display:inline-block;font-size:17px;font-weight:700;line-height:1;padding:7px 12px;border-radius:10px;background:rgba(255,255,255,.16);color:#fff}
+.pass .stat small{display:block;font-size:13px;color:var(--lav);margin-top:6px}
+.perf{border-top:1px dashed #D5CDDF;position:relative;height:0}
+.perf:before,.perf:after{content:"";position:absolute;top:-9px;width:18px;height:18px;border-radius:50%;background:var(--bgp);border:1px solid var(--rule)}
+.perf:before{left:-10px;clip-path:inset(0 0 0 50%)}.perf:after{right:-10px;clip-path:inset(0 50% 0 0)}
+.legs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:10px 16px 13px}
+.legs i{display:block;height:4px;border-radius:2px;background:var(--rule)}
+.legs span{display:block;font-size:12px;color:var(--mute);margin-top:6px;white-space:nowrap}
+.legs .d i{background:var(--pur)}
+.legs .n span{color:var(--ink);font-weight:700}
+.s-confirming .legs .n i{background:var(--pur)}
+.s-preparing .legs .n i{background:var(--sun)}
+.s-ready .legs .n i,.s-ready .legs .d i{background:var(--grn)}
+.s-preparing .stat b{background:var(--sun);color:var(--sun-ink)}
+.s-ready{--band:var(--grn)}
+.s-ready .stat b{background:#fff;color:var(--grn)}
+.s-cancelled{--band:#8A8395}
+.s-cancelled .stat b{background:#fff;color:var(--red)}
+.s-cancelled .code .pfx{color:#fff}
+.s-cancelled .code{color:#E9E5EE;text-decoration:line-through;text-decoration-thickness:3px}
+.pass.mini .code{font-size:40px}
+.pass.mini .stat b{font-size:15px;padding:6px 10px}
+.snapping .stat b,.snapping .legs .n i,.snapping .legs .d i{animation:snap var(--snap)}
+@keyframes snap{0%{opacity:.3;transform:translateY(2px)}100%{opacity:1;transform:none}}
+
+/* stalls */
+.stall{display:grid;grid-template-columns:44px 1fr auto;gap:2px 14px;align-items:center;padding:14px 20px;border-bottom:1px solid var(--rule);width:100%;text-align:left;background:var(--w)}
+.stall:hover{background:var(--fill)}
+.stall .op b.on{color:var(--grn)}
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 20px 24px}
+.scard{background:var(--w);border-radius:8px;overflow:hidden;text-align:left;display:flex;flex-direction:column;box-shadow:0 1px 2px rgba(27,20,38,.06),0 4px 14px rgba(91,42,134,.08)}
+.scard:hover{box-shadow:0 1px 2px rgba(27,20,38,.08),0 8px 22px rgba(91,42,134,.16)}
+.scard .img{position:relative;aspect-ratio:4/3;background:color-mix(in srgb,var(--sc) 14%,#fff);display:grid;place-items:center;color:color-mix(in srgb,var(--sc) 70%,#fff)}
+.scard .img .ico{width:30px;height:30px;stroke-width:1.5}
+.scard .img .phl{position:absolute;bottom:8px;left:0;right:0;text-align:center;font-size:11px;color:color-mix(in srgb,var(--sc) 75%,#000)}
+.scard .tile{position:absolute;top:8px;left:8px;font:800 16px var(--num);font-stretch:78%;color:#fff;background:var(--sc);border-radius:5px;padding:3px 8px}
+.scard .body{padding:10px 12px 12px;display:grid;gap:2px}
+.scard .nm{font-size:16px;font-weight:700}
+.scard .mt{font-size:12px;color:var(--mute)}
+.scard .st{font-size:12px;font-weight:700;margin-top:4px;display:flex;justify-content:space-between;gap:6px}
+.scard .st .on{color:var(--grn)}
+.scard .st .off{color:var(--mute)}
+.scard .st .cartn{color:var(--pur)}
+.scard.closed .img{filter:grayscale(1);opacity:.7}
+.scard.closed .nm{color:var(--mute)}
+.stall .no{font:800 20px var(--num);font-stretch:78%;color:#fff;background:var(--sc);grid-row:span 2;width:44px;height:44px;border-radius:6px;display:grid;place-items:center}
+.stall .nm{font-size:17px;font-weight:500}
+.stall .mt{font-size:13px;color:var(--mute)}
+.stall .op{font-size:13px;grid-row:span 2;text-align:right;display:grid;gap:2px}
+.stall .op b{font-weight:500}
+.stall .cartn{color:var(--pur);font-weight:700}
+.stall.closed .nm{color:var(--mute)}
+.stall.closed .no{background:#B3ABBD}
+
+/* menu */
+.tabs{display:flex;gap:24px;padding:0 20px;border-bottom:1px solid var(--rule);position:sticky;top:0;background:var(--lilac);z-index:2;overflow-x:auto;scrollbar-width:none;margin-top:12px}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{padding:14px 0 11px;color:var(--mute);white-space:nowrap;font-size:15px}
+.tabs button[aria-current=true]{color:var(--pur);font-weight:700;box-shadow:inset 0 -3px 0 var(--pur)}
+.hero{position:relative}
+.hero .sample{position:absolute}
+.hero .on{color:var(--grn);font-weight:700}.hero .off{color:var(--mute);font-weight:700}
+.himg{position:relative;display:grid;place-items:center;aspect-ratio:16/9;background:color-mix(in srgb,var(--sc) 16%,#fff);color:color-mix(in srgb,var(--sc) 70%,#fff)}
+.himg .ico{width:36px;height:36px;stroke-width:1.5}
+.himg .phl{position:absolute;bottom:10px;left:0;right:0;text-align:center;font-size:12px;color:color-mix(in srgb,var(--sc) 75%,#000)}
+.hero.closed .himg{filter:grayscale(1);opacity:.75}
+.desc{font-size:15px;line-height:1.5}
+.hero .mt{font-size:13px;color:var(--mute);margin-top:4px}
+/* B: image + overlapping card */
+.hb{padding-bottom:4px}
+.hb .himg{aspect-ratio:auto;height:170px}
+.hb .himg .phl{bottom:auto;top:12px}
+.hb .hcard{position:relative;margin:-44px 16px 0;background:var(--w);border-radius:8px;padding:14px 16px 16px;box-shadow:0 1px 2px rgba(27,20,38,.06),0 6px 18px rgba(91,42,134,.12)}
+.hb .hrow{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.hb .tile{font-weight:800;font-size:16px;color:#fff;background:var(--sc);border-radius:5px;padding:3px 8px}
+.hb h2{font-size:20px}
+.hb .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.hb .chips span{font-size:12px;background:var(--pur-tint);color:var(--pur-ink);border-radius:10px;padding:4px 10px}
+.hb .chips span .on,.hb .chips span .off{font-weight:700}
+.hb .sample{right:16px;top:14px;position:absolute}
+.igrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:4px 20px 8px}
+.icard{background:var(--w);border-radius:8px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 1px 2px rgba(27,20,38,.06),0 4px 14px rgba(91,42,134,.08)}
+.iimg{position:relative;aspect-ratio:4/3;display:grid;place-items:center;background:color-mix(in srgb,var(--sc) 12%,#fff);color:color-mix(in srgb,var(--sc) 65%,#fff)}
+.iimg .ico{width:28px;height:28px;stroke-width:1.5}
+.iimg .phl{position:absolute;bottom:6px;left:0;right:0;text-align:center;font-size:11px;color:color-mix(in srgb,var(--sc) 75%,#000)}
+.iimg .sold{position:absolute;top:8px;left:8px;background:var(--ink);color:#fff;font-size:12px;font-weight:700;padding:3px 9px;border-radius:10px}
+.ibody{padding:10px 10px 10px 12px;display:flex;flex-direction:column;gap:2px;flex:1}
+.ibody .nm{font-size:15px;line-height:1.35;font-weight:500;min-height:2.7em}
+.ifoot{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:auto;padding-top:6px;min-height:40px}
+.ifoot .p{font:600 19px var(--num);font-stretch:78%;font-variant-numeric:tabular-nums}
+.icard .step{height:36px}.icard .step button{width:32px}.icard .step output{min-width:16px;font-size:15px}
+.icard .add{width:36px;height:36px}
+.icard.out .iimg{background:#EFEDF2;color:#B3ABBD}
+.icard.out .nm,.icard.out .p{color:var(--mute)}
+.icard.out .p{text-decoration:line-through}
+.cat{padding:24px 20px 4px;font-size:13px;font-weight:700;color:var(--mute)}
+.item{display:grid;grid-template-columns:1fr auto auto;gap:14px;align-items:center;padding:12px 20px;min-height:64px;border-bottom:1px solid var(--rule);background:var(--w)}
+.item .nm{font-size:17px;line-height:1.3}
+.item .p{font:600 20px var(--num);font-stretch:78%;font-variant-numeric:tabular-nums}
+.item.out .nm,.item.out .p{color:var(--mute)}
+.item .tag{font-size:13px;color:var(--mute);grid-column:2/4;justify-self:end}
+.warn{display:block;font-size:12px;color:var(--red);margin-top:2px;font-weight:500}
+.step{display:flex;align-items:center;border:0;background:var(--pur);color:#fff;border-radius:10px;height:40px}
+.step button{width:40px;height:100%;display:grid;place-items:center;border-radius:10px}
+.step button:hover{background:rgba(255,255,255,.16)}
+.step output{min-width:20px;text-align:center;font:700 16px var(--num);font-variant-numeric:tabular-nums}
+.add{width:40px;height:40px;border:1.5px solid var(--pur);color:var(--pur);border-radius:6px;display:grid;place-items:center;background:var(--w)}
+.add:hover{background:var(--pur-tint)}
+.add:disabled{border-color:var(--rule);color:var(--faint);background:none}
+
+.note{margin:14px 20px 0;padding:12px 14px;border-radius:5px;background:var(--fill);font-size:14px;display:flex;gap:10px;align-items:flex-start}
+.note.err{background:var(--red-tint);color:#7E1C1C}
+.note .act{margin-left:auto;font-weight:700;text-decoration:underline;text-underline-offset:3px;white-space:nowrap;padding:0 2px}
+
+.cta{margin:12px 16px 16px;height:56px;border-radius:10px;background:var(--pur);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 24px;font-weight:700;font-size:17px;width:calc(100% - 32px);flex:none}
+.cta:hover:not(:disabled){background:var(--pur-ink)}
+.cta:disabled{background:#CFC6DA}
+.cta.center{justify-content:center;gap:10px}
+.cta .num{font-size:22px}
+.spin{width:18px;height:18px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:rot .8s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+
+/* checkout */
+.line{display:grid;grid-template-columns:1fr auto auto;gap:14px;align-items:center;padding:12px 20px;border-bottom:1px solid var(--rule);min-height:64px;background:var(--w)}
+.line .sub{font:600 18px var(--num);font-stretch:78%;min-width:52px;text-align:right}
+.line.bad .nm s,.line.bad .sub{color:var(--mute)}
+.line.bad .sub{text-decoration:line-through}
+.line .rm{font-size:14px;font-weight:700;color:var(--red);padding:10px 4px;text-decoration:underline;text-underline-offset:3px}
+.sum{display:flex;justify-content:space-between;align-items:baseline;padding:16px 20px}
+.sum b{font:800 28px var(--num);font-stretch:78%}
+.ph{margin:0 20px;border:1px dashed #CFC6DA;border-radius:6px;padding:14px 16px;font-size:14px;color:var(--mute);display:flex;gap:12px}
+.ph + .ph{margin-top:10px}
+.ph strong{display:block;color:var(--ink);font-size:15px;margin-bottom:2px}
+
+/* full pass */
+.passwrap{padding:20px;min-height:100%}
+.passwrap .pass .code{font-size:84px}
+.passwrap .pass .top{padding:20px 18px 20px}
+.passwrap .pass .stat b{font-size:20px;padding:8px 14px}
+.fields{display:grid;grid-template-columns:1.4fr 1fr .7fr;gap:12px;padding:14px 18px 16px}
+.fields dd{font-size:15px;margin-top:3px}
+
+.rule{border-top:1px solid var(--rule);margin:0 18px}
+.lines{padding:14px 18px 16px;font-size:14px}
+.lines div{display:flex;justify-content:space-between;padding:3px 0}
+.lines .t{border-top:1px solid var(--rule);margin-top:8px;padding-top:10px;font-weight:700}
+.msg{margin-top:18px;font-size:15px;text-align:center;color:var(--mute)}
+.msg.ready{color:var(--grn);font-weight:700;font-size:17px}
+.msg.cancel{color:var(--red);font-weight:700}
+.upd{margin-top:8px;text-align:center;font-size:13px;color:var(--mute);display:flex;gap:6px;justify-content:center;align-items:center}
+.upd.off{color:var(--red)}
+
+/* orders */
+.hist{display:grid;grid-template-columns:72px 1fr auto;gap:2px 12px;align-items:center;padding:14px 20px;border-bottom:1px solid var(--rule);width:100%;text-align:left;background:var(--w)}
+.hist:hover{background:var(--fill)}
+.hist .code{font:700 20px var(--num);font-stretch:78%;color:var(--mute);grid-row:span 2}
+.hist .mt{font-size:13px;color:var(--mute)}
+.hist .r{grid-row:span 2;text-align:right;font-size:13px}
+.hist .r b{display:block;font:600 17px var(--num);font-stretch:78%}
+.hist .x{color:var(--red)}
+.empty{padding:48px 20px;text-align:center;color:var(--mute)}
+.empty button{margin-top:12px;color:var(--ink);font-weight:700;text-decoration:underline;text-underline-offset:3px;padding:10px}
+
+/* demo panel */
+.demo{width:300px;background:var(--w);border-radius:14px;padding:20px;box-shadow:0 2px 10px rgba(27,20,38,.08);font-size:14px;position:sticky;top:40px}
+.demo h2{font-size:15px;margin-bottom:4px}
+.demo p{color:var(--mute);font-size:13px}
+.demo .lbl{display:block;font-size:12px;color:var(--mute);margin:16px 0 6px}
+.demo select{width:100%;font:inherit;padding:9px 10px;border:1px solid var(--rule);border-radius:8px;background:var(--w);color:var(--ink)}
+.demo .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.demo .row + .row{margin-top:8px}
+.demo button{border:1px solid var(--rule);border-radius:8px;padding:9px 10px;text-align:left;font-size:13px;background:var(--w);min-height:40px}
+.demo button:hover:not(:disabled){border-color:var(--pur);color:var(--pur)}
+.demo button:disabled{color:var(--faint)}
+.demo button[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.demo .wide{grid-column:1/3}
+@media (max-width:899px){.demo{width:auto;border-radius:0;position:static;box-shadow:none;border-top:8px solid var(--desk)}}
+/* auth + onboarding */
+.auth{flex:1;overflow-y:auto;display:flex;flex-direction:column;scrollbar-width:thin}
+.ahero{background:var(--pur);color:#fff;padding:18px 20px 64px;position:relative;overflow:hidden;flex:none}
+.ahero:after{content:"";position:absolute;right:-60px;top:-50px;width:220px;height:220px;border-radius:50%;border:28px solid rgba(255,255,255,.07);pointer-events:none}
+.ahero .bar{display:flex;justify-content:space-between;align-items:center;min-height:44px}
+.ahero .bar .back{width:44px;height:44px;margin-left:-12px;display:grid;place-items:center;border-radius:6px;color:#fff}
+.ahero .bar .back:hover{background:rgba(255,255,255,.14)}
+.ahero h1{font-size:28px;line-height:1.25;font-weight:700;margin-top:28px;position:relative;z-index:1}
+.ahero h1 .pfx{color:var(--sun)}
+.ahero p{color:#E7DCF3;font-size:15px;margin-top:8px;position:relative;z-index:1;max-width:34ch}
+.acard{background:var(--w);margin:-36px 16px 24px;border-radius:8px;padding:22px 18px 20px;position:relative;box-shadow:0 1px 2px rgba(27,20,38,.06),0 8px 24px rgba(91,42,134,.12)}
+.acard h2{font-size:20px;font-weight:700}
+.acard .sub{font-size:14px;color:var(--mute);margin-top:4px}
+.field{display:grid;gap:6px;margin-top:18px}
+.field > label{font-size:14px;font-weight:700}
+.input{display:flex;align-items:center;min-width:0;height:52px;border:1.5px solid #D5CDDF;border-radius:6px;background:#fff;padding:0 4px 0 14px;transition:border-color .12s}
+.input:focus-within{border-color:var(--pur);box-shadow:0 0 0 3px var(--pur-tint)}
+.input input{flex:1;border:0;outline:0;font:inherit;font-size:17px;background:none;color:var(--ink);min-width:0;height:100%}
+.input input::placeholder{color:#9A93A5}
+.input input.num{font-family:var(--num);font-stretch:85%;letter-spacing:.06em;font-size:20px}
+.input .eye{width:44px;height:44px;display:grid;place-items:center;color:var(--mute);border-radius:5px;flex:none}
+.input .eye:hover{background:var(--fill)}
+.field.bad .input{border-color:var(--red)}
+.field.ok .input{border-color:var(--grn)}
+.hint{font-size:13px;color:var(--mute)}
+.field.bad .hint{color:var(--red);font-weight:500}
+.checks{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;margin-top:2px}
+.checks li{font-size:13px;color:var(--mute);display:flex;gap:6px;align-items:center}
+.checks li .ico{width:15px;height:15px;stroke-width:2.2}
+.checks li.ok{color:var(--grn);font-weight:500}
+.cta.inline{margin:22px 0 0;width:100%;justify-content:center;gap:10px}
+.alink{text-align:center;margin-top:14px;font-size:15px;color:var(--mute)}
+.alink button{color:var(--pur);font-weight:700;text-decoration:underline;text-underline-offset:3px;padding:10px 2px}
+.acard .note{margin:16px 0 0}
+.acard .note .act{color:inherit}
+.mock{display:block;text-align:center;font-size:12px;color:var(--mute);margin-top:12px}
+.obhead{background:var(--pur);color:#fff;padding:12px 16px 18px 20px;flex:none}
+.obhead .bar{display:flex;justify-content:space-between;align-items:center;min-height:44px}
+.obhead .steps{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
+.obhead .steps i{height:4px;border-radius:2px;background:rgba(255,255,255,.25)}
+.obhead .steps i.on{background:var(--sun)}
+.obhead .stepn{font:700 12px var(--num);letter-spacing:.12em;color:var(--lav);margin-top:8px;display:block}
+.ob{padding:22px 20px 24px}
+.ob h2{font-size:22px;font-weight:700;line-height:1.3}
+.ob .lead{font-size:15px;color:var(--mute);margin-top:6px}
+.opts{display:grid;gap:10px;margin-top:18px}
+.opt{display:grid;grid-template-columns:40px 1fr 22px;gap:12px;align-items:center;padding:14px;border:1.5px solid var(--rule);border-radius:6px;background:var(--w);text-align:left;width:100%}
+.opt:hover{border-color:#CFC6DA}
+.opt .oi{width:40px;height:40px;border-radius:6px;background:var(--pur-tint);color:var(--pur);display:grid;place-items:center}
+.opt b{display:block;font-size:16px}
+.opt small{display:block;font-size:13px;color:var(--mute)}
+.opt .rd{width:22px;height:22px;border-radius:50%;border:2px solid #CFC6DA;display:grid;place-items:center}
+.opt[aria-checked=true]{border-color:var(--pur);background:#FBF8FE}
+.opt[aria-checked=true] .rd{border-color:var(--pur)}
+.opt[aria-checked=true] .rd:after{content:"";width:10px;height:10px;border-radius:50%;background:var(--pur)}
+.cardform{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 12px;margin-top:4px;padding:2px 2px 0}
+.cardform .field:first-child{grid-column:1/3}
+.obfoot{padding:8px 16px 16px;flex:none}
+.obfoot .cta{margin:0;width:100%;justify-content:center;gap:8px}
+.obfoot .pair{display:grid;grid-template-columns:auto 1fr;gap:10px}
+.obfoot .prev{height:56px;padding:0 20px;border-radius:10px;border:1.5px solid var(--pur);color:var(--pur);font-weight:700;font-size:16px;display:flex;align-items:center;gap:4px;background:var(--w)}
+.obfoot .prev:hover{background:var(--pur-tint)}
+.obfoot .prev .ico{width:18px;height:18px}
+.obfoot .skip{display:block;margin:6px auto 0;padding:12px;color:var(--mute);font-weight:700;text-decoration:underline;text-underline-offset:3px}
+.nprev{margin-top:22px;background:var(--w);border-radius:8px;padding:14px;display:grid;grid-template-columns:40px 1fr;gap:12px;box-shadow:0 1px 2px rgba(27,20,38,.06),0 8px 24px rgba(91,42,134,.12)}
+.nprev .ni{width:40px;height:40px;border-radius:6px;background:var(--pur);color:var(--sun);display:grid;place-items:center}
+.nprev .nt{display:flex;justify-content:space-between;font-size:13px;color:var(--mute)}
+.nprev .nt b{color:var(--ink);font-weight:700}
+.nprev p{font-size:15px;margin-top:2px}
+.nprev p b{font-family:var(--num);font-stretch:85%;font-size:17px}
+.nprev .sample{grid-column:1/3;justify-self:end}
+.nlist{list-style:none;margin-top:18px;display:grid;gap:10px}
+.nlist li{display:flex;gap:10px;font-size:15px}
+.nlist li .ico{color:var(--grn);margin-top:2px}
+.acct{margin:0 20px;background:var(--w);border-radius:8px;box-shadow:0 1px 2px rgba(27,20,38,.06),0 4px 14px rgba(91,42,134,.08)}
+.acct > div{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--rule);font-size:15px}
+.acct > div:last-child{border-bottom:0}
+.acct dt{color:var(--mute);font-size:14px}
+.acct dd{font-weight:500;text-align:right}
+.acct dd.num{font-family:var(--num);font-stretch:85%;font-size:18px;letter-spacing:.04em}
+.acct .so{color:var(--red);font-weight:700;padding:6px 0}
+.ph.set{border-style:solid;background:var(--w)}
+.idcard{margin:20px 20px 0;background:var(--w);border-radius:8px;box-shadow:0 1px 2px rgba(27,20,38,.06),0 6px 18px rgba(91,42,134,.10);--bgp:var(--lilac)}
+.idcard .top{display:grid;grid-template-columns:1fr auto;gap:6px 16px;padding:14px 16px 16px;align-items:end;background:var(--pur);color:#fff;border-radius:8px 8px 0 0;position:relative;overflow:hidden}
+.idcard .top:after{content:"";position:absolute;right:-30px;top:-30px;width:120px;height:120px;border-radius:50%;border:18px solid rgba(255,255,255,.07)}
+.idcard .lab{color:var(--lav)}
+.idcard .code{font:800 40px/0.95 var(--num);font-stretch:78%;letter-spacing:.03em}
+.idcard .stat b{display:inline-block;font-size:14px;font-weight:700;padding:6px 10px;border-radius:10px;background:rgba(255,255,255,.16)}
+.idcard .fields{grid-template-columns:1fr 1fr}
+.setrow{display:grid;grid-template-columns:40px 1fr auto;gap:12px;align-items:center;padding:14px 16px;border-bottom:1px solid var(--rule)}
+.setrow:last-child{border-bottom:0}
+.acct > .setrow{display:grid;justify-content:normal}
+.idcard .fields .lab{color:var(--mute)}
+.setrow .oi{width:40px;height:40px;border-radius:6px;background:var(--pur-tint);color:var(--pur);display:grid;place-items:center}
+.setrow .tx b{display:block;font-size:16px;font-weight:500}
+.setrow .tx small{display:block;font-size:13px;color:var(--mute)}
+.switch{width:52px;height:32px;border-radius:16px;background:#CFC6DA;position:relative;flex:none}
+.switch i{position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:transform .15s}
+.switch[aria-checked=true]{background:var(--pur)}
+.switch[aria-checked=true] i{transform:translateX(20px)}
+.tog-light{border-color:var(--rule)}
+.tog-light button{color:var(--mute)}
+.tog-light button[aria-pressed=true]{background:var(--pur);color:#fff}
+.chg{height:36px;padding:0 14px;border-radius:10px;border:1.5px solid var(--pur);color:var(--pur);font-weight:700;font-size:14px}
+.chg:hover{background:var(--pur-tint)}
+.signout{display:block;margin:24px 20px 0;width:calc(100% - 40px);height:52px;border-radius:10px;border:1.5px solid var(--red);color:var(--w);font-weight:700;background:var(--red)}
+.signout:hover{background:#962020;border-color:#962020}
+.navrow{width:100%;text-align:left;background:none}
+.navrow:hover{background:var(--fill)}
+.navrow .chev{color:var(--mute)}
+.acct > .navrow{display:grid;border-bottom:0;border-radius:8px}
+.defchip{display:inline-block;font-size:11px;font-weight:700;color:var(--pur);background:var(--pur-tint);border-radius:10px;padding:1px 8px;margin-left:6px;vertical-align:2px}
+.pacts{display:flex;gap:4px}
+.lnk{font-size:13px;font-weight:700;color:var(--pur);padding:8px 6px;border-radius:4px}
+.lnk:hover{background:var(--pur-tint)}
+.lnk.del{color:var(--mute)}
+.addrow{display:flex;align-items:center;gap:10px;width:100%;padding:14px 16px;color:var(--pur);font-weight:700;font-size:15px;border-top:1px dashed #D5CDDF;border-radius:0 0 8px 8px}
+.addrow:hover{background:var(--pur-tint)}
+.addrow .ico{width:20px;height:20px}
+.note.ok{background:#E8F5EC;color:#0F4D2A}
+.note.ok .ico{color:var(--grn)}
+.areatabs{position:static;margin-top:0;background:transparent;gap:14px}
+.areatabs button{font-size:15px}
+:lang(en) .areatabs button{font-size:14px}
+.areatabs .cnt{display:inline-block;margin-left:4px;font:700 12px var(--num);color:var(--mute);background:var(--w);border-radius:5px;padding:0 6px;vertical-align:1px}
+.areatabs button[aria-current=true] .cnt{background:var(--pur);color:#fff}
+button.icard{text-align:left;font:inherit;color:inherit;width:100%;cursor:pointer}
+button.icard:hover{box-shadow:0 1px 2px rgba(27,20,38,.08),0 8px 22px rgba(91,42,134,.16)}
+button.icard:focus-visible{outline-offset:3px}
+.icard .add{pointer-events:none}
+.iimg .incart{position:absolute;top:8px;right:8px;background:var(--pur);color:#fff;font-size:12px;font-weight:700;padding:3px 8px;border-radius:5px}
+.itempage .himg{aspect-ratio:4/3}
+.sold.big{position:absolute;top:12px;left:12px;background:var(--ink);color:#fff;font-size:14px;font-weight:700;padding:4px 12px;border-radius:5px}
+.ihead{display:grid;grid-template-columns:1fr auto;align-items:baseline;gap:2px 12px;padding:18px 20px 4px}
+.ihead h2{font-size:22px;font-weight:700}
+.ihead .p{font-size:24px;font-weight:700}
+.ihead .mt{grid-column:1/3;font-size:13px;color:var(--mute)}
+.ihead .sample{grid-column:1/3;justify-self:end}
+.ogroup{border:0;margin:16px 20px 0;background:var(--w);border-radius:8px;padding:6px 0;box-shadow:0 1px 2px rgba(27,20,38,.06),0 4px 14px rgba(91,42,134,.06)}
+.ogroup legend,.ogroup .legend{display:block;width:100%;padding:12px 16px 6px;font-size:16px;font-weight:700;float:left}
+.ogroup legend small,.ogroup .legend small{display:block;font-size:12px;font-weight:400;color:var(--mute);margin-top:2px}
+.ogroup legend + *{clear:both}
+.ochk{display:grid;grid-template-columns:24px 1fr auto;gap:12px;align-items:center;padding:12px 16px;border-top:1px solid var(--rule);cursor:pointer;clear:both}
+.ochk input{position:absolute;opacity:0;width:1px;height:1px}
+.ochk .box{width:22px;height:22px;border:2px solid #CFC6DA;border-radius:5px;display:grid;place-items:center;color:transparent}
+.ochk .box .ico{width:16px;height:16px;stroke-width:2.6}
+.ochk input:checked + .box{background:var(--pur);border-color:var(--pur);color:#fff}
+.ochk input:focus-visible + .box{outline:2px solid var(--pur);outline-offset:2px}
+.ochk .ol{font-size:16px}
+.ochk .ol small{margin-left:8px;font-size:11px;color:var(--mute);border:1px solid var(--rule);border-radius:4px;padding:0 5px;vertical-align:2px}
+.ochk .od{font-size:16px;font-weight:600;color:var(--mute)}
+fieldset:disabled .ochk{opacity:.5;cursor:not-allowed}
+.ogroup textarea{display:block;clear:both;width:calc(100% - 32px);margin:4px 16px 0;border:1.5px solid #D5CDDF;border-radius:6px;padding:10px 12px;font:inherit;font-size:16px;resize:none;color:var(--ink);background:#fff}
+.ogroup textarea:focus{outline:0;border-color:var(--pur);box-shadow:0 0 0 3px var(--pur-tint)}
+.ogroup .cnt{display:block;text-align:right;padding:4px 16px 8px}
+.qrow{display:flex;justify-content:space-between;align-items:center;margin:16px 20px 0;padding:12px 16px;background:var(--w);border-radius:8px;font-weight:700;box-shadow:0 1px 2px rgba(27,20,38,.06),0 4px 14px rgba(91,42,134,.06)}
+.qrow .step button:disabled{opacity:.4}
+.lopt{display:block;font-size:12px;color:var(--mute);margin-top:2px}
+.lines .lopt{font-size:12px}
+.toast{margin:12px 20px 0}
+/* Chinese always renders in Noto Sans TC: form controls and placeholders don't inherit fonts by default */
+:root{--cjk:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif}
+html,body,button,input,textarea,select,legend,label{font-family:"Noto Sans TC",system-ui,sans-serif}
+input::placeholder,textarea::placeholder{font-family:"Noto Sans TC",system-ui,sans-serif}
+.num,.lab,.code,.p,.sum b,.stall .no,.hist .code,.badge,.areatabs .cnt,.stepn{font-family:"Archivo","Noto Sans TC",sans-serif}
+.pass .top{grid-template-columns:auto 1fr auto;column-gap:12px}
+.pass .top .lab:first-child{grid-column:1/3}
+.pass .vend{align-self:end;font-size:15px;line-height:1.2;font-weight:700;color:#fff;padding-bottom:3px;min-width:0;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pass .stat{grid-column:3}
+.pass .stat b{white-space:nowrap}
+.pass .stat b{font-size:22px;padding:9px 16px}
+.pass.mini .stat b{font-size:20px;padding:8px 14px}
+.passwrap .pass .stat b{font-size:26px;padding:10px 16px}
+.passwrap .pass .code{font-size:84px}
+.passwrap .pass .top{grid-template-columns:1fr;row-gap:10px}
+.passwrap .pass .top .lab:first-child{grid-column:1}
+.passwrap .pass .top .lab[style]{display:none}
+.passwrap .pass .vend{display:none}
+.passwrap .pass .stat{grid-column:1;justify-self:start}
+/* Pickup pass text: neutral text on the green (ready) and grey (cancelled) bands. */
+.s-ready .stat b,.s-cancelled .stat b{color:var(--ink)}
+.s-ready .top .lab,.s-cancelled .top .lab,.s-ready .stat small,.s-cancelled .stat small{color:#fff}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="device"><div class="app" id="app"></div></div>
+  <aside class="demo" id="demo" aria-label="Demo controls"></aside>
+</div>
+<div id="live" class="sr-only" aria-live="polite"></div>
+
+<script type="module">
+/* ---------- icons ---------- */
+const I = {
+  back:'<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>',
+  plus:'<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
+  minus:'<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg>',
+  store:'<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10l1.5-5h13L20 10M4 10h16M4 10v9h16v-9M9 19v-5h6v5"/></svg>',
+  ticket:'<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v3a2 2 0 0 0 0 4v3H3v-3a2 2 0 0 0 0-4z"/><path d="M14 8v8" stroke-dasharray="2 2.5"/></svg>',
+  alert:'<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5v.01"/></svg>',
+  info:'<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/></svg>',
+  wifiOff:'<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" style="width:16px;height:16px"><path d="M3 3l18 18M8.5 12.5a5 5 0 0 1 3.5-1.4M5 9a10 10 0 0 1 4-2.2M19 9a10 10 0 0 0-5.5-2.4M12 17v.01"/></svg>',
+  card:'<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg>',
+  photo:'<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="M21 16l-5-5-8 8"/></svg>',
+  eye:'<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  eyeOff:'<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10.6 5.1A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4M6.6 6.6A17 17 0 0 0 2 12s3.6 7 10 7a9.8 9.8 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>',
+  check:'<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  dot:'<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/></svg>',
+  bell:'<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>',
+  wallet:'<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="2.5"/><path d="M10 18.5h4"/></svg>',
+  clock:'<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  lang:'<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg>',
+  lock:'<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+  chev:'<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>',
+  user:'<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0 1 16 0"/></svg>'
+};
+
+/* ---------- copy ---------- */
+const T = {
+  zh:{stalls:'攤位',myOrders:'我的訂單',passes:'你的取餐券',allStalls:'所有攤位',open:'營業中',closed:'休息中',
+      opensAt:h=>`${h} 開始接單`,closedBanner:h=>`目前休息中，${h} 開始接單。可以先看看菜單。`,
+      soldOut:'售完',addA:n=>`加入 ${n}`,more:n=>`增加一份 ${n}`,less:n=>`減少一份 ${n}`,checkout:'結帳',
+      items:n=>`${n} 項`,total:'合計',review:'確認訂單',payment:'付款與帳號',
+      paymentTtl:'線上付款（示意）',paymentPh:'線上付款尚未開放，付款方式待定。',
+      accountTtl:'學號登入（示意）',accountPh:'登入方式待定，此示意稿以訪客身分下單。',
+      place:'送出訂單',placing:'送出中…',
+      errFail:'訂單沒有送出：攤位沒有回應。購物車已保留。',errOffline:'目前沒有網路連線。購物車已保留，恢復連線後再送出。',
+      retry:'再試一次',nowOut:n=>`${n} 剛剛售完`,remove:'移除',removeFirst:'移除售完的品項後才能送出訂單。',
+      emptyCart:'購物車是空的。',backMenu:'回到菜單',pickup:'取餐號',status:'狀態',
+      st:{confirming:'確認中',preparing:'製作中',ready:'可取餐',picked:'已取餐',cancelled:'已取消'},
+      legs:['確認','製作中','可取餐','已取餐'],
+      show:'取餐時在櫃檯出示此畫面',readyMsg:(no,n)=>`請到${n}取餐`,cancelMsg:'攤位已取消這筆訂單。',
+      pickedMsg:'已取餐，祝用餐愉快。',updated:t=>`更新於 ${t}`,offline:t=>`連線中斷，顯示的是 ${t} 的狀態`,
+      active:'進行中',history:'紀錄',noActive:'目前沒有進行中的訂單。',noOrders:'還沒有訂單。',browse:'去看看攤位',placed:t=>`${t} 下單`,
+      appName:'NTHU 點餐系統',tagline:'下課前先點，好了再去拿。',signIn:'登入',signUp:'註冊',createAcct:'建立帳號',
+      sid:'學號',sidHint:'9 位數字',sidErr:'學號必須是 9 位數字。',pw:'密碼',pwShow:'顯示密碼',pwHide:'隱藏密碼',pwReq:'請輸入密碼。',
+      chk:['至少 8 個字元','包含英文字母','包含數字','只用英文字母和數字'],noAcct:'還沒有帳號？',haveAcct:'已經有帳號了？',
+      signingIn:'登入中…',creating:'建立中…',loginErr:'學號或密碼不正確，請再試一次。',takenErr:'這個學號已經註冊過了。',signInInstead:'改為登入',
+      mockAuth:'示意稿：不會連到真正的帳號系統。',signUpLead:'用學號建立帳號，之後就能預先點餐。',
+      stepN:n=>`步驟 ${n} / 2`,payTtl:'新增付款方式',payLead:'之後結帳時會用這個付款方式。',
+      optCard:'信用卡／金融卡',optCardSub:'輸入卡片資料',optWallet:'行動支付',optWalletSub:'支援的服務待定',optLater:'稍後再設定',optLaterSub:'第一次結帳前再新增',
+      cardNo:'卡號',exp:'到期日',cvc:'安全碼',cardNote:'示意稿：卡片資料不會儲存，也不會扣款。',walletNote:'示意稿：支援哪些行動支付還沒決定。',
+      cont:'繼續',prevStep:'上一步',skip:'略過',notifTtl:'餐點好了就通知你',notifLead:'開啟通知後，訂單變成「可取餐」時手機會提醒你，不用一直盯著畫面。',
+      nPoints:['訂單可取餐時通知','攤位取消訂單時通知','不會傳送廣告'],nNow:'現在',nBody:(c,st)=>`取餐號 <b>${c}</b> 可取餐，請到${st}取餐。`,
+      allow:'開啟通知',notNow:'暫時不要',notifMock:'示意稿：不會真的向瀏覽器要求通知權限。',
+      account:'帳號',meTab:'帳號',myAccount:'我的帳號',acctStatus:'狀態',verified:'已驗證',school:'學校',nthu:'國立清華大學',joined:'註冊日期',settings:'設定',notifSub:'訂單可取餐、攤位取消時通知',changePay:'變更付款方式',addPayTtl:'新增付款方式',payMethods:'付款方式',nMethods:n=>`${n} 個`,defaultTag:'預設',defaultSub:'結帳時預設使用',makeDefault:'設為預設',noPay:'還沒有付款方式',payAdded:'已新增付款方式。',security:'安全性',changePw:'變更密碼',changePwSub:'更新登入用的密碼',curPw:'目前密碼',newPw:'新密碼',confPw:'再次輸入新密碼',pwMismatch:'兩次輸入的新密碼不一樣。',sameAsOld:'新密碼不能和目前密碼相同。',curWrong:'目前密碼不正確。',updatePw:'更新密碼',saving:'儲存中…',pwUpdated:'密碼已更新。',change:'變更',add:'新增',save:'儲存',payMethod:'付款方式',notSet:'尚未設定',notif:'通知',on:'已開啟',off:'已關閉',signOut:'登出',
+      cardLast:l=>`信用卡 •••• ${l}`,walletName:'行動支付',chargeNote:'示意稿：送出訂單不會扣款。',orderAs:id=>`以學號 ${id} 下單`,
+      orderLines:'品項',inCartN:n=>`已加入 ${n}`,customize:'客製化',customizeSub:'可複選，標示「擇一」的同類只能選一個',pickOne:'擇一',noteTtl:'其他需求',optional:'選填',notePh:'例如：醬另外放、餐具不用',noteLbl:'備註',qty:'數量',addToCart:'加入購物車',addedToCart:'已加入購物車。',itemOut:'這個品項已售完，暫時無法加入購物車。',area:'區域',phPhoto:'照片待補',fStall:'攤位',fPlace:'地點',fPlaced:'下單',lang:'介面語言',back:'返回',stallOf:(no,n)=>n,inCart:n=>`購物車 ${n} 項`},
+  en:{stalls:'Stalls',myOrders:'My orders',passes:'Your pickup passes',allStalls:'All stalls',open:'Open',closed:'Closed',
+      opensAt:h=>`Opens ${h}`,closedBanner:h=>`Closed right now. Ordering opens at ${h}; you can still browse the menu.`,
+      soldOut:'Sold out',addA:n=>`Add ${n}`,more:n=>`One more ${n}`,less:n=>`One less ${n}`,checkout:'Checkout',
+      items:n=>`${n} item${n===1?'':'s'}`,total:'Total',review:'Review order',payment:'Payment & account',
+      paymentTtl:'Online payment (placeholder)',paymentPh:"Online payment isn't available yet; the provider is still to be decided.",
+      accountTtl:'Student sign-in (placeholder)',accountPh:'Sign-in method to be decided; this mockup orders as a guest.',
+      place:'Place order',placing:'Placing order…',
+      errFail:"Your order didn't go through: the stall didn't respond. Your cart is saved.",errOffline:"You're offline. Your cart is saved; place the order once you're back online.",
+      retry:'Try again',nowOut:n=>`${n} just sold out`,remove:'Remove',removeFirst:'Remove the sold-out items to place your order.',
+      emptyCart:'Your cart is empty.',backMenu:'Back to menu',pickup:'Pickup',status:'Status',
+      st:{confirming:'Confirming',preparing:'Preparing',ready:'Ready',picked:'Picked up',cancelled:'Cancelled'},
+      legs:['Confirmed','Preparing','Ready','Picked up'],
+      show:'Show this screen at the counter',readyMsg:(no,n)=>`Collect it at ${n}`,cancelMsg:'The stall cancelled this order.',
+      pickedMsg:'Picked up. Enjoy your meal.',updated:t=>`Updated ${t}`,offline:t=>`Offline — showing status from ${t}`,
+      active:'Active',history:'History',noActive:'No active orders.',noOrders:'No orders yet.',browse:'Browse stalls',placed:t=>`Placed ${t}`,
+      appName:'NTHU Food Ordering',tagline:"Order between classes. Pick up when it's ready.",signIn:'Sign in',signUp:'Sign up',createAcct:'Create account',
+      sid:'Student ID',sidHint:'9 digits',sidErr:'Student ID must be exactly 9 digits.',pw:'Password',pwShow:'Show password',pwHide:'Hide password',pwReq:'Enter your password.',
+      chk:['At least 8 characters','Has a letter','Has a number','Letters and numbers only'],noAcct:"Don't have an account?",haveAcct:'Already have an account?',
+      signingIn:'Signing in…',creating:'Creating account…',loginErr:"That student ID and password don't match. Try again.",takenErr:'This student ID is already registered.',signInInstead:'Sign in instead',
+      mockAuth:'Mockup: not connected to a real account system.',signUpLead:'Create an account with your student ID to start ordering ahead.',
+      stepN:n=>`STEP ${n} OF 2`,payTtl:'Add a payment method',payLead:"You'll use it at checkout.",
+      optCard:'Credit or debit card',optCardSub:'Enter card details',optWallet:'Mobile wallet',optWalletSub:'Supported services to be decided',optLater:'Set up later',optLaterSub:'Add one before your first checkout',
+      cardNo:'Card number',exp:'Expiry',cvc:'Security code',cardNote:"Mockup: card details aren't stored or charged.",walletNote:"Mockup: supported wallets haven't been decided.",
+      cont:'Continue',prevStep:'Back',skip:'Skip',notifTtl:'Know the moment your food is ready',notifLead:"Turn on notifications and your phone will tell you when an order is ready, so you don't have to keep checking.",
+      nPoints:['When an order is ready','When a stall cancels an order','No ads, ever'],nNow:'now',nBody:(c,st)=>`Pickup <b>${c}</b> is ready. Collect it at ${st}.`,
+      allow:'Turn on notifications',notNow:'Not now',notifMock:"Mockup: doesn't ask your browser for real permission.",
+      account:'Account',meTab:'Account',myAccount:'My account',acctStatus:'Status',verified:'Verified',school:'School',nthu:'NTHU',joined:'Joined',settings:'Settings',notifSub:'When an order is ready or a stall cancels',changePay:'Change payment method',addPayTtl:'Add payment method',payMethods:'Payment methods',nMethods:n=>`${n}`,defaultTag:'Default',defaultSub:'Used at checkout by default',makeDefault:'Make default',noPay:'No payment method yet',payAdded:'Payment method added.',security:'Security',changePw:'Change password',changePwSub:'Update your sign-in password',curPw:'Current password',newPw:'New password',confPw:'Confirm new password',pwMismatch:"The new passwords don't match.",sameAsOld:"New password can't be the same as the current one.",curWrong:'Current password is incorrect.',updatePw:'Update password',saving:'Saving…',pwUpdated:'Password updated.',change:'Change',add:'Add',save:'Save',payMethod:'Payment',notSet:'Not set',notif:'Notifications',on:'On',off:'Off',signOut:'Sign out',
+      cardLast:l=>`Card •••• ${l}`,walletName:'Mobile wallet',chargeNote:"Mockup: placing an order won't charge you.",orderAs:id=>`Ordering as ${id}`,
+      orderLines:'Items',inCartN:n=>`${n} in cart`,customize:'Customize',customizeSub:'Pick any; options marked “pick one” replace each other',pickOne:'pick one',noteTtl:'Other requests',optional:'Optional',notePh:'e.g. sauce on the side, no utensils',noteLbl:'Note',qty:'Quantity',addToCart:'Add to cart',addedToCart:'Added to cart.',itemOut:'This item is sold out and can’t be added right now.',area:'Area',phPhoto:'Photo to come',fStall:'Stall',fPlace:'Location',fPlaced:'Placed',lang:'Interface language',back:'Back',stallOf:(no,n)=>n,inCart:n=>`${n} in cart`}
+};
+
+/* ---------- sample data ---------- */
+const STALLS = [
+  {no:'03',area:'shuimu',c:'#5B2A86',name:{zh:'便當屋',en:'Bento House'},desc:{zh:'現做台式便當，一份主菜配三樣配菜與白飯。',en:'Taiwanese bento made to order: one main, three sides and rice.'},place:{zh:'水木 B1',en:'Shui-Mu B1'},hours:'10:30–13:30',open:true,cats:[
+    {zh:'便當',en:'Bento',items:[['b1','排骨便當','Pork chop bento',95],['b2','雞腿便當','Chicken leg bento',105],['b3','控肉便當','Braised pork belly bento',100],['b4','素食便當','Vegetarian bento',80]]},
+    {zh:'加點',en:'Extras',items:[['b5','滷蛋','Braised egg',15],['b6','味噌湯','Miso soup',20]]}]},
+  {no:'07',area:'food',c:'#7B3FB0',name:{zh:'麵食部',en:'Noodle Counter'},desc:{zh:'牛肉麵、乾拌麵與各式小菜，湯頭每日熬煮。',en:'Beef noodle soup, dry noodles and sides; broth simmered daily.'},place:{zh:'小吃部 1F',en:'Food Court 1F'},hours:'10:30–14:00',open:true,cats:[
+    {zh:'麵類',en:'Noodles',items:[['n1','紅燒牛肉麵','Braised beef noodle soup',120],['n2','炸醬麵','Zhajiang noodles',85],['n3','麻醬麵','Sesame noodles',70],['n4','酸辣湯麵','Hot & sour noodle soup',90,true],['n5','乾拌麵','Dry tossed noodles',60]]},
+    {zh:'湯品',en:'Soup',items:[['n6','餛飩湯','Wonton soup',60],['n7','貢丸湯','Pork ball soup',40]]},
+    {zh:'小菜',en:'Sides',items:[['n8','燙青菜','Blanched greens',35],['n9','滷蛋','Braised egg',15],['n10','海帶豆干','Kelp & tofu',30]]},
+    {zh:'飲料',en:'Drinks',items:[['n11','冬瓜茶','Winter melon tea',25],['n12','豆漿','Soy milk',25]]}]},
+  {no:'11',area:'shuimu',c:'#4A2370',name:{zh:'早午餐',en:'Brunch Corner'},desc:{zh:'蛋餅、蘿蔔糕與吐司，只在上午營業。',en:'Egg crepes, turnip cake and toast, mornings only.'},place:{zh:'水木 1F',en:'Shui-Mu 1F'},hours:'07:00–11:00',open:false,opens:'07:00',cats:[
+    {zh:'早餐',en:'Breakfast',items:[['r1','蛋餅','Egg crepe',35],['r2','蘿蔔糕','Turnip cake',40],['r3','鮪魚吐司','Tuna toast',45],['r4','大冰奶','Large iced milk tea',30]]}]},
+  {no:'15',area:'food',c:'#9050C8',name:{zh:'茶飲站',en:'Tea Stand'},desc:{zh:'現泡茶飲與果茶。',en:'Freshly brewed tea and fruit tea.'},place:{zh:'小吃部 1F',en:'Food Court 1F'},hours:'09:00–20:00',open:true,cats:[
+    {zh:'茶',en:'Tea',items:[['t1','四季春青茶','Four Seasons oolong',35],['t2','紅茶拿鐵','Black tea latte',50],['t3','珍珠奶茶','Bubble milk tea',55]]},
+    {zh:'果茶',en:'Fruit tea',items:[['t4','百香綠茶','Passion fruit green tea',50],['t5','檸檬紅茶','Lemon black tea',45,true]]}]},
+  {no:'18',area:'shuimu',c:'#6A2C9E',name:{zh:'咖哩飯',en:'Curry Rice'},desc:{zh:'日式咖哩飯，豬排、雞肉、蔬菜三種口味。',en:'Japanese curry rice: pork cutlet, chicken or vegetable.'},place:{zh:'水木 B1',en:'Shui-Mu B1'},hours:'11:00–14:00',open:true,cats:[
+    {zh:'咖哩',en:'Curry',items:[['c1','豬排咖哩飯','Pork cutlet curry rice',115],['c2','雞肉咖哩飯','Chicken curry rice',100],['c3','蔬菜咖哩飯','Vegetable curry rice',90]]}]},
+  {no:'21',area:'fengyun',c:'#7A3DAA',name:{zh:'麵包坊',en:'Bakery'},desc:{zh:'每日現烤麵包與三明治。',en:'Bread and sandwiches baked fresh daily.'},place:{zh:'風雲樓 1F',en:'Fengyun Hall 1F'},hours:'08:00–18:00',open:true,cats:[
+    {zh:'麵包',en:'Bread',items:[['k1','菠蘿麵包','Pineapple bun',30],['k2','肉鬆麵包','Pork floss bun',40],['k3','起司貝果','Cheese bagel',45,true]]},
+    {zh:'三明治',en:'Sandwiches',items:[['k4','火腿蛋三明治','Ham & egg sandwich',50],['k5','鮪魚三明治','Tuna sandwich',50]]}]}
+];
+// customisation options per stall (sample data). g = exclusive group (pick at most one), d = price delta
+const OPTS = {
+  '03':[['rice-less','飯少一點','Less rice',0,'rice'],['rice-more','飯多一點','More rice',10,'rice'],['egg','加滷蛋','Add braised egg',15],['no-spicy','不要辣','Not spicy',0]],
+  '07':[['noodle','加麵','Extra noodles',15],['egg','加蛋','Add egg',10],['no-scallion','不要蔥','No scallions',0],['no-cilantro','不要香菜','No cilantro',0],['spicy','加辣','Make it spicy',0]],
+  '11':[['egg','加蛋','Add egg',10],['cheese','加起司','Add cheese',10],['no-sauce','不要醬','No sauce',0]],
+  '15':[['pearl','加珍珠','Add tapioca pearls',10],['coconut','加椰果','Add coconut jelly',10],['less-ice','少冰','Less ice',0,'ice'],['no-ice','去冰','No ice',0,'ice'],['less-sugar','少糖','Less sugar',0,'sugar'],['no-sugar','無糖','No sugar',0,'sugar']],
+  '18':[['rice','加飯','Extra rice',10],['cheese','加起司','Add cheese',20],['mild','小辣','Mild',0,'heat'],['hot','大辣','Hot',0,'heat']],
+  '21':[['warm','加熱','Warm it up',0],['half','切半','Cut in half',0]]
+};
+const optOf = (no,id) => { const o=(OPTS[no]||[]).find(x=>x[0]===id); return o?{id:o[0],zh:o[1],en:o[2],d:o[3],g:o[4]}:null };
+const optNames = (no,ids) => ids.map(i=>loc(optOf(no,i)||{zh:i,en:i})).join('、');
+const AREAS = [['all',{zh:'全部',en:'All'}],['shuimu',{zh:'水木',en:'Shui-Mu'}],['food',{zh:'小吃部',en:'Food Court'}],['fengyun',{zh:'風雲',en:'Fengyun'}]];
+const ITEM = {};
+STALLS.forEach(s=>s.cats.forEach(c=>{c.items=c.items.map(([id,zh,en,price,out])=>(ITEM[id]={id,zh,en,price,out:!!out,stall:s.no}))}));
+const STALL = Object.fromEntries(STALLS.map(s=>[s.no,s]));
+
+/* ---------- state ---------- */
+const clock = () => new Date();
+const hm = d => d.toTimeString().slice(0,5);
+const hms = d => d.toTimeString().slice(0,8);
+let seq = 47;
+const S = {
+  lang:'zh', area:'all', it:{opts:[],note:'',q:1}, stack:[{v:'login'}], user:null, pays:[], flash:null, notif:false, busy:false, authErr:null, failLogin:false, idTaken:false, f:{id:'',pw:'',show:false,touched:{},payType:null,cno:'',exp:'',cvc:'',cur:'',nw:'',conf:'',pwTouched:{}}, carts:{}, placing:false, error:null, offline:false, failNext:false, snapId:null,
+  orders:[
+    {id:'A-046',stall:'15',lines:[{id:'t3',q:1,p:55},{id:'t1',q:1,p:35}],status:'preparing',placed:new Date(Date.now()-6*60e3),updated:new Date(Date.now()-60e3)},
+    {id:'A-031',stall:'07',lines:[{id:'n1',q:1,p:120}],status:'picked',placed:new Date(Date.now()-26*3600e3),updated:new Date(Date.now()-26*3600e3)},
+    {id:'A-022',stall:'03',lines:[{id:'b2',q:2,p:105}],status:'cancelled',placed:new Date(Date.now()-50*3600e3),updated:new Date(Date.now()-50*3600e3)}
+  ]
+};
+const t = k => T[S.lang][k];
+const loc = o => o[S.lang];
+const view = () => S.stack[S.stack.length-1];
+const go = v => {S.error=null;S.stack.push(v);render(true)};
+const back = () => {S.error=null;if(S.stack.length>1)S.stack.pop();render(true)};
+const home = v => {S.error=null;S.stack=[v];render(true)};
+const isActive = o => !['picked','cancelled'].includes(o.status);
+const active = () => S.orders.filter(isActive);
+const cart = no => (S.carts[no] ||= {});
+const META = {};
+const lineKey = (id,opts,note) => `${id}|${[...opts].sort().join(',')}|${note.trim()}`;
+const unitOf = (it,opts) => it.price + opts.reduce((a,o)=>a+(optOf(it.stall,o)?.d||0),0);
+const itemCount = (no,id) => Object.entries(cart(no)).reduce((a,[k,q])=>a+(META[k]?.id===id?q:0),0);
+const cartCount = no => Object.values(cart(no)).reduce((a,b)=>a+b,0);
+const cartLines = no => Object.entries(cart(no)).filter(([,q])=>q>0).map(([k,q])=>{ const m=META[k], it=ITEM[m.id]; return {k,it,q,opts:m.opts,note:m.note,unit:unitOf(it,m.opts)} });
+const cartTotal = lines => lines.reduce((a,l)=>a+(l.it.out?0:l.unit*l.q),0);
+const orderTotal = o => o.lines.reduce((a,l)=>a+l.p*l.q,0);
+const STEP = {confirming:0,preparing:1,ready:2,picked:3};
+const NEXT = ['preparing','ready','picked'];
+
+/* ---------- pieces ---------- */
+const header = (title, opt={}) => `
+  <header class="hdr">
+    ${opt.back?`<button class="back" data-a="back" aria-label="${t('back')}">${I.back}</button>`:''}
+    <div class="ttl"><h1>${title}</h1></div>
+    <div class="tog" role="group" aria-label="${t('lang')}">
+      <button data-a="lang" data-v="zh" aria-pressed="${S.lang==='zh'}" lang="zh-Hant">中</button>
+      <button data-a="lang" data-v="en" aria-pressed="${S.lang==='en'}" lang="en">EN</button>
+    </div>
+  </header>`;
+
+const legs = o => {
+  const n = o.status==='cancelled' ? -1 : STEP[o.status];
+  return `<div class="legs">${t('legs').map((l,i)=>{
+    const done = o.status==='picked' ? true : i<n;
+    const now = o.status!=='picked' && i===n;
+    return `<div class="${done?'d':''}${now?' n':''}"><i></i><span>${l}</span></div>`;
+  }).join('')}</div>`;
+};
+// mode: 'mini' (button) | 'full' (section with extra content after the strip)
+const pass = (o, mode, extra='') => {
+  const s = STALL[o.stall], cls = 's-'+o.status+(S.snapId===o.id?' snapping':'');
+  const sub = mode==='mini' ? t('stallOf')(s.no,loc(s.name)) : '';
+  const inner = `
+    <div class="top">
+      <span class="lab">${t('pickup')}</span><span class="lab" style="grid-column:3;text-align:right">${t('status')}</span>
+      <span class="code num"><span class="pfx">${o.id.split('-')[0]}</span>-${o.id.split('-')[1]}</span>
+      <span class="vend">${mode==='mini'?sub:''}</span>
+      <div class="stat"><b>${t('st')[o.status]}</b></div>
+    </div>
+    ${mode==='full'?`<dl class="fields"><div><dt class="lab">${t('fStall')}</dt><dd>${t('stallOf')(s.no,loc(s.name))}</dd></div><div><dt class="lab">${t('fPlace')}</dt><dd>${loc(s.place)}</dd></div><div><dt class="lab">${t('fPlaced')}</dt><dd>${hm(o.placed)}</dd></div></dl>`:''}
+    <div class="perf"></div>${legs(o)}${extra}`;
+  return mode==='mini'
+    ? `<button class="pass mini ${cls}" data-a="pass" data-id="${o.id}" aria-label="${t('pickup')} ${o.id}, ${t('st')[o.status]}, ${sub}">${inner}</button>`
+    : `<section class="pass ${cls}">${inner}</section>`;
+};
+const esc = x => String(x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const lineStepper = l => `<div class="step"><button data-a="ldec" data-k="${l.k}" aria-label="${t('less')(loc(l.it))}">${I.minus}</button><output aria-live="polite">${l.q}</output><button data-a="linc" data-k="${l.k}" aria-label="${t('more')(loc(l.it))}">${I.plus}</button></div>`;
+const stepper = it => {
+  const q = cart(it.stall)[it.id]||0, n = loc(it);
+  return q>0
+    ? `<div class="step"><button data-a="dec" data-id="${it.id}" aria-label="${t('less')(n)}">${I.minus}</button><output aria-live="polite">${q}</output><button data-a="inc" data-id="${it.id}" aria-label="${t('more')(n)}">${I.plus}</button></div>`
+    : `<button class="add" data-a="inc" data-id="${it.id}" aria-label="${t('addA')(n)}" ${STALL[it.stall].open?'':'disabled'}>${I.plus}</button>`;
+};
+const tabbar = cur => {
+  const n = active().length;
+  return `<nav class="tabbar">
+    <button data-a="home" data-v="stalls" ${cur==='stalls'?'aria-current="page"':''}>${I.store}${t('stalls')}</button>
+    <button data-a="home" data-v="orders" ${cur==='orders'?'aria-current="page"':''}>${I.ticket}${t('myOrders')}${n?`<span class="badge">${n}</span>`:''}</button>
+    <button data-a="home" data-v="account" ${cur==='account'?'aria-current="page"':''}>${I.user}${t('meTab')}</button>
+  </nav>`;
+};
+
+const defPay = () => S.pays.find(p=>p.def) || S.pays[0] || null;
+const payName = p => p.type==='card' ? t('cardLast')(p.last4) : t('walletName');
+const payLabel = () => defPay() ? payName(defPay()) : `${t('payMethod')}: ${t('notSet')}`;
+const newPay = () => S.f.payType==='card' ? {id:'p'+Date.now(),type:'card',last4:S.f.cno.replace(/\D/g,'').slice(-4)} : {id:'p'+Date.now(),type:'wallet'};
+const addPay = p => { if(!S.pays.length) p.def=true; S.pays.push(p) };
+const heroImg = (s, cls='') => `<div class="himg ${cls}" style="--sc:${s.c}">${I.photo}<span class="phl">${t('phPhoto')}</span></div>`;
+const openTxt = s => s.open?`<span class="on">${t('open')}</span>`:`<span class="off">${t('opensAt')(s.opens)}</span>`;
+const hero = s => `<section class="hero hb ${s.open?'':'closed'}" style="--sc:${s.c}">${heroImg(s)}
+    <div class="hcard"><div class="hrow"><h2>${loc(s.name)}</h2></div>
+      <p class="desc">${loc(s.desc)}</p>
+      <div class="chips"><span>${loc(s.place)}</span><span class="num">${s.hours}</span><span>${openTxt(s)}</span></div>
+      <span class="sample">SAMPLE DATA</span></div></section>`;
+
+const RX = { id:/^\d{9}$/, pw:/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/ };
+const pwChecks = v => [v.length>=8, /[A-Za-z]/.test(v), /\d/.test(v), v.length>0 && /^[A-Za-z\d]+$/.test(v)];
+const langTog = () => `<div class="tog" role="group" aria-label="${t('lang')}">
+      <button type="button" data-a="lang" data-v="zh" aria-pressed="${S.lang==='zh'}" lang="zh-Hant">中</button>
+      <button type="button" data-a="lang" data-v="en" aria-pressed="${S.lang==='en'}" lang="en">EN</button></div>`;
+const idField = () => {
+  const v=S.f.id, bad = S.f.touched.id && !RX.id.test(v) || /\D/.test(v);
+  return `<div class="field ${bad?'bad':(RX.id.test(v)?'ok':'')}" data-field="id"><label for="f-id">${t('sid')}</label>
+    <div class="input"><input id="f-id" name="sid" class="num" inputmode="numeric" autocomplete="username" maxlength="9" placeholder="112000000" value="${v}" aria-describedby="h-id" aria-invalid="${bad}"></div>
+    <span class="hint" id="h-id">${bad?t('sidErr'):t('sidHint')}</span></div>`;
+};
+const pwField = (mode) => {
+  const v=S.f.pw, ck=pwChecks(v), ok=RX.pw.test(v);
+  const bad = mode==='login' ? (S.f.touched.pw && !v) : (S.f.touched.pw && !ok);
+  return `<div class="field ${bad?'bad':(mode==='signup'&&ok?'ok':'')}" data-field="pw"><label for="f-pw">${t('pw')}</label>
+    <div class="input"><input id="f-pw" name="pw" type="${S.f.show?'text':'password'}" autocomplete="${mode==='login'?'current-password':'new-password'}" value="${v}" aria-describedby="h-pw" aria-invalid="${bad}">
+      <button type="button" class="eye" data-a="eye" aria-label="${S.f.show?t('pwHide'):t('pwShow')}">${S.f.show?I.eyeOff:I.eye}</button></div>
+    ${mode==='signup'
+      ? `<ul class="checks" id="h-pw">${t('chk').map((c,i)=>`<li class="${ck[i]?'ok':''}">${ck[i]?I.check:I.dot}${c}</li>`).join('')}</ul>`
+      : `<span class="hint" id="h-pw">${bad?t('pwReq'):''}</span>`}</div>`;
+};
+const authValid = mode => RX.id.test(S.f.id) && (mode==='login' ? S.f.pw.length>0 : RX.pw.test(S.f.pw));
+const cardValid = () => S.f.cno.replace(/\D/g,'').length===16 && /^(0[1-9]|1[0-2])\/\d{2}$/.test(S.f.exp) && /^\d{3}$/.test(S.f.cvc);
+const payValid = () => S.f.payType==='wallet' || S.f.payType==='later' || (S.f.payType==='card' && cardValid());
+const payOptions = () => {
+  const ty=S.f.payType;
+  const opt=(k,ic,ti,su)=>`<button type="button" class="opt" role="radio" aria-checked="${ty===k}" data-a="payType" data-v="${k}"><span class="oi">${ic}</span><span><b>${ti}</b><small>${su}</small></span><span class="rd"></span></button>`;
+  return `<div class="opts" role="radiogroup" aria-label="${t('payTtl')}">
+    ${opt('card',I.card,t('optCard'),t('optCardSub'))}
+    ${ty==='card'?`<div class="cardform">
+      <div class="field"><label for="f-cno">${t('cardNo')}</label><div class="input"><input id="f-cno" class="num" inputmode="numeric" autocomplete="off" maxlength="19" placeholder="0000 0000 0000 0000" value="${S.f.cno}"></div></div>
+      <div class="field"><label for="f-exp">${t('exp')}</label><div class="input"><input id="f-exp" class="num" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="MM/YY" value="${S.f.exp}"></div></div>
+      <div class="field"><label for="f-cvc">${t('cvc')}</label><div class="input"><input id="f-cvc" class="num" inputmode="numeric" autocomplete="off" maxlength="3" placeholder="000" value="${S.f.cvc}"></div></div>
+      <span class="hint" style="grid-column:1/3;margin-top:8px">${t('cardNote')}</span></div>`:''}
+    ${opt('wallet',I.wallet,t('optWallet'),t('optWalletSub'))}
+    ${ty==='wallet'?`<span class="hint">${t('walletNote')}</span>`:''}
+    ${view().v==='payEdit'?'':opt('later',I.clock,t('optLater'),t('optLaterSub'))}
+  </div>`;
+};
+const pwFormValid = () => S.f.cur.length>0 && RX.pw.test(S.f.nw) && S.f.nw===S.f.conf && S.f.nw!==S.f.cur;
+const obHead = (n, back) => `<header class="obhead"><div class="bar">${back?`<button class="back" data-a="back" aria-label="${t('back')}" style="color:#fff;width:44px;height:44px;margin-left:-12px;display:grid;place-items:center;border-radius:6px">${I.back}</button>`:'<span></span>'}${langTog()}</div>
+  <div class="steps" aria-hidden="true"><i class="on"></i><i class="${n>1?'on':''}"></i></div><span class="stepn">${t('stepN')(n)}</span></header>`;
+
+/* ---------- screens ---------- */
+const V = {
+  login(){
+    const ok = authValid('login');
+    return `<div class="auth"><section class="ahero"><div class="bar"><span></span>${langTog()}</div>
+      <h1>${t('appName')}</h1><p>${t('tagline')}</p></section>
+      <form class="acard" data-form="login" novalidate>
+        <h2>${t('signIn')}</h2>
+        ${S.authErr==='login'?`<div class="note err" role="alert">${I.alert}<span>${t('loginErr')}</span></div>`:''}
+        ${idField()}${pwField('login')}
+        <button class="cta inline" type="submit" ${ok&&!S.busy?'':'disabled'} aria-busy="${S.busy}">${S.busy?`<span class="spin" aria-hidden="true"></span>${t('signingIn')}`:t('signIn')}</button>
+        <p class="alink">${t('noAcct')} <button type="button" data-a="toSignup">${t('signUp')}</button></p>
+        <span class="mock">${t('mockAuth')}</span>
+      </form></div>`;
+  },
+  signup(){
+    const ok = authValid('signup');
+    return `<div class="auth"><section class="ahero"><div class="bar"><button class="back" data-a="toLogin" aria-label="${t('back')}">${I.back}</button>${langTog()}</div>
+      <h1>${t('createAcct')}</h1><p>${t('signUpLead')}</p></section>
+      <form class="acard" data-form="signup" novalidate>
+        ${S.authErr==='taken'?`<div class="note err" role="alert">${I.alert}<span>${t('takenErr')}</span><button type="button" class="act" data-a="toLogin">${t('signInInstead')}</button></div>`:''}
+        ${idField()}${pwField('signup')}
+        <button class="cta inline" type="submit" ${ok&&!S.busy?'':'disabled'} aria-busy="${S.busy}">${S.busy?`<span class="spin" aria-hidden="true"></span>${t('creating')}`:t('createAcct')}</button>
+        <p class="alink">${t('haveAcct')} <button type="button" data-a="toLogin">${t('signIn')}</button></p>
+        <span class="mock">${t('mockAuth')}</span>
+      </form></div>`;
+  },
+  obPay(){
+    return obHead(1,true) + `<main><div class="ob">
+      <h2>${t('payTtl')}</h2><p class="lead">${t('payLead')}</p>${payOptions()}</div></main>
+      <div class="obfoot"><div class="pair"><button class="prev" data-a="obBack">${I.back}${t('prevStep')}</button><button class="cta" data-a="payNext" ${payValid()?'':'disabled'}>${t('cont')}</button></div></div>`;
+  },
+  payEdit(){
+    return header(t('addPayTtl'),{back:true}) + `<main><div class="ob">
+      <h2>${t('addPayTtl')}</h2><p class="lead">${t('payLead')}</p>${payOptions()}</div></main>
+      <div class="obfoot"><button class="cta" data-a="paySave" ${payValid()?'':'disabled'}>${t('save')}</button></div>`;
+  },
+  pwChange(){
+    const ck=pwChecks(S.f.nw), okNew=RX.pw.test(S.f.nw), same=S.f.nw && S.f.nw===S.f.cur;
+    const confBad=S.f.pwTouched.conf && S.f.conf!==S.f.nw;
+    const curBad=S.f.pwTouched.cur && !S.f.cur;
+    const pwIn=(id,lbl,ac,bad,hint)=>`<div class="field ${bad?'bad':''}" data-field="${id}"><label for="f-${id}">${lbl}</label>
+      <div class="input"><input id="f-${id}" type="${S.f.show?'text':'password'}" autocomplete="${ac}" value="${S.f[id]}" aria-invalid="${!!bad}" aria-describedby="h-${id}">
+      ${id==='cur'?`<button type="button" class="eye" data-a="eyePw" aria-label="${S.f.show?t('pwHide'):t('pwShow')}">${S.f.show?I.eyeOff:I.eye}</button>`:''}</div>${hint}</div>`;
+    return header(t('changePw'),{back:true}) + `<main><form class="ob" data-form="pw" novalidate>
+      ${S.authErr==='cur'?`<div class="note err" role="alert" style="margin:0 0 4px">${I.alert}<span>${t('curWrong')}</span></div>`:''}
+      ${pwIn('cur',t('curPw'),'current-password',curBad,`<span class="hint" id="h-cur">${curBad?t('pwReq'):''}</span>`)}
+      ${pwIn('nw',t('newPw'),'new-password',(S.f.pwTouched.nw&&!okNew)||same,`<ul class="checks" id="h-nw">${t('chk').map((c,i)=>`<li class="${ck[i]?'ok':''}">${ck[i]?I.check:I.dot}${c}</li>`).join('')}</ul><span class="hint same">${same?t('sameAsOld'):''}</span>`)}
+      ${pwIn('conf',t('confPw'),'new-password',confBad,`<span class="hint" id="h-conf">${confBad?t('pwMismatch'):''}</span>`)}
+      <span class="mock" style="text-align:left;margin-top:16px">${t('mockAuth')}</span>
+    </form></main>
+    <div class="obfoot"><button class="cta" data-a="pwSave" ${pwFormValid()&&!S.busy?'':'disabled'} aria-busy="${S.busy}">${S.busy?`<span class="spin" aria-hidden="true"></span>${t('saving')}`:t('updatePw')}</button></div>`;
+  },
+  account(){
+    const fl=S.flash; S.flash=null;
+    return header(t('myAccount')) + `<main>
+      ${fl?`<div class="note ok" role="status">${I.check}<span>${t(fl)}</span></div>`:''}
+      <section class="idcard"><div class="top">
+        <span class="lab">${t('sid')}</span><span class="lab" style="text-align:right">${t('acctStatus')}</span>
+        <span class="code num">${S.user||'—'}</span><div class="stat"><b>${t('verified')}</b></div></div>
+        <div class="perf"></div>
+        <dl class="fields"><div><dt class="lab">${t('school')}</dt><dd>${t('nthu')}</dd></div><div><dt class="lab">${t('joined')}</dt><dd>${S.joined||'—'}</dd></div></dl>
+      </section>
+      <div class="sec"><h2>${t('settings')}</h2></div>
+      <div class="acct">
+        <div class="setrow"><span class="oi">${I.bell}</span><span class="tx"><b id="lbl-notif">${t('notif')}</b><small>${t('notifSub')}</small></span>
+          <button class="switch" role="switch" aria-checked="${S.notif}" aria-labelledby="lbl-notif" data-a="toggleNotif"><i></i></button></div>
+        <div class="setrow"><span class="oi">${I.lang}</span><span class="tx"><b>${t('lang')}</b><small>${S.lang==='zh'?'中文（繁體）':'English'}</small></span>
+          ${langTog().replace('class="tog"','class="tog tog-light"')}</div>
+      </div>
+      <div class="sec"><h2>${t('security')}</h2></div>
+      <div class="acct">
+        <button class="setrow navrow" data-a="pwChange"><span class="oi">${I.lock}</span><span class="tx"><b>${t('changePw')}</b><small>${t('changePwSub')}</small></span><span class="chev">${I.chev}</span></button>
+      </div>
+      <div class="sec"><h2>${t('payMethods')}</h2><span>${S.pays.length?t('nMethods')(S.pays.length):''}</span></div>
+      <div class="acct">
+        ${S.pays.map(p=>`<div class="setrow"><span class="oi">${p.type==='wallet'?I.wallet:I.card}</span>
+          <span class="tx"><b>${payName(p)}${p.def?` <span class="defchip">${t('defaultTag')}</span>`:''}</b><small>${p.def?t('defaultSub'):t('chargeNote')}</small></span>
+          <span class="pacts">${p.def?'':`<button class="lnk" data-a="payDef" data-id="${p.id}">${t('makeDefault')}</button>`}<button class="lnk del" data-a="payDel" data-id="${p.id}" aria-label="${t('remove')} ${payName(p)}">${t('remove')}</button></span></div>`).join('')}
+        ${S.pays.length?'':`<div class="setrow"><span class="oi">${I.card}</span><span class="tx"><b>${t('noPay')}</b><small>${t('optLaterSub')}</small></span><span></span></div>`}
+        <button class="addrow" data-a="payEdit">${I.plus}${t('addPayTtl')}</button>
+      </div>
+      <button class="signout" data-a="signOut">${t('signOut')}</button>
+      <span class="mock">${t('mockAuth')}</span>
+      <div style="height:24px"></div>
+    </main>` + tabbar('account');
+  },
+  obNotif(){
+    return obHead(2,true) + `<main><div class="ob">
+      <h2>${t('notifTtl')}</h2><p class="lead">${t('notifLead')}</p>
+      <div class="nprev" aria-hidden="true"><span class="ni">${I.bell}</span>
+        <div><div class="nt"><b>${t('appName')}</b><span>${t('nNow')}</span></div><p>${t('nBody')('A-047',t('stallOf')('07',loc(STALL['07'].name)))}</p></div>
+        <span class="sample">SAMPLE DATA</span></div>
+      <ul class="nlist">${t('nPoints').map(x=>`<li>${I.check}<span>${x}</span></li>`).join('')}</ul>
+      <span class="mock" style="text-align:left;margin-top:18px">${t('notifMock')}</span>
+    </div></main>
+    <div class="obfoot"><div class="pair"><button class="prev" data-a="obBack">${I.back}${t('prevStep')}</button><button class="cta" data-a="notif" data-v="on">${I.bell}${t('allow')}</button></div><button class="skip" data-a="notif" data-v="off">${t('notNow')}</button></div>`;
+  },
+  stalls(){
+    const a = active();
+    return header(t('stalls')) + `<main>
+      ${a.length?`<div class="sec"><h2>${t('passes')}</h2><span class="sample">SAMPLE DATA</span></div>
+        <div class="stack">${a.map(o=>pass(o,'mini')).join('')}</div>`:''}
+      <div class="sec"><h2>${t('allStalls')}</h2>${a.length?'':'<span class="sample">SAMPLE DATA</span>'}</div>
+      <nav class="tabs areatabs" aria-label="${t('area')}">${AREAS.map(([k,n])=>`<button data-a="area" data-v="${k}" aria-current="${S.area===k}">${loc(n)}<span class="cnt">${k==='all'?STALLS.length:STALLS.filter(x=>x.area===k).length}</span></button>`).join('')}</nav>
+      <div class="sgrid" style="padding-top:14px">${STALLS.filter(s=>S.area==='all'||s.area===S.area).map(s=>{const c=cartCount(s.no);return `<button class="scard ${s.open?'':'closed'}" data-a="menu" data-v="${s.no}" style="--sc:${s.c}" aria-label="${loc(s.name)}, ${s.open?t('open'):t('closed')}">
+        <span class="img">${I.photo}<span class="phl">${t('phPhoto')}</span></span>
+        <span class="body"><span class="nm">${loc(s.name)}</span><span class="mt">${loc(s.place)}</span><span class="mt">${s.hours}</span>
+          <span class="st"><span class="${s.open?'on':'off'}">${s.open?t('open'):t('opensAt')(s.opens)}</span>${c?`<span class="cartn">${t('inCart')(c)}</span>`:''}</span></span>
+      </button>`}).join('')}</div>
+    </main>` + tabbar('stalls');
+  },
+  menu({no, cat=0}){
+    const s = STALL[no], a = active().filter(o=>o.stall===no), lines = cartLines(no), cnt = cartCount(no);
+    const fl=S.flash; S.flash=null;
+    return header(loc(s.name),{back:true,no:s.no}) + `<main id="scroller">
+      ${fl?`<div class="note ok toast" role="status">${I.check}<span>${t(fl)}</span></div>`:''}
+      ${hero(s)}
+      ${s.open?'':`<div class="note">${I.info}<span>${t('closedBanner')(s.opens)}</span></div>`}
+      ${a.length?`<div class="stack" style="padding-top:16px">${a.map(o=>pass(o,'mini')).join('')}</div>`:''}
+      <nav class="tabs">${s.cats.map((c,i)=>`<button data-a="cat" data-v="${i}" aria-current="${i===cat}">${loc(c)}</button>`).join('')}</nav>
+      ${s.cats.map((c,i)=>`<section id="cat-${i}"><h3 class="cat">${loc(c)}</h3>
+        <div class="igrid">${c.items.map(it=>{ const n=itemCount(no,it.id); return `<button class="icard ${it.out?'out':''}" style="--sc:${s.c}" data-a="item" data-id="${it.id}" aria-label="${loc(it)}, $${it.price}${it.out?', '+t('soldOut'):''}${n?', '+t('inCartN')(n):''}">
+          <span class="iimg">${I.photo}${it.out?`<span class="sold">${t('soldOut')}</span>`:`<span class="phl">${t('phPhoto')}</span>`}${n?`<span class="incart">${t('inCartN')(n)}</span>`:''}</span>
+          <span class="ibody"><span class="nm">${loc(it)}</span>${it.out&&n?`<span class="warn">${t('nowOut')(loc(it))}</span>`:''}
+            <span class="ifoot"><span class="p">$${it.price}</span>${it.out||!s.open?'':`<span class="add" aria-hidden="true">${I.plus}</span>`}</span></span>
+        </button>`}).join('')}</div></section>`).join('')}
+      <div style="height:24px"></div>
+    </main>
+    ${cnt?`<button class="cta" data-a="checkout" data-v="${no}"><span>${t('checkout')} · ${t('items')(cnt)}</span><span class="num">NT$${cartTotal(lines)}</span></button>`:''}`;
+  },
+  item({id}){
+    const it=ITEM[id], s=STALL[it.stall], f=S.it, opts=OPTS[it.stall]||[];
+    const unit=unitOf(it,f.opts), can=!it.out && s.open;
+    return header(loc(it),{back:true}) + `<main class="itempage">
+      <div class="himg" style="--sc:${s.c}">${I.photo}<span class="phl">${t('phPhoto')}</span>${it.out?`<span class="sold big">${t('soldOut')}</span>`:''}</div>
+      <section class="ihead"><h2>${loc(it)}</h2><span class="p num">$${it.price}</span><p class="mt">${loc(s.name)} · ${loc(s.place)}</p><span class="sample">SAMPLE DATA</span></section>
+      ${it.out?`<div class="note err" role="alert">${I.alert}<span>${t('itemOut')}</span></div>`:''}
+      ${!s.open?`<div class="note">${I.info}<span>${t('closedBanner')(s.opens)}</span></div>`:''}
+      ${opts.length?`<fieldset class="ogroup" ${can?'':'disabled'}><legend>${t('customize')}<small>${t('customizeSub')}</small></legend>
+        ${opts.map(([oid,zh,en,d,g])=>`<label class="ochk"><input type="checkbox" data-opt="${oid}" ${f.opts.includes(oid)?'checked':''}><span class="box">${I.check}</span><span class="ol">${S.lang==='zh'?zh:en}${g?`<small>${t('pickOne')}</small>`:''}</span><span class="od num">${d?'+$'+d:''}</span></label>`).join('')}
+      </fieldset>`:''}
+      <div class="ogroup"><label class="legend" for="f-note">${t('noteTtl')}<small>${t('optional')}</small></label>
+        <textarea id="f-note" maxlength="60" rows="3" placeholder="${t('notePh')}" ${can?'':'disabled'}>${esc(f.note)}</textarea>
+        <span class="hint cnt" id="note-cnt">${f.note.length} / 60</span></div>
+      <div class="qrow"><span>${t('qty')}</span><div class="step"><button data-a="iq" data-v="-1" aria-label="${t('less')(loc(it))}" ${f.q<=1||!can?'disabled':''}>${I.minus}</button><output aria-live="polite">${f.q}</output><button data-a="iq" data-v="1" aria-label="${t('more')(loc(it))}" ${f.q>=20||!can?'disabled':''}>${I.plus}</button></div></div>
+      <div style="height:16px"></div>
+    </main>
+    <button class="cta" data-a="addItem" ${can?'':'disabled'}><span>${it.out?t('soldOut'):!s.open?t('closed'):t('addToCart')}</span><span class="num" id="item-total">${can?'NT$'+unit*f.q:''}</span></button>`;
+  },
+  checkout({no}){
+    const s = STALL[no], lines = cartLines(no), bad = lines.filter(l=>l.it.out), cnt = lines.reduce((a,l)=>a+l.q,0);
+    if(!lines.length) return header(t('review'),{back:true}) + `<main><div class="empty">${t('emptyCart')}<br><button data-a="back">${t('backMenu')}</button></div></main>`;
+    const blocked = bad.length>0 || S.placing;
+    return header(t('review'),{back:true}) + `<main>
+      <div class="meta"><span>${t('stallOf')(s.no,loc(s.name))} · ${loc(s.place)}</span><span class="sample">SAMPLE DATA</span></div>
+      ${S.error?`<div class="note err" role="alert">${I.alert}<span>${S.error==='offline'?t('errOffline'):t('errFail')}</span>${S.error==='offline'?'':`<button class="act" data-a="place" data-v="${no}">${t('retry')}</button>`}</div>`:''}
+      ${bad.length?`<div class="note err" role="alert">${I.alert}<span>${t('removeFirst')}</span></div>`:''}
+      <div class="sec"><h2>${t('orderLines')}</h2><span>${t('items')(cnt)}</span></div>
+      ${lines.map(l=>`<div class="line ${l.it.out?'bad':''}">
+        <span class="nm">${l.it.out?`<s>${loc(l.it)}</s><span class="sr-only">（${t('soldOut')}）</span>`:loc(l.it)}${l.opts.length?`<span class="lopt">${optNames(l.it.stall,l.opts)}</span>`:''}${l.note?`<span class="lopt">${t('noteLbl')}：${esc(l.note)}</span>`:''}${l.it.out?`<span class="warn">${t('nowOut')(loc(l.it))}</span>`:''}</span>
+        ${l.it.out?`<button class="rm" data-a="rm" data-k="${l.k}">${t('remove')}</button>`:lineStepper(l)}
+        <span class="sub num">$${l.unit*l.q}</span></div>`).join('')}
+      <div class="sum"><span>${t('total')}</span><b>NT$${cartTotal(lines)}</b></div>
+      <div class="sec" style="padding-top:16px"><h2>${t('payment')}</h2></div>
+      <div class="ph ${defPay()?'set':''}">${I.card}<span><strong>${payLabel()}</strong>${t('chargeNote')}</span></div>
+      <div class="ph set">${I.user}<span><strong>${t('orderAs')(S.user||'—')}</strong>${t('mockAuth')}</span></div>
+      <div style="height:24px"></div>
+    </main>
+    <button class="cta ${S.placing?'center':''}" data-a="place" data-v="${no}" ${blocked?'disabled':''} aria-busy="${S.placing}">
+      ${S.placing?`<span class="spin" aria-hidden="true"></span><span>${t('placing')}</span>`:`<span>${t('place')}</span><span class="num">NT$${cartTotal(lines)}</span>`}
+    </button>`;
+  },
+  pass({id}){
+    const o = S.orders.find(x=>x.id===id), s = STALL[o.stall];
+    const msg = o.status==='ready' ? `<p class="msg ready">${t('readyMsg')(s.no,loc(s.name))}</p>`
+      : o.status==='cancelled' ? `<p class="msg cancel">${t('cancelMsg')}</p>`
+      : o.status==='picked' ? `<p class="msg">${t('pickedMsg')}</p>` : `<p class="msg">${t('show')}</p>`;
+    const extra = `<div class="rule"></div><div class="lines">
+      ${o.lines.map(l=>`<div><span>${loc(ITEM[l.id])} × ${l.q}${l.opts&&l.opts.length?`<small class="lopt">${optNames(ITEM[l.id].stall,l.opts)}</small>`:''}${l.note?`<small class="lopt">${t('noteLbl')}：${esc(l.note)}</small>`:''}</span><span class="num">$${l.p*l.q}</span></div>`).join('')}
+      <div class="t"><span>${t('total')}</span><span class="num">NT$${orderTotal(o)}</span></div></div>`;
+    const stale = S.offline && isActive(o);
+    return header(t('stallOf')(s.no,loc(s.name)),{back:true}) + `<main><div class="passwrap">
+      ${pass(o,'full',extra)}
+      ${msg}
+      <p class="upd ${stale?'off':''}">${stale?I.wifiOff+t('offline')(hms(o.updated)):t('updated')(hms(o.updated))}</p>
+      <p class="upd"><span class="sample">SAMPLE DATA</span></p>
+    </div></main>
+    ${o.status==='cancelled'?`<button class="cta center" data-a="menu" data-v="${s.no}">${t('backMenu')}</button>`:''}`;
+  },
+  orders(){
+    const a = active(), h = S.orders.filter(o=>!isActive(o));
+    if(!S.orders.length) return header(t('myOrders'))+`<main><div class="empty">${t('noOrders')}<br><button data-a="home" data-v="stalls">${t('browse')}</button></div></main>`+tabbar('orders');
+    return header(t('myOrders')) + `<main>
+      <div class="sec"><h2>${t('active')}</h2><span class="sample">SAMPLE DATA</span></div>
+      ${a.length?`<div class="stack">${a.map(o=>pass(o,'mini')).join('')}</div>`:`<p style="padding:0 20px;color:var(--mute);font-size:14px">${t('noActive')}</p>`}
+      <div class="sec"><h2>${t('history')}</h2></div>
+      ${h.map(o=>{const s=STALL[o.stall];return `<button class="hist" data-a="pass" data-id="${o.id}">
+        <span class="code">${o.id}</span><span>${loc(s.name)}</span>
+        <span class="r"><b>NT$${orderTotal(o)}</b><span class="${o.status==='cancelled'?'x':''}">${t('st')[o.status]}</span></span>
+        <span class="mt">${o.placed.toLocaleDateString(S.lang==='zh'?'zh-TW':'en-GB',{month:'short',day:'numeric'})} · ${hm(o.placed)}</span>
+      </button>`}).join('')}
+      <div style="height:24px"></div>
+    </main>` + tabbar('orders');
+  }
+};
+
+/* ---------- render ---------- */
+const app = document.getElementById('app');
+let lastScreen = null;
+let pendingFocus = false; // set before an async busy render so the final render still moves focus
+const ZONES = ['.hdr','.ahero','.obhead','.obfoot','.tabbar','.acard','main'];
+function focusKey(el){
+  if(!el || !app.contains(el) || el===document.body) return null;
+  if(el.id) return `#${CSS.escape(el.id)}`;
+  const d=el.dataset||{}; if(!d.a && !d.opt) return null;
+  const zone = ZONES.find(z=>el.closest(z)) || '';
+  if(d.opt) return `[data-opt="${d.opt}"]`;
+  return `${zone} [data-a="${d.a}"]` + (d.v!==undefined?`[data-v="${d.v}"]`:'') + (d.id?`[data-id="${d.id}"]`:'') + (d.k?`[data-k="${CSS.escape(d.k)}"]`:'');
+}
+const busyNow = () => S.busy || S.placing;
+function holdFocus(){ if(app.contains(document.activeElement)) pendingFocus = true }
+function render(reset){
+  const old = app.querySelector('main,.auth'), keep = (!reset && old) ? old.scrollTop : 0;
+  const fk = focusKey(document.activeElement), hadFocus = app.contains(document.activeElement);
+  document.documentElement.lang = S.lang==='zh'?'zh-Hant':'en';
+  const v = view(), screen = JSON.stringify([v.v,v.no,v.id]);
+  app.innerHTML = V[v.v](v);
+  const m = app.querySelector('main,.auth'); if(m) m.scrollTop = keep;
+  // keep keyboard focus: same control if it still exists, otherwise the new screen's heading
+  const want = hadFocus || pendingFocus;
+  const focusEl = el => { if(!el) return; if(!el.matches('button,input,textarea,select,a,[tabindex]')) el.tabIndex=-1; el.focus({preventScroll:true}) };
+  if(!busyNow()){
+    const err = app.querySelector('.note.err[role=alert]');
+    if(screen!==lastScreen){ if(lastScreen!==null && want) focusEl(app.querySelector('h1') || app.querySelector('main h2, .acard h2')) }
+    else if(pendingFocus && err) focusEl(err);
+    else if(fk && hadFocus) focusEl(app.querySelector(fk) || app.querySelector('.addrow, main [data-a]'));
+    pendingFocus = false;
+  }
+  lastScreen = screen;
+  S.snapId = null;
+  renderDemo();
+}
+
+app.addEventListener('click', e=>{
+  const b = e.target.closest('[data-a]'); if(!b || b.disabled) return;
+  const {a,v,id} = b.dataset;
+  if(a==='lang'){S.lang=v;render()}
+  else if(a==='area'){ S.area=v; render() }
+  else if(a==='eye'){ S.f.show=!S.f.show; render(); document.getElementById('f-pw')?.focus() }
+  else if(a==='toSignup'){ resetAuth(); S.stack=[{v:'login'},{v:'signup'}]; render(true) }
+  else if(a==='toLogin'){ resetAuth(true); S.stack=[{v:'login'}]; render(true) }
+  else if(a==='payType'){ S.f.payType=v; render(); if(v==='card') document.getElementById('f-cno')?.focus() }
+  else if(a==='payNext'){ if(S.f.payType!=='later') addPay(newPay()); go({v:'obNotif'}) }
+  else if(a==='notif'){ S.notif = v==='on'; home({v:'stalls'}) }
+  else if(a==='toggleNotif'){ S.notif=!S.notif; render(); say(`${t('notif')}: ${S.notif?t('on'):t('off')}`) }
+  else if(a==='payEdit'){ S.f.payType=null; S.f.cno=S.f.exp=S.f.cvc=''; go({v:'payEdit'}) }
+  else if(a==='payDef'){ S.pays.forEach(p=>p.def=p.id===id); render() }
+  else if(a==='payDel'){ const was=S.pays.find(p=>p.id===id)?.def; S.pays=S.pays.filter(p=>p.id!==id); if(was&&S.pays[0]) S.pays[0].def=true; render() }
+  else if(a==='pwChange'){ Object.assign(S.f,{cur:'',nw:'',conf:'',pwTouched:{},show:false}); S.authErr=null; go({v:'pwChange'}) }
+  else if(a==='paySave'){ addPay(newPay()); S.flash='payAdded'; back(); say(t('payAdded')) }
+  else if(a==='eyePw'){ S.f.show=!S.f.show; app.querySelectorAll('#f-cur,#f-nw,#f-conf').forEach(i=>i.type=S.f.show?'text':'password'); b.innerHTML=S.f.show?I.eyeOff:I.eye; b.setAttribute('aria-label',S.f.show?t('pwHide'):t('pwShow')) }
+  else if(a==='pwSave'){ if(!pwFormValid()) return; holdFocus(); S.busy=true; render();
+    setTimeout(()=>{ S.busy=false; if(S.failLogin){ S.failLogin=false; S.authErr='cur'; S.f.cur=''; S.f.pwTouched={}; return render() } S.flash='pwUpdated'; back(); say(t('pwUpdated')) },900) }
+  else if(a==='signOut'){ S.user=null; S.pays=[]; resetAuth(); home({v:'login'}) }
+  else if(a==='back' && view().v==='obPay'){ S.f.id=S.user||''; S.stack=[{v:'login'},{v:'signup'}]; render(true) }
+  else if(a==='obBack'){ if(view().v==='obPay'){ S.f.id=S.user||''; S.stack=[{v:'login'},{v:'signup'}]; render(true) } else back() }
+  else if(a==='back') back();
+  else if(a==='home') home({v});
+  else if(a==='menu'){ if(view().v==='pass') S.stack.pop(); go({v:'menu',no:v}) }
+  else if(a==='pass') go({v:'pass',id});
+  else if(a==='checkout') go({v:'checkout',no:v});
+  else if(a==='item'){ S.it={opts:[],note:'',q:1}; go({v:'item',id}) }
+  else if(a==='iq'){ S.it.q=Math.min(20,Math.max(1,S.it.q+(+v))); render(); say(`${t('qty')} ${S.it.q}`) }
+  else if(a==='addItem'){ const it=ITEM[view().id], k=lineKey(it.id,S.it.opts,S.it.note); META[k]={id:it.id,opts:[...S.it.opts],note:S.it.note.trim()}; cart(it.stall)[k]=(cart(it.stall)[k]||0)+S.it.q; S.flash='addedToCart'; back(); say(t('addedToCart')) }
+  else if(a==='linc'){ const m=META[b.dataset.k]; const c=cart(ITEM[m.id].stall); c[b.dataset.k]++; render(); say(`${loc(ITEM[m.id])} × ${c[b.dataset.k]}`) }
+  else if(a==='ldec'){ const k=b.dataset.k, it=ITEM[META[k].id], c=cart(it.stall); c[k]--; const q=c[k]; if(q<=0) delete c[k]; render(); say(`${loc(it)} × ${Math.max(q,0)}`) }
+  else if(a==='inc'){const it=ITEM[id];cart(it.stall)[id]=(cart(it.stall)[id]||0)+1;render()}
+  else if(a==='dec'){const it=ITEM[id],c=cart(it.stall);c[id]=Math.max(0,(c[id]||0)-1);if(!c[id])delete c[id];render()}
+  else if(a==='rm'){ const k=b.dataset.k; delete cart(ITEM[META[k].id].stall)[k]; render() }
+  else if(a==='cat'){
+    view().cat=+v; render();
+    const el=document.getElementById('cat-'+v), sc=document.getElementById('scroller');
+    if(el&&sc) sc.scrollTo({top:el.offsetTop-52,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
+  }
+  else if(a==='place') place(v);
+});
+
+function resetAuth(keepId){ S.authErr=null; S.busy=false; S.f.pw=''; S.f.show=false; S.f.touched={}; if(!keepId) S.f.id='' }
+app.addEventListener('change', e=>{
+  const el=e.target; if(!el.dataset.opt || view().v!=='item') return;
+  const it=ITEM[view().id], o=optOf(it.stall,el.dataset.opt);
+  if(el.checked){ if(o.g) S.it.opts=S.it.opts.filter(x=>optOf(it.stall,x)?.g!==o.g); S.it.opts.push(o.id) } else S.it.opts=S.it.opts.filter(x=>x!==o.id);
+  app.querySelectorAll('[data-opt]').forEach(c=>c.checked=S.it.opts.includes(c.dataset.opt));
+  const tot=document.getElementById('item-total'); if(tot) tot.textContent='NT$'+unitOf(it,S.it.opts)*S.it.q;
+});
+// live validation without re-rendering (keeps focus and caret)
+app.addEventListener('input', e=>{
+  const el=e.target, mode=view().v;
+  if(el.id==='f-id'){ S.f.id=el.value; if(S.f.id.length===9) S.f.touched.id=true }
+  else if(el.id==='f-pw'){ S.f.pw=el.value }
+  else if(el.id==='f-cno'){ const d=el.value.replace(/\D/g,'').slice(0,16); el.value=S.f.cno=d.replace(/(\d{4})(?=\d)/g,'$1 ') }
+  else if(el.id==='f-exp'){ let d=el.value.replace(/\D/g,'').slice(0,4); el.value=S.f.exp=d.length>2?d.slice(0,2)+'/'+d.slice(2):d }
+  else if(el.id==='f-cur'||el.id==='f-nw'||el.id==='f-conf'){ S.f[el.id.slice(2)]=el.value; S.authErr=null; patchPwForm(); return }
+  else if(el.id==='f-note'){ S.it.note=el.value; const c=document.getElementById('note-cnt'); if(c) c.textContent=`${el.value.length} / 60`; return }
+  else if(el.id==='f-cvc'){ el.value=S.f.cvc=el.value.replace(/\D/g,'').slice(0,3) }
+  else return;
+  if(mode==='login'||mode==='signup'){ S.authErr=null; patchAuth(mode) }
+  if(mode==='obPay'||mode==='payEdit'){ const b=app.querySelector('[data-a=payNext],[data-a=paySave]'); if(b) b.disabled=!payValid() }
+});
+app.addEventListener('focusout', e=>{
+  const mode=view().v; if(mode!=='login'&&mode!=='signup') return;
+  if(e.target.id==='f-id' && S.f.id){ S.f.touched.id=true; patchAuth(mode) }
+  if(e.target.id==='f-pw' && (S.f.pw||mode==='login')){ S.f.touched.pw=true; patchAuth(mode) }
+});
+function patchPwForm(){
+  const nw=app.querySelector('[data-field=nw]');
+  if(nw){ const ck=pwChecks(S.f.nw); nw.querySelectorAll('.checks li').forEach((li,i)=>{ li.className=ck[i]?'ok':''; li.innerHTML=(ck[i]?I.check:I.dot)+t('chk')[i] });
+    const same=S.f.nw&&S.f.nw===S.f.cur; nw.querySelector('.hint.same').textContent=same?t('sameAsOld'):'';
+    nw.className='field '+(((S.f.pwTouched.nw&&!RX.pw.test(S.f.nw))||same)?'bad':(RX.pw.test(S.f.nw)?'ok':'')) }
+  const conf=app.querySelector('[data-field=conf]');
+  if(conf){ const bad=S.f.pwTouched.conf && S.f.conf!==S.f.nw; conf.className='field '+(bad?'bad':(S.f.conf&&S.f.conf===S.f.nw?'ok':'')); conf.querySelector('.hint').textContent=bad?t('pwMismatch'):'' }
+  const cur=app.querySelector('[data-field=cur]');
+  if(cur){ const bad=S.f.pwTouched.cur&&!S.f.cur; cur.className='field '+(bad?'bad':''); cur.querySelector('.hint').textContent=bad?t('pwReq'):'' }
+  app.querySelector('form[data-form=pw] .note.err')?.remove();
+  const b=app.querySelector('[data-a=pwSave]'); if(b) b.disabled=!pwFormValid()||S.busy;
+}
+app.addEventListener('focusout', e=>{
+  if(view().v!=='pwChange') return; const k=(e.target.id||'').slice(2);
+  if(['cur','nw','conf'].includes(k)){ S.f.pwTouched[k]=true; patchPwForm() }
+});
+function patchAuth(mode){
+  // update validation UI in place so focus, caret and pending clicks are never disturbed
+  const idEl=app.querySelector('[data-field=id]');
+  if(idEl){ const v=S.f.id, bad=(S.f.touched.id&&!RX.id.test(v))||/\D/.test(v);
+    idEl.className='field '+(bad?'bad':(RX.id.test(v)?'ok':''));
+    idEl.querySelector('input').setAttribute('aria-invalid',bad);
+    idEl.querySelector('.hint').textContent=bad?t('sidErr'):t('sidHint'); }
+  const pwEl=app.querySelector('[data-field=pw]');
+  if(pwEl){ const v=S.f.pw, ok=RX.pw.test(v), bad = mode==='login' ? (S.f.touched.pw&&!v) : (S.f.touched.pw&&!ok);
+    pwEl.className='field '+(bad?'bad':(mode==='signup'&&ok?'ok':''));
+    pwEl.querySelector('input').setAttribute('aria-invalid',bad);
+    if(mode==='signup'){ const ck=pwChecks(v); pwEl.querySelectorAll('.checks li').forEach((li,i)=>{ li.className=ck[i]?'ok':''; li.innerHTML=(ck[i]?I.check:I.dot)+t('chk')[i] }) }
+    else pwEl.querySelector('.hint').textContent=bad?t('pwReq'):''; }
+  app.querySelector('.acard .note.err')?.remove();
+  const sb=app.querySelector('.acard [type=submit]'); if(sb) sb.disabled=!authValid(mode)||S.busy;
+}
+app.addEventListener('submit', e=>{
+  e.preventDefault(); const mode=e.target.dataset.form;
+  S.f.touched={id:true,pw:true};
+  if(!authValid(mode)||S.busy){ patchAuth(mode); return }
+  holdFocus(); S.busy=true; render();
+  setTimeout(()=>{
+    S.busy=false;
+    if(mode==='login'){
+      if(S.failLogin){ S.failLogin=false; S.authErr='login'; S.f.pw=''; S.f.touched={}; return render() }
+      S.user=S.f.id; S.joined=S.joined||'2025/9/1'; resetAuth(); home({v:'stalls'});
+    } else {
+      if(S.idTaken){ S.idTaken=false; S.authErr='taken'; return render() }
+      S.user=S.f.id; S.joined=new Date().toLocaleDateString('zh-TW'); resetAuth(); S.f.payType=null; S.f.cno=S.f.exp=S.f.cvc=''; S.stack=[{v:'obPay'}]; render(true);
+    }
+  },900);
+});
+
+function place(no){
+  if(S.placing) return;
+  holdFocus(); S.placing=true; S.error=null; render();
+  setTimeout(()=>{
+    S.placing=false;
+    if(S.offline){S.error='offline';return render()}
+    if(S.failNext){S.failNext=false;S.error='fail';return render()}
+    const lines = cartLines(no).map(l=>({id:l.it.id,q:l.q,p:l.unit,opts:l.opts,note:l.note}));
+    const o = {id:'A-0'+(seq++),stall:no,lines,status:'confirming',placed:clock(),updated:clock()};
+    S.orders.unshift(o); S.carts[no]={}; demoSel=o.id;
+    S.stack.pop(); S.stack.push({v:'pass',id:o.id}); render(true);
+  },1100);
+}
+
+const liveEl = document.getElementById('live');
+let annQ=[], annT=null;
+function say(msg){ annQ.push(msg); clearTimeout(annT); annT=setTimeout(()=>{ liveEl.textContent=''; const m=annQ.join('; '); annQ=[]; setTimeout(()=>{ liveEl.textContent=m },50) },30) }
+function announce(o){ annQ.push(`${t('pickup')} ${o.id}: ${t('st')[o.status]}`); clearTimeout(annT); annT=setTimeout(()=>{ liveEl.textContent=''; const msg=annQ.join('; '); annQ=[]; setTimeout(()=>{ liveEl.textContent=msg },50) },30) }
+
+/* ---------- demo panel (not part of the app) ---------- */
+const demo = document.getElementById('demo');
+let demoSel = null;
+function cartStall(){ const v=view(); return v.no || (v.id && S.orders.find(x=>x.id===v.id)?.stall) || null }
+function renderDemo(){
+  const a = active();
+  if(!a.find(o=>o.id===demoSel)) demoSel = a[0]?.id ?? null;
+  const o = S.orders.find(x=>x.id===demoSel);
+  const shown = o ? (o.pending||o.status) : null;
+  const no = cartStall(), avail = no ? cartLines(no).filter(l=>!l.it.out) : [];
+  demo.innerHTML = `
+    <h2>Demo controls</h2>
+    <p>Not part of the app. Play the vendor or the network to see every state. All stalls, items, prices and pickup codes are sample data; the pickup-code format is a placeholder.</p>
+    <label class="lbl" for="dsel">Vendor side — order</label>
+    <select id="dsel" ${a.length?'':'disabled'}>${a.length?a.map(x=>`<option value="${x.id}" ${x.id===demoSel?'selected':''}>${x.id} · ${STALL[x.stall].name.en} · ${T.en.st[x.pending||x.status]}</option>`).join(''):'<option>No active orders</option>'}</select>
+    <div class="row" style="margin-top:8px">
+      <button data-d="adv" ${o&&shown!=='picked'&&shown!=='cancelled'?'':'disabled'}>Advance${o&&STEP[shown]<3?` → ${T.en.st[NEXT[STEP[shown]]]}`:''}</button>
+      <button data-d="cancel" ${o&&shown!=='cancelled'?'':'disabled'}>Cancel order</button>
+    </div>
+    <span class="lbl">Account</span>
+    <div class="row">
+      <button data-d="failLogin" aria-pressed="${S.failLogin}">Wrong password next sign-in</button>
+      <button data-d="idTaken" aria-pressed="${S.idTaken}">ID already registered next sign-up</button>
+    </div>
+    <div class="row"><button class="wide" data-d="skipAuth" ${S.user?'disabled':''}>Skip sign-in (use sample account)</button></div>
+    <span class="lbl">Menu</span>
+    <div class="row"><button class="wide" data-d="sellout" ${avail.length?'':'disabled'}>Sell out an item in this cart${avail.length?` (${avail[0].it.en})`:''}</button></div>
+    <div class="row"><button class="wide" data-d="restock">Restock everything</button></div>
+    <span class="lbl">Network</span>
+    <div class="row">
+      <button data-d="offline" aria-pressed="${S.offline}">Offline</button>
+      <button data-d="fail" aria-pressed="${S.failNext}">Fail next order</button>
+    </div>
+    ${S.offline&&a.some(x=>x.pending)?'<p style="margin-top:10px">Status changes are queued until you go back online.</p>':''}`;
+}
+demo.addEventListener('change', e=>{ if(e.target.id==='dsel'){demoSel=e.target.value;renderDemo()} });
+demo.addEventListener('click', e=>{
+  const b = e.target.closest('[data-d]'); if(!b||b.disabled) return;
+  const d = b.dataset.d, o = S.orders.find(x=>x.id===demoSel);
+  const setStatus = st => {
+    if(S.offline){ o.pending=st; return renderDemo() }
+    o.status=st; o.updated=clock(); S.snapId=o.id; render(); announce(o);
+  };
+  if(d==='adv'&&o) setStatus(NEXT[STEP[o.pending||o.status]]);
+  else if(d==='cancel'&&o) setStatus('cancelled');
+  else if(d==='sellout'){ const l=cartLines(cartStall()).find(l=>!l.it.out); if(l){l.it.out=true;render()} }
+  else if(d==='restock'){ Object.values(ITEM).forEach(i=>i.out=false); render() }
+  else if(d==='offline'){
+    S.offline=!S.offline;
+    if(!S.offline) S.orders.forEach(x=>{ if(x.pending){x.status=x.pending;delete x.pending;x.updated=clock();S.snapId=x.id;setTimeout(()=>announce(x))} });
+    render();
+  }
+  else if(d==='fail'){ S.failNext=!S.failNext; renderDemo() }
+  else if(d==='failLogin'){ S.failLogin=!S.failLogin; renderDemo() }
+  else if(d==='idTaken'){ S.idTaken=!S.idTaken; renderDemo() }
+  else if(d==='skipAuth'){ S.user='112062501'; S.joined='2025/9/1'; S.pays=[{id:'p1',type:'card',last4:'4242',def:true}]; S.notif=true; home({v:'stalls'}) }
+});
+
+render(true);
+</script>
+</body>
+</html>
