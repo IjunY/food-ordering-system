@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, func
+from sqlalchemy import DateTime, ForeignKey, String, false, func
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -25,6 +25,15 @@ class User(Base):
     # Always None for customers and admins. Set when the staff account registers
     # its vendor (POST /api/vendors) or by the seed script.
     vendor_id: Mapped[int | None] = mapped_column(ForeignKey("vendors.id"))
+    # Set for accounts whose first password was chosen by someone else (an admin
+    # creating a staff account). Until it is changed, the account can only read
+    # /auth/me and change its password.
+    must_change_password: Mapped[bool] = mapped_column(
+        default=False, server_default=false()
+    )
+    # Copied into every login token; bumping it (on a password change) makes all
+    # tokens issued before then invalid, so a leaked password stops working at once.
+    token_version: Mapped[int] = mapped_column(default=0, server_default="0")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

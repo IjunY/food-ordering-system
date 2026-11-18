@@ -80,7 +80,8 @@ def auth_headers(
             if vendor_id is not None:
                 user.vendor_id = vendor_id
                 session.commit()
-        return {"Authorization": f"Bearer {create_access_token(user.id, settings)}"}
+        token = create_access_token(user.id, settings, token_version=user.token_version)
+        return {"Authorization": f"Bearer {token}"}
 
     return make
 

@@ -137,7 +137,9 @@ def test_me_requires_a_valid_token(client: TestClient) -> None:
 def test_me_rejects_expired_token(client: TestClient, settings: Settings) -> None:
     user = register(client)
     expired = create_access_token(
-        user["id"], settings.model_copy(update={"access_token_expire_minutes": -1})
+        user["id"],
+        settings.model_copy(update={"access_token_expire_minutes": -1}),
+        token_version=0,
     )
 
     response = client.get(
@@ -155,6 +157,7 @@ def test_token_signed_with_another_secret_is_rejected(
         settings.model_copy(
             update={"jwt_secret": SecretStr("a-different-secret-0123456789-abcdefghij")}
         ),
+        token_version=0,
     )
 
     response = client.get("/api/auth/me", headers={"Authorization": f"Bearer {forged}"})

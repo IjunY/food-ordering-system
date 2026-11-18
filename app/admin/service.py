@@ -39,9 +39,12 @@ def grant_admin(
 def create_staff(session: Session, data: StaffCreate) -> User:
     """Creates a vendor staff account (no vendor yet; the staff registers it).
 
+    The account must change its password before it can do anything else.
+
     Duplicate student IDs or emails raise the same 409 as customer sign-up.
     """
-    return register_user(session, data, role=UserRole.STAFF)
+    # The admin knows this first password, so the staff member has to replace it
+    return register_user(session, data, role=UserRole.STAFF, must_change_password=True)
 
 
 def list_staff(session: Session) -> Sequence[User]:

@@ -129,14 +129,37 @@ def test_admin_creates_a_staff_account_that_can_set_up_its_vendor(
     assert listed()["staff01"] == staff
     assert all(row["role"] == "staff" for row in listed().values())
 
+    # The admin knows this first password, so the account starts locked down
+    assert staff["must_change_password"] is True
+
     # The new account signs in with the password the admin chose ...
     login = client.post(
         "/api/auth/login",
         json={"student_id": "staff01", "password": NEW_STAFF["password"]},
     )
     assert login.status_code == 200
-    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
-    # ... and registers its vendor
+    assert login.json()["user"]["must_change_password"] is True
+    first = {"Authorization": f"Bearer {login.json()['access_token']}"}
+    # ... can only see itself until the password is changed ...
+    assert client.get("/api/auth/me", headers=first).status_code == 200
+    blocked = client.post(
+        "/api/vendors",
+        json={"name_zh": "測試便當", "name_en": "Test Bento"},
+        headers=first,
+    )
+    assert blocked.status_code == 403
+    changed = client.post(
+        "/api/auth/change-password",
+        json={
+            "current_password": NEW_STAFF["password"],
+            "new_password": "my-own-password-456",
+        },
+        headers=first,
+    )
+    assert changed.status_code == 200, changed.text
+    assert changed.json()["user"]["must_change_password"] is False
+    headers = {"Authorization": f"Bearer {changed.json()['access_token']}"}
+    # ... and then registers its vendor
     vendor = client.post(
         "/api/vendors",
         json={"name_zh": "測試便當", "name_en": "Test Bento"},
