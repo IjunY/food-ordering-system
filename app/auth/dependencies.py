@@ -48,5 +48,6 @@ def require_roles(*roles: UserRole) -> Callable[[User], User]:
     return checker
 
 
-# Vendor staff and platform admins
-StaffUser = Annotated[User, Depends(require_roles(UserRole.STAFF, UserRole.ADMIN))]
+# Vendor staff only. Admins can monitor (read everything) but not change vendors,
+# menus or orders, so they are deliberately not let through here.
+StaffUser = Annotated[User, Depends(require_roles(UserRole.STAFF))]

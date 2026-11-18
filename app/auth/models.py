@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, String, func
+from sqlalchemy import DateTime, ForeignKey, String, func
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -21,6 +21,10 @@ class User(Base):
     role: Mapped[UserRole] = mapped_column(
         SAEnum(UserRole, native_enum=False), default=UserRole.CUSTOMER
     )
+    # The vendor a STAFF account works for (one vendor per staff account).
+    # Always None for customers and admins. Set when the staff account registers
+    # its vendor (POST /api/vendors) or by the seed script.
+    vendor_id: Mapped[int | None] = mapped_column(ForeignKey("vendors.id"))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

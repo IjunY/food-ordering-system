@@ -27,6 +27,20 @@ class VendorCreate(BaseModel):
     is_accepting_orders: bool = True
 
 
+class VendorUpdate(BaseModel):
+    """PATCH body: only the fields that are sent get changed."""
+
+    name_zh: Name | None = None
+    name_en: Name | None = None
+    description_zh: str | None = None
+    description_en: str | None = None
+    opening_hours_zh: ShortText | None = None
+    opening_hours_en: ShortText | None = None
+    location_zh: ShortText | None = None
+    location_en: ShortText | None = None
+    is_accepting_orders: bool | None = None
+
+
 class VendorRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

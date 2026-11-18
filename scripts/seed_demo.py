@@ -6,9 +6,10 @@
   (frontend/js/mock/data.js). The frontend still shows menus from its own demo
   data and matches them to these rows by vendor + item name (Chinese) when
   ordering, so the two files must list the same names.
-- Accounts: a customer (112012345), a vendor staff account (staff) and an
-  admin (admin, with its row in the admins table), all with the password given
-  on the command line.
+- Accounts: a customer (112012345), a vendor staff account (staff, managing
+  水木自助餐, the vendor the frontend's demo staff account runs) and an admin
+  (admin, with its row in the admins table), all with the password given on
+  the command line.
 
 Running it again only adds what is missing; nothing is changed or deleted.
 """
@@ -32,6 +33,9 @@ from app.menu.models import MenuItem, Vendor
 from app.menu.schemas import MenuItemCreate, VendorCreate
 
 MENU_FILE = Path(__file__).with_name("demo_menu.json")
+
+# The vendor the demo staff account manages (frontend/js/mock/data.js: USERS.staff -> r1)
+DEMO_STAFF_VENDOR = "水木自助餐"
 
 DEMO_ACCOUNTS = [
     ("112012345", UserRole.CUSTOMER),
@@ -101,12 +105,17 @@ def seed_accounts(session: Session, password: str) -> int:
                 role=role,
             )
             added += 1
-        # Also fills in the profile for an admin seeded before the admins table existed
+        # Also fills in what accounts seeded by an older version of this script lack
         if (
             role is UserRole.ADMIN
             and admin_repo.get_by_user_id(session, user.id) is None
         ):
             grant_admin(session, user, display_name="Demo admin")
+        if role is UserRole.STAFF and user.vendor_id is None:
+            user.vendor_id = session.scalar(
+                select(Vendor.id).where(Vendor.name_zh == DEMO_STAFF_VENDOR)
+            )
+            session.commit()
     return added
 
 

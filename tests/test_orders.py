@@ -9,16 +9,6 @@ Headers = Callable[..., dict[str, str]]
 
 
 @pytest.fixture
-def staff(auth_headers: Headers) -> dict[str, str]:
-    return auth_headers("staff01", UserRole.STAFF)
-
-
-@pytest.fixture
-def customer(auth_headers: Headers) -> dict[str, str]:
-    return auth_headers("990000001")
-
-
-@pytest.fixture
 def vendors(make_vendor: Callable[..., int]) -> dict[str, int]:
     return {
         "noodles": make_vendor("Test Noodle House", "測試麵館"),
@@ -27,8 +17,32 @@ def vendors(make_vendor: Callable[..., int]) -> dict[str, int]:
 
 
 @pytest.fixture
+def staff(auth_headers: Headers, vendors: dict[str, int]) -> dict[str, str]:
+    """Staff of the noodle house."""
+    return auth_headers("staff01", UserRole.STAFF, vendor_id=vendors["noodles"])
+
+
+@pytest.fixture
+def tea_staff(auth_headers: Headers, vendors: dict[str, int]) -> dict[str, str]:
+    return auth_headers("staff02", UserRole.STAFF, vendor_id=vendors["tea"])
+
+
+@pytest.fixture
+def admin(auth_headers: Headers) -> dict[str, str]:
+    return auth_headers("admin01", UserRole.ADMIN)
+
+
+@pytest.fixture
+def customer(auth_headers: Headers) -> dict[str, str]:
+    return auth_headers("990000001")
+
+
+@pytest.fixture
 def menu(
-    client: TestClient, staff: dict[str, str], vendors: dict[str, int]
+    client: TestClient,
+    staff: dict[str, str],
+    tea_staff: dict[str, str],
+    vendors: dict[str, int],
 ) -> dict[str, int]:
     """A small menu; maps a short name to the menu item id."""
 
@@ -52,7 +66,9 @@ def menu(
     }
     ids = {}
     for key, body in rows.items():
-        response = client.post("/api/menu-items", json=body, headers=staff)
+        # each vendor's own staff adds its items
+        headers = tea_staff if body["vendor_id"] == vendors["tea"] else staff
+        response = client.post("/api/menu-items", json=body, headers=headers)
         assert response.status_code == 201, response.text
         ids[key] = response.json()["id"]
     return ids
@@ -173,11 +189,13 @@ def test_client_cannot_set_the_price(
 
 
 # ---------- reading orders ----------
-def test_customers_only_see_their_own_orders(
+def test_who_sees_which_orders(
     client: TestClient,
     auth_headers: Headers,
     customer: dict[str, str],
     staff: dict[str, str],
+    tea_staff: dict[str, str],
+    admin: dict[str, str],
     menu: dict[str, int],
 ) -> None:
     other = auth_headers("990000002")
@@ -197,12 +215,40 @@ def test_customers_only_see_their_own_orders(
     )
     assert client.get("/api/orders").status_code == 401
 
-    # staff see everyone's, newest first
-    staff_ids = [o["id"] for o in client.get("/api/orders", headers=staff).json()]
-    assert staff_ids.index(theirs["id"]) < staff_ids.index(mine["id"])
-    assert client.get(f"/api/orders/{theirs['id']}", headers=staff).status_code == 200
-    # ... unless they ask for their own only
+    # staff see their own vendor's orders only (mine is noodles, theirs is tea)
+    noodle_ids = [o["id"] for o in client.get("/api/orders", headers=staff).json()]
+    assert mine["id"] in noodle_ids
+    assert theirs["id"] not in noodle_ids
+    assert client.get(f"/api/orders/{mine['id']}", headers=staff).status_code == 200
+    assert client.get(f"/api/orders/{theirs['id']}", headers=staff).status_code == 404
+    tea_ids = [o["id"] for o in client.get("/api/orders", headers=tea_staff).json()]
+    assert theirs["id"] in tea_ids
+    assert mine["id"] not in tea_ids
+    # ... and only the ones they placed themselves if they ask for mine=true
     assert client.get("/api/orders", params={"mine": True}, headers=staff).json() == []
+
+    # admins monitor every vendor, newest first
+    admin_ids = [o["id"] for o in client.get("/api/orders", headers=admin).json()]
+    assert admin_ids.index(theirs["id"]) < admin_ids.index(mine["id"])
+    assert client.get(f"/api/orders/{theirs['id']}", headers=admin).status_code == 200
+
+
+def test_staff_without_a_vendor_only_see_their_own_orders(
+    client: TestClient, auth_headers: Headers, menu: dict[str, int]
+) -> None:
+    newcomer = auth_headers("staff03", UserRole.STAFF)
+    other = auth_headers("990000002")
+    theirs = place(client, other, (menu["tea"], 1))
+    own = place(client, newcomer, (menu["noodles"], 1))
+
+    assert [o["id"] for o in client.get("/api/orders", headers=newcomer).json()] == [
+        own["id"]
+    ]
+    assert (
+        client.get(f"/api/orders/{theirs['id']}", headers=newcomer).status_code == 404
+    )
+    # Placing an order does not make them its vendor's staff
+    assert set_status(client, newcomer, own["id"], "preparing").status_code == 403
 
 
 def test_list_can_filter_by_status(
@@ -260,12 +306,24 @@ def test_status_cannot_skip_or_go_backwards(
     assert set_status(client, staff, 999999, "preparing").status_code == 404
 
 
-def test_customers_cannot_change_status(
-    client: TestClient, customer: dict[str, str], menu: dict[str, int]
+def test_only_the_vendors_staff_can_change_status(
+    client: TestClient,
+    customer: dict[str, str],
+    tea_staff: dict[str, str],
+    admin: dict[str, str],
+    menu: dict[str, int],
 ) -> None:
     order = place(client, customer, (menu["noodles"], 1))
 
-    assert set_status(client, customer, order["id"], "ready").status_code == 403
+    assert set_status(client, customer, order["id"], "preparing").status_code == 403
+    # admins monitor only
+    assert set_status(client, admin, order["id"], "preparing").status_code == 403
+    assert (
+        client.post(f"/api/orders/{order['id']}/cancel", headers=admin).status_code
+        == 403
+    )
+    # another vendor's staff cannot even see it
+    assert set_status(client, tea_staff, order["id"], "preparing").status_code == 404
     assert (
         client.get(f"/api/orders/{order['id']}", headers=customer).json()["status"]
         == "confirming"

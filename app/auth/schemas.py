@@ -37,6 +37,7 @@ class UserRead(BaseModel):
     email: str
     phone_number: str
     role: UserRole
+    vendor_id: int | None  # staff only: the vendor this account manages
     created_at: datetime
 
 

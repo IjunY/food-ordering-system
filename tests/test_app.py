@@ -11,6 +11,7 @@ from app.menu.models import MenuItem, Vendor
 from app.menu.schemas import MenuItemCreate, VendorCreate
 from scripts.seed_demo import (
     DEMO_ACCOUNTS,
+    DEMO_STAFF_VENDOR,
     MENU_FILE,
     seed_accounts,
     seed_menu,
@@ -111,3 +112,18 @@ def test_seed_is_idempotent(client: TestClient) -> None:
     )
     assert login.status_code == 200
     assert login.json()["user"]["role"] == "staff"
+
+
+def test_seeded_staff_manages_the_frontends_demo_vendor(client: TestClient) -> None:
+    vendors = [{"name_zh": DEMO_STAFF_VENDOR, "name_en": "Shuimu Buffet"}]
+    with client.app.state.session_factory() as session:  # type: ignore[attr-defined]
+        session.execute(delete(User).where(User.student_id == "staff"))
+        session.commit()
+        seed_vendors(session, vendors)
+        seed_accounts(session, "demo-password-1")
+        staff = session.scalar(select(User).where(User.student_id == "staff"))
+        vendor_id = session.scalar(
+            select(Vendor.id).where(Vendor.name_zh == DEMO_STAFF_VENDOR)
+        )
+        assert staff is not None
+        assert staff.vendor_id == vendor_id

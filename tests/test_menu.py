@@ -35,25 +35,34 @@ def beef_noodles(noodle_house: int) -> dict:
     return menu_item(noodle_house, "牛肉麵", "Beef Noodles", 120)
 
 
+@pytest.fixture
+def staff(auth_headers: Headers, noodle_house: int) -> dict[str, str]:
+    """A staff account that manages the noodle house."""
+    return auth_headers("staff01", UserRole.STAFF, vendor_id=noodle_house)
+
+
 def test_anyone_can_browse_vendors_and_the_menu(
     client: TestClient, auth_headers: Headers, make_vendor: MakeVendor
 ) -> None:
-    staff = auth_headers("staff01", UserRole.STAFF)
     noodles = make_vendor("Test Noodle House", "測試麵館")
     tea = make_vendor("Test Tea Shop", "測試茶飲", location_en="Building 1")
+    noodle_staff = auth_headers("staff01", UserRole.STAFF, vendor_id=noodles)
+    tea_staff = auth_headers("staff02", UserRole.STAFF, vendor_id=tea)
 
     client.post(
         "/api/menu-items",
         json=menu_item(noodles, "牛肉麵", "Beef Noodles", 120),
-        headers=staff,
+        headers=noodle_staff,
     )
     client.post(
-        "/api/menu-items", json=menu_item(tea, "奶茶", "Milk Tea", 45), headers=staff
+        "/api/menu-items",
+        json=menu_item(tea, "奶茶", "Milk Tea", 45),
+        headers=tea_staff,
     )
     client.post(
         "/api/menu-items",
         json=menu_item(tea, "季節限定", "Seasonal Special", 60, is_available=False),
-        headers=staff,
+        headers=tea_staff,
     )
 
     # No Authorization header on any of these
@@ -90,9 +99,8 @@ def test_anyone_can_browse_vendors_and_the_menu(
 
 
 def test_staff_can_create_update_and_delete(
-    client: TestClient, auth_headers: Headers, noodle_house: int, beef_noodles: dict
+    client: TestClient, staff: dict[str, str], noodle_house: int, beef_noodles: dict
 ) -> None:
-    staff = auth_headers("staff01", UserRole.STAFF)
 
     created = client.post("/api/menu-items", json=beef_noodles, headers=staff)
     assert created.status_code == 201
@@ -131,17 +139,26 @@ def test_staff_can_create_update_and_delete(
     assert client.get(f"/api/menu-items/{item['id']}").status_code == 404
 
 
-def test_customers_and_guests_cannot_change_the_menu(
-    client: TestClient, auth_headers: Headers, beef_noodles: dict
+def test_only_the_vendors_own_staff_can_change_its_menu(
+    client: TestClient,
+    auth_headers: Headers,
+    make_vendor: MakeVendor,
+    staff: dict[str, str],
+    beef_noodles: dict,
 ) -> None:
-    staff = auth_headers("staff01", UserRole.STAFF)
     customer = auth_headers("990000001")
+    # Admins monitor only: they can read the menu but not change it
+    admin = auth_headers("admin01", UserRole.ADMIN)
+    other_staff = auth_headers(
+        "staff02", UserRole.STAFF, vendor_id=make_vendor("Other Vendor")
+    )
+    no_vendor_staff = auth_headers("staff03", UserRole.STAFF)
     item_id = client.post("/api/menu-items", json=beef_noodles, headers=staff).json()[
         "id"
     ]
 
     assert client.post("/api/menu-items", json=beef_noodles).status_code == 401
-    for headers in (customer,):
+    for headers in (customer, admin, other_staff, no_vendor_staff):
         assert (
             client.post("/api/menu-items", json=beef_noodles, headers=headers)
         ).status_code == 403
@@ -158,9 +175,8 @@ def test_customers_and_guests_cannot_change_the_menu(
 
 
 def test_menu_item_validation(
-    client: TestClient, auth_headers: Headers, beef_noodles: dict
+    client: TestClient, staff: dict[str, str], beef_noodles: dict
 ) -> None:
-    staff = auth_headers("staff01", UserRole.STAFF)
 
     for bad in (
         {"price": -1},
@@ -180,10 +196,10 @@ def test_menu_item_validation(
         response = client.post("/api/menu-items", json=without, headers=staff)
         assert response.status_code == 422, name
 
-    # The vendor has to exist, when creating and when moving an item
+    # Staff manage one vendor: items cannot be created for, or moved to, another one
     no_vendor = {**beef_noodles, "vendor_id": 999999}
     assert (
-        client.post("/api/menu-items", json=no_vendor, headers=staff).status_code == 404
+        client.post("/api/menu-items", json=no_vendor, headers=staff).status_code == 403
     )
     item_id = client.post("/api/menu-items", json=beef_noodles, headers=staff).json()[
         "id"
@@ -191,16 +207,15 @@ def test_menu_item_validation(
     moved = client.patch(
         f"/api/menu-items/{item_id}", json={"vendor_id": 999999}, headers=staff
     )
-    assert moved.status_code == 404
+    assert moved.status_code == 403
 
     missing = client.patch("/api/menu-items/999999", json={"price": 1}, headers=staff)
     assert missing.status_code == 404
 
 
 def test_item_used_in_an_order_cannot_be_deleted(
-    client: TestClient, auth_headers: Headers, beef_noodles: dict
+    client: TestClient, auth_headers: Headers, staff: dict[str, str], beef_noodles: dict
 ) -> None:
-    staff = auth_headers("staff01", UserRole.STAFF)
     customer = auth_headers("990000001")
     item_id = client.post("/api/menu-items", json=beef_noodles, headers=staff).json()[
         "id"
