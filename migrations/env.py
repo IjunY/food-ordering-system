@@ -5,7 +5,8 @@ from sqlalchemy import create_engine, pool
 
 import app.auth.models
 import app.menu.models
-import app.orders.models  # noqa F401
+import app.orders.models
+import app.payments.models  # noqa F401
 from app.core.config import get_settings
 from app.core.db import Base, get_database_url
 
