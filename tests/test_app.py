@@ -4,6 +4,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 from sqlalchemy import delete, func, select
 
+from app.admin.models import Admin
 from app.auth.models import User
 from app.auth.states import UserRole
 from app.menu.models import MenuItem, Vendor
@@ -96,6 +97,14 @@ def test_seed_is_idempotent(client: TestClient) -> None:
             "staff": UserRole.STAFF,
             "admin": UserRole.ADMIN,
         }
+        # ... and the admin account has its profile row
+        admin_profiles = session.scalar(
+            select(func.count())
+            .select_from(Admin)
+            .join(User, Admin.user_id == User.id)
+            .where(User.student_id == "admin")
+        )
+        assert admin_profiles == 1
 
     login = client.post(
         "/api/auth/login", json={"student_id": "staff", "password": "demo-password-1"}

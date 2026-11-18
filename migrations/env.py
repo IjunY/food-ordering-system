@@ -3,6 +3,7 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import create_engine, pool
 
+import app.admin.models
 import app.auth.models
 import app.menu.models
 import app.orders.models  # noqa F401

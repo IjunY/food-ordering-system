@@ -7,7 +7,8 @@
   data and matches them to these rows by vendor + item name (Chinese) when
   ordering, so the two files must list the same names.
 - Accounts: a customer (112012345), a vendor staff account (staff) and an
-  admin (admin), all with the password given on the command line.
+  admin (admin, with its row in the admins table), all with the password given
+  on the command line.
 
 Running it again only adds what is missing; nothing is changed or deleted.
 """
@@ -19,6 +20,8 @@ from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.admin import repo as admin_repo
+from app.admin.service import grant_admin
 from app.auth import repo as user_repo
 from app.auth.schemas import UserRegister
 from app.auth.service import register_user
@@ -85,19 +88,25 @@ def seed_menu(session: Session, rows: list[dict]) -> int:
 def seed_accounts(session: Session, password: str) -> int:
     added = 0
     for student_id, role in DEMO_ACCOUNTS:
-        if user_repo.get_by_student_id(session, student_id) is not None:
-            continue
-        register_user(
-            session,
-            UserRegister(
-                student_id=student_id,
-                email=f"{student_id}@example.com",
-                phone_number="0900000000",
-                password=password,
-            ),
-            role=role,
-        )
-        added += 1
+        user = user_repo.get_by_student_id(session, student_id)
+        if user is None:
+            user = register_user(
+                session,
+                UserRegister(
+                    student_id=student_id,
+                    email=f"{student_id}@example.com",
+                    phone_number="0900000000",
+                    password=password,
+                ),
+                role=role,
+            )
+            added += 1
+        # Also fills in the profile for an admin seeded before the admins table existed
+        if (
+            role is UserRole.ADMIN
+            and admin_repo.get_by_user_id(session, user.id) is None
+        ):
+            grant_admin(session, user, display_name="Demo admin")
     return added
 
 
