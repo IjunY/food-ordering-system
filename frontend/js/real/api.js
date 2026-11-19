@@ -1,7 +1,11 @@
 // 真後端（FastAPI，app/）的轉接層：呼叫 /api，再把回傳轉成畫面用的欄位（和 mock/api.js 同一套）。
 //
-// 目前接上真後端的：登入／註冊／我的資料、下單、訂單查詢、店家接單看板改狀態。
-// 還沒接的（餐廳列表、菜單、等候時間、付款、店家設定與菜單管理、報表、平台管理）照舊用 mock/api.js。
+// 目前接上真後端的：登入／註冊／我的資料、下單、訂單查詢、店家接單看板改狀態、店家「接單／暫停」開關，
+// 以及餐廳是否接單（餐廳列表與餐廳頁的其餘內容仍來自 mock/data.js）。
+// 還沒接的（菜單、等候時間、付款、店家其餘設定與菜單管理、報表、平台管理）照舊用 mock/api.js。
+//
+// 店家帳號屬於哪家餐廳：後端 users.vendor_id → 用店名對應到 mock/data.js 的餐廳。
+// 後端只回傳該店家的訂單（平台管理員看得到全部）。
 //
 // 菜單仍顯示前端的示範資料，所以下單時要把示範品項換成資料庫裡的品項編號：
 // 兩邊用「餐廳中文名＋品項中文名」對應（scripts/seed_demo.py 照 mock/data.js 灌進資料庫）。
@@ -10,6 +14,7 @@
 import { getLang } from '../i18n.js';
 import { session, read, write } from '../store.js';
 import { SEED_RESTAURANTS, SEED_MENUS, USERS } from '../mock/data.js';
+import * as mock from '../mock/api.js';
 
 export const API_BASE = '/api';
 
@@ -129,18 +134,46 @@ async function toOrder(o, view = 'customer') {
   };
 }
 
+// ---------- 店家（後端 vendors）⇄ 畫面上的餐廳 ----------
+const listVendors = () => http('GET', '/vendors');
+
+// 後端的接單狀態蓋過 mock 資料裡的設定（以店名對應）
+async function withVendorStatus(list) {
+  const vendors = await listVendors().catch(() => null);
+  if (!vendors) return list;
+  const accepting = new Map(vendors.map((v) => [v.name.zh, v.is_accepting_orders]));
+  return list.map((r) => {
+    const zh = SEED_RESTAURANTS.find((x) => x.id === r.id)?.name.zh;
+    return accepting.has(zh) ? { ...r, is_accepting_orders: accepting.get(zh) } : r;
+  });
+}
+
+export async function listRestaurants(params) {
+  const list = await withVendorStatus(await mock.listRestaurants(params));
+  const open = (r) => Number(r.is_open && r.is_accepting_orders);
+  return list.sort((a, b) => open(b) - open(a)); // 暫停接單的排到後面（sort 是穩定的，其餘順序不變）
+}
+
+export async function getRestaurant(id) {
+  return (await withVendorStatus([await mock.getRestaurant(id)]))[0];
+}
+
 // ======================= 登入 =======================
-const toSessionUser = (u) => ({
-  id: u.id,
-  role: u.role,
-  student_id: u.student_id,
-  // 後端還沒有「店家帳號屬於哪家餐廳」，店家一律管示範的第一家
-  restaurant_id: u.role === 'customer' ? null : USERS.staff.restaurant_id,
-});
+// 店家：restaurant_id 是自己那家店（vendor_id → 店名 → 畫面上的餐廳）；沒綁店家就是 null。
+// 平台管理員：後台頁面沿用示範的第一家餐廳。
+async function toSessionUser(u) {
+  let restaurant_id = null;
+  if (u.role === 'admin') restaurant_id = USERS.admin.restaurant_id;
+  if (u.role === 'staff' && u.vendor_id != null) {
+    const vendor = (await listVendors()).find((v) => v.id === u.vendor_id);
+    restaurant_id = vendor ? restaurantByVendor(vendor.name.zh)?.id ?? null : null;
+  }
+  return { id: u.id, role: u.role, student_id: u.student_id, vendor_id: u.vendor_id ?? null, restaurant_id };
+}
 
 export async function login(student_id, password) {
   const res = await http('POST', '/auth/login', { student_id, password });
-  return { access_token: res.access_token, user: toSessionUser(res.user) };
+  return { access_token: res.access_token, user: await toSessionUser(res.user) };
 }
 
 export async function register({ student_id, email, phone_number, password }) {
@@ -150,7 +183,7 @@ export async function register({ student_id, email, phone_number, password }) {
 
 export async function getMe() {
   const u = await http('GET', '/auth/me');
-  const su = toSessionUser(u);
+  const su = await toSessionUser(u);
   const r = su.restaurant_id ? SEED_RESTAURANTS.find((x) => x.id === su.restaurant_id) : null;
   return {
     ...su,
@@ -192,11 +225,12 @@ export async function pay(order_id, method) {
 }
 
 // ======================= 店家接單看板 =======================
+// 後端只回傳這個店家帳號的訂單；平台管理員拿到的是全部店家的，所以只留畫面上這家店的
 export async function adminListOrders() {
-  const rid = session.get()?.user?.restaurant_id;
-  const vendor = SEED_RESTAURANTS.find((r) => r.id === rid)?.name.zh;
+  const user = session.get()?.user;
+  const vendor = SEED_RESTAURANTS.find((r) => r.id === user?.restaurant_id)?.name.zh;
   const list = await http('GET', '/orders?limit=200');
-  const active = list.filter((o) => o.vendor_name.zh === vendor && ['confirming', 'preparing', 'ready'].includes(o.status));
+  const active = list.filter((o) => (user?.role !== 'admin' || o.vendor_name.zh === vendor) && ['confirming', 'preparing', 'ready'].includes(o.status));
   const orders = await Promise.all(active.map((o) => toOrder(o, 'staff')));
   return orders.sort((a, b) => a.created_at.localeCompare(b.created_at));
 }
@@ -207,4 +241,26 @@ export async function adminUpdateOrderStatus(id, status) {
     ? await http('POST', path)
     : await http('PATCH', path, { status: toBackendStatus(status) });
   return toOrder(o, 'staff');
+}
+
+// ======================= 店家設定 =======================
+// 「接單／暫停」開關寫進後端（PATCH /vendors/{id}），其餘設定仍只存在這台瀏覽器（mock）
+async function myVendorId() {
+  const user = session.get()?.user;
+  if (user?.vendor_id != null) return user.vendor_id;
+  const zh = SEED_RESTAURANTS.find((r) => r.id === user?.restaurant_id)?.name.zh;
+  return (await listVendors()).find((v) => v.name.zh === zh)?.id ?? null;
+}
+
+export async function adminGetRestaurant() {
+  return (await withVendorStatus([await mock.adminGetRestaurant()]))[0];
+}
+
+export async function adminUpdateRestaurant(patch) {
+  if ('is_accepting_orders' in patch) {
+    const id = await myVendorId();
+    if (id == null) throw new Error(getLang() === 'en' ? 'This account is not linked to a vendor' : '這個帳號還沒綁定店家');
+    await http('PATCH', `/vendors/${id}`, { is_accepting_orders: patch.is_accepting_orders });
+  }
+  return (await withVendorStatus([await mock.adminUpdateRestaurant(patch)]))[0];
 }

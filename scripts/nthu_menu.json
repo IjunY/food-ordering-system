@@ -1,0 +1,429 @@
+{
+  "_comment": "NTHU campus vendors and menus (Fengyun Hall, Shuimu Center, Snack Bar), collected 2026-11-18 from public Google Maps listings: a menu-board photo for 珈名鮮茶 (2026-03) and reviews that list dishes with prices. Prices change; check at the counter. Vendor descriptions were written by us. Images are original illustrations in frontend/img/, not photos of the real food. Items name their vendor by vendor name_zh. Keep in sync with frontend/js/mock/data.js.",
+  "vendors": [
+    {
+      "name_zh": "牛肉先生",
+      "name_en": "Mr. Beef",
+      "description_zh": "丼飯與炸物定食。在點餐機點餐、看螢幕叫號取餐，套餐附小菜；醬料、辣粉與胡椒自取。",
+      "description_en": "Rice bowls and fried cutlet sets. Order at the kiosk and pick up when your number shows on the screen; sets come with small sides, and sauces are self-serve.",
+      "opening_hours_zh": "午餐、晚餐時段",
+      "opening_hours_en": "Lunch and dinner",
+      "location_zh": "風雲樓 3F",
+      "location_en": "Fengyun Hall 3F",
+      "is_accepting_orders": true,
+      "image_url": "img/vendors/r1.svg"
+    },
+    {
+      "name_zh": "炭烤小姐",
+      "name_en": "Miss Charcoal Grill",
+      "description_zh": "炭烤便當。雞腿、雞排、雞柳先炸後烤再刷醬，附白飯與配菜。",
+      "description_en": "Charcoal-grilled bento. Chicken leg, cutlet and strips are fried, then grilled and brushed with sauce; served with rice and sides.",
+      "opening_hours_zh": "午餐、晚餐時段",
+      "opening_hours_en": "Lunch and dinner",
+      "location_zh": "風雲樓",
+      "location_en": "Fengyun Hall",
+      "is_accepting_orders": true,
+      "image_url": "img/vendors/r2.svg"
+    },
+    {
+      "name_zh": "米麵研究所",
+      "name_en": "Rice & Noodle Lab",
+      "description_zh": "現點現炒的炒飯與炒麵，粒粒分明，不定期推出限定口味。",
+      "description_en": "Fried rice and stir-fried noodles cooked to order, with limited-time specials now and then.",
+      "opening_hours_zh": "午餐、晚餐時段",
+      "opening_hours_en": "Lunch and dinner",
+      "location_zh": "風雲樓",
+      "location_en": "Fengyun Hall",
+      "is_accepting_orders": true,
+      "image_url": "img/vendors/r3.svg"
+    },
+    {
+      "name_zh": "利竫和食",
+      "name_en": "Lijing Japanese Kitchen",
+      "description_zh": "日式丼飯與拉麵。丼飯配高麗菜、玉米，可加起司或加飯；另有平價的校園特餐。",
+      "description_en": "Japanese rice bowls and ramen. Bowls come with cabbage and corn, with cheese or extra rice on request; there is also a budget campus special.",
+      "opening_hours_zh": "午餐、晚餐時段",
+      "opening_hours_en": "Lunch and dinner",
+      "location_zh": "水木生活中心 1F",
+      "location_en": "Shuimu Center 1F",
+      "is_accepting_orders": true,
+      "image_url": "img/vendors/r4.svg"
+    },
+    {
+      "name_zh": "珈名鮮茶",
+      "name_en": "Jia Ming Fresh Tea",
+      "description_zh": "小吃部裡的手搖飲與現打果汁：現泡茶、風味茶、拿鐵和新鮮果汁，茶飲可加珍珠、椰果、布丁或仙草凍。",
+      "description_en": "Hand-shaken tea and fresh juice in the Snack Bar: brewed teas, flavoured teas, lattes and fresh fruit juice, with pearls, coconut jelly, pudding or grass jelly on top.",
+      "opening_hours_zh": "10:30 起",
+      "opening_hours_en": "From 10:30",
+      "location_zh": "小吃部 1F",
+      "location_en": "Snack Bar 1F",
+      "is_accepting_orders": true,
+      "image_url": "img/vendors/r5.svg"
+    },
+    {
+      "name_zh": "蘇記牛肉麵",
+      "name_en": "Su's Beef Noodles",
+      "description_zh": "小吃部的牛肉麵店。乾拌麵帶沙茶香、微辣，麵條偏粗有嚼勁；單點燙青菜份量大。",
+      "description_en": "Beef noodle stall in the Snack Bar. The dry noodles have a satay-sauce kick and thick, chewy noodles; the side of greens is generous.",
+      "opening_hours_zh": "午餐、晚餐時段",
+      "opening_hours_en": "Lunch and dinner",
+      "location_zh": "小吃部",
+      "location_en": "Snack Bar",
+      "is_accepting_orders": true,
+      "image_url": "img/vendors/r6.svg"
+    }
+  ],
+  "items": [
+    {
+      "vendor": "牛肉先生",
+      "item_name_zh": "炙燒骰子牛牛丼套餐",
+      "item_name_en": "Seared Diced Beef Bowl Set",
+      "category_zh": "丼飯定食",
+      "category_en": "Rice bowl sets",
+      "price": 160,
+      "prep_minutes": 10,
+      "image_url": "img/items/r1-b1.svg"
+    },
+    {
+      "vendor": "牛肉先生",
+      "item_name_zh": "日式炸豬排飯套餐",
+      "item_name_en": "Japanese Pork Cutlet Rice Set",
+      "category_zh": "丼飯定食",
+      "category_en": "Rice bowl sets",
+      "price": 90,
+      "prep_minutes": 8,
+      "image_url": "img/items/r1-b2.svg"
+    },
+    {
+      "vendor": "牛肉先生",
+      "item_name_zh": "唐揚炸雞丼套餐",
+      "item_name_en": "Karaage Chicken Bowl Set",
+      "category_zh": "丼飯定食",
+      "category_en": "Rice bowl sets",
+      "price": 95,
+      "prep_minutes": 8,
+      "image_url": "img/items/r1-b3.svg"
+    },
+    {
+      "vendor": "牛肉先生",
+      "item_name_zh": "舒肥雞胸肉飯套餐",
+      "item_name_en": "Sous-vide Chicken Breast Rice Set",
+      "category_zh": "丼飯定食",
+      "category_en": "Rice bowl sets",
+      "price": 100,
+      "prep_minutes": 6,
+      "image_url": "img/items/r1-b4.svg"
+    },
+    {
+      "vendor": "炭烤小姐",
+      "item_name_zh": "烤雞腿便當",
+      "item_name_en": "Grilled Chicken Leg Bento",
+      "category_zh": "炭烤便當",
+      "category_en": "Grilled bento",
+      "price": 110,
+      "prep_minutes": 9,
+      "image_url": "img/items/r2-g1.svg"
+    },
+    {
+      "vendor": "炭烤小姐",
+      "item_name_zh": "烤雞柳便當",
+      "item_name_en": "Grilled Chicken Strips Bento",
+      "category_zh": "炭烤便當",
+      "category_en": "Grilled bento",
+      "price": 100,
+      "prep_minutes": 8,
+      "image_url": "img/items/r2-g2.svg"
+    },
+    {
+      "vendor": "炭烤小姐",
+      "item_name_zh": "烤雞排便當",
+      "item_name_en": "Grilled Chicken Cutlet Bento",
+      "category_zh": "炭烤便當",
+      "category_en": "Grilled bento",
+      "price": 95,
+      "prep_minutes": 8,
+      "image_url": "img/items/r2-g3.svg"
+    },
+    {
+      "vendor": "炭烤小姐",
+      "item_name_zh": "烤五花肉便當",
+      "item_name_en": "Grilled Pork Belly Bento",
+      "category_zh": "炭烤便當",
+      "category_en": "Grilled bento",
+      "price": 95,
+      "prep_minutes": 8,
+      "image_url": "img/items/r2-g4.svg"
+    },
+    {
+      "vendor": "米麵研究所",
+      "item_name_zh": "牛肉炒飯",
+      "item_name_en": "Beef Fried Rice",
+      "category_zh": "炒飯",
+      "category_en": "Fried rice",
+      "price": 80,
+      "prep_minutes": 7,
+      "image_url": "img/items/r3-f1.svg"
+    },
+    {
+      "vendor": "米麵研究所",
+      "item_name_zh": "鹹酥雞炒飯（限定）",
+      "item_name_en": "Taiwanese Popcorn Chicken Fried Rice (limited)",
+      "category_zh": "炒飯",
+      "category_en": "Fried rice",
+      "price": 110,
+      "prep_minutes": 9,
+      "image_url": "img/items/r3-f2.svg"
+    },
+    {
+      "vendor": "米麵研究所",
+      "item_name_zh": "蛤蜊炒麵",
+      "item_name_en": "Clam Stir-fried Noodles",
+      "category_zh": "炒麵",
+      "category_en": "Stir-fried noodles",
+      "price": 75,
+      "prep_minutes": 7,
+      "image_url": "img/items/r3-f3.svg"
+    },
+    {
+      "vendor": "利竫和食",
+      "item_name_zh": "牛丼",
+      "item_name_en": "Gyudon (Beef Bowl)",
+      "category_zh": "丼飯",
+      "category_en": "Rice bowls",
+      "price": 100,
+      "prep_minutes": 7,
+      "image_url": "img/items/r4-j1.svg"
+    },
+    {
+      "vendor": "利竫和食",
+      "item_name_zh": "韓式泡菜豬肉丼",
+      "item_name_en": "Kimchi Pork Bowl",
+      "category_zh": "丼飯",
+      "category_en": "Rice bowls",
+      "price": 85,
+      "prep_minutes": 7,
+      "image_url": "img/items/r4-j2.svg"
+    },
+    {
+      "vendor": "利竫和食",
+      "item_name_zh": "咖哩雞腿丼",
+      "item_name_en": "Curry Chicken Leg Bowl",
+      "category_zh": "丼飯",
+      "category_en": "Rice bowls",
+      "price": 100,
+      "prep_minutes": 15,
+      "image_url": "img/items/r4-j3.svg"
+    },
+    {
+      "vendor": "利竫和食",
+      "item_name_zh": "招牌叉燒拉麵",
+      "item_name_en": "Signature Chashu Ramen",
+      "category_zh": "拉麵",
+      "category_en": "Ramen",
+      "price": 90,
+      "prep_minutes": 8,
+      "image_url": "img/items/r4-j4.svg"
+    },
+    {
+      "vendor": "利竫和食",
+      "item_name_zh": "校園特餐（紅燒豬肉）",
+      "item_name_en": "Campus Special (Braised Pork)",
+      "category_zh": "校園特餐",
+      "category_en": "Campus special",
+      "price": 70,
+      "prep_minutes": 5,
+      "image_url": "img/items/r4-j5.svg"
+    },
+    {
+      "vendor": "珈名鮮茶",
+      "item_name_zh": "三薰綠茶",
+      "item_name_en": "Three-Scent Green Tea",
+      "category_zh": "現泡茶",
+      "category_en": "Brewed tea",
+      "price": 40,
+      "prep_minutes": 2,
+      "image_url": "img/items/r5-d1.svg"
+    },
+    {
+      "vendor": "珈名鮮茶",
+      "item_name_zh": "蜜香烏龍茶",
+      "item_name_en": "Honey-Scented Oolong",
+      "category_zh": "現泡茶",
+      "category_en": "Brewed tea",
+      "price": 45,
+      "prep_minutes": 2,
+      "image_url": "img/items/r5-d2.svg"
+    },
+    {
+      "vendor": "珈名鮮茶",
+      "item_name_zh": "凍頂烏龍茶",
+      "item_name_en": "Dongding Oolong",
+      "category_zh": "現泡茶",
+      "category_en": "Brewed tea",
+      "price": 45,
+      "prep_minutes": 2,
+      "image_url": "img/items/r5-d3.svg"
+    },
+    {
+      "vendor": "珈名鮮茶",
+      "item_name_zh": "紅茶",
+      "item_name_en": "Black Tea",
+      "category_zh": "風味茶",
+      "category_en": "Flavoured tea",
+      "price": 30,
+      "prep_minutes": 1,
+      "image_url": "img/items/r5-d4.svg"
+    },
+    {
+      "vendor": "珈名鮮茶",
+      "item_name_zh": "綠茶",
+      "item_name_en": "Green Tea",
+      "category_zh": "風味茶",
+      "category_en": "Flavoured tea",
+      "price": 30,
+      "prep_minutes": 1,
+      "image_url": "img/items/r5-d5.svg"
+    },
+    {
+      "vendor": "珈名鮮茶",
+      "item_name_zh": "冬瓜檸檬",
+      "item_name_en": "Winter Melon Lemon",
+      "category_zh": "風味茶",
+      "category_en": "Flavoured tea",
+      "price": 40,
+      "prep_minutes": 2,
+      "image_url": "img/items/r5-d6.svg"
+    },
+    {
+      "vendor": "珈名鮮茶",
+      "item_name_zh": "鮮百香綠茶",
+      "item_name_en": "Passion Fruit Green Tea",
+      "category_zh": "風味茶",
+      "category_en": "Flavoured tea",
+      "price": 45,
+      "prep_minutes": 2,
+      "image_url": "img/items/r5-d7.svg"
+    },
+    {
+      "vendor": "珈名鮮茶",
+      "item_name_zh": "檸檬多多",
+      "item_name_en": "Lemon Yakult",
+      "category_zh": "風味茶",
+      "category_en": "Flavoured tea",
+      "price": 50,
+      "prep_minutes": 2,
+      "image_url": "img/items/r5-d8.svg"
+    },
+    {
+      "vendor": "珈名鮮茶",
+      "item_name_zh": "甘蔗青茶",
+      "item_name_en": "Sugarcane Green Tea",
+      "category_zh": "風味茶",
+      "category_en": "Flavoured tea",
+      "price": 55,
+      "prep_minutes": 2,
+      "image_url": "img/items/r5-d9.svg"
+    },
+    {
+      "vendor": "珈名鮮茶",
+      "item_name_zh": "紅茶拿鐵",
+      "item_name_en": "Black Tea Latte",
+      "category_zh": "拿鐵",
+      "category_en": "Lattes",
+      "price": 45,
+      "prep_minutes": 2,
+      "image_url": "img/items/r5-d10.svg"
+    },
+    {
+      "vendor": "珈名鮮茶",
+      "item_name_zh": "黑糖拿鐵",
+      "item_name_en": "Brown Sugar Latte",
+      "category_zh": "拿鐵",
+      "category_en": "Lattes",
+      "price": 45,
+      "prep_minutes": 2,
+      "image_url": "img/items/r5-d11.svg"
+    },
+    {
+      "vendor": "珈名鮮茶",
+      "item_name_zh": "抹茶拿鐵",
+      "item_name_en": "Matcha Latte",
+      "category_zh": "拿鐵",
+      "category_en": "Lattes",
+      "price": 50,
+      "prep_minutes": 2,
+      "image_url": "img/items/r5-d12.svg"
+    },
+    {
+      "vendor": "珈名鮮茶",
+      "item_name_zh": "西瓜汁",
+      "item_name_en": "Watermelon Juice",
+      "category_zh": "新鮮果汁",
+      "category_en": "Fresh juice",
+      "price": 45,
+      "prep_minutes": 3,
+      "image_url": "img/items/r5-d13.svg"
+    },
+    {
+      "vendor": "珈名鮮茶",
+      "item_name_zh": "芭樂汁",
+      "item_name_en": "Guava Juice",
+      "category_zh": "新鮮果汁",
+      "category_en": "Fresh juice",
+      "price": 45,
+      "prep_minutes": 3,
+      "image_url": "img/items/r5-d14.svg"
+    },
+    {
+      "vendor": "珈名鮮茶",
+      "item_name_zh": "香蕉牛奶",
+      "item_name_en": "Banana Milk",
+      "category_zh": "新鮮果汁",
+      "category_en": "Fresh juice",
+      "price": 55,
+      "prep_minutes": 3,
+      "image_url": "img/items/r5-d15.svg"
+    },
+    {
+      "vendor": "珈名鮮茶",
+      "item_name_zh": "木瓜牛奶",
+      "item_name_en": "Papaya Milk",
+      "category_zh": "新鮮果汁",
+      "category_en": "Fresh juice",
+      "price": 60,
+      "prep_minutes": 3,
+      "image_url": "img/items/r5-d16.svg"
+    },
+    {
+      "vendor": "珈名鮮茶",
+      "item_name_zh": "綜合果汁",
+      "item_name_en": "Mixed Fruit Juice",
+      "category_zh": "新鮮果汁",
+      "category_en": "Fresh juice",
+      "price": 60,
+      "prep_minutes": 3,
+      "image_url": "img/items/r5-d17.svg"
+    },
+    {
+      "vendor": "蘇記牛肉麵",
+      "item_name_zh": "牛肉乾拌麵",
+      "item_name_en": "Dry Beef Noodles",
+      "category_zh": "麵食",
+      "category_en": "Noodles",
+      "price": 85,
+      "prep_minutes": 6,
+      "image_url": "img/items/r6-s1.svg"
+    },
+    {
+      "vendor": "蘇記牛肉麵",
+      "item_name_zh": "燙青菜",
+      "item_name_en": "Blanched Greens",
+      "category_zh": "小菜",
+      "category_en": "Sides",
+      "price": 40,
+      "prep_minutes": 3,
+      "image_url": "img/items/r6-s2.svg"
+    }
+  ]
+}

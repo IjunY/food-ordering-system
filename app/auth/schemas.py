@@ -37,7 +37,15 @@ class UserRead(BaseModel):
     email: str
     phone_number: str
     role: UserRole
+    vendor_id: int | None  # staff only: the vendor this account manages
+    # True: the frontend should send the user to "change password" first
+    must_change_password: bool
     created_at: datetime
+
+
+class PasswordChange(BaseModel):
+    current_password: str = Field(max_length=128)
+    new_password: Password
 
 
 class TokenResponse(BaseModel):

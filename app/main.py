@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import sessionmaker
 
+from app.admin.router import router as admin_router
 from app.auth.router import router as auth_router
 from app.core.config import Settings, get_settings
 from app.core.db import get_engine
@@ -40,6 +41,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(auth_router, prefix="/api")
     app.include_router(menu_router, prefix="/api")
     app.include_router(orders_router, prefix="/api")
+    app.include_router(admin_router, prefix="/api")
 
     # The frontend calls this on start-up to tell whether a real backend is there
     # (if not, e.g. when the pages are opened as plain files, it uses its demo data)

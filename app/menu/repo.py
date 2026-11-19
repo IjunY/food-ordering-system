@@ -22,6 +22,12 @@ def get_vendors(session: Session, vendor_ids: Iterable[int]) -> Sequence[Vendor]
     return session.scalars(select(Vendor).where(Vendor.id.in_(ids))).all()
 
 
+def add_vendor(session: Session, vendor: Vendor) -> Vendor:
+    session.add(vendor)
+    session.flush()  # sends the INSERT so the new id is known
+    return vendor
+
+
 # ---------- Menu items ----------
 def list_items(
     session: Session, vendor_id: int | None = None, available_only: bool = False

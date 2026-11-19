@@ -17,8 +17,22 @@ from app.orders.schemas import OrderCreate, OrderItemRead, OrderRead
 from app.orders.states import ALLOWED_TRANSITIONS, OrderStatus
 
 
-def _is_staff(user: User) -> bool:
-    return user.role in (UserRole.STAFF, UserRole.ADMIN)
+def _manages(user: User, order: Order) -> bool:
+    """True for the staff of the vendor the order was placed with."""
+    return (
+        user.role is UserRole.STAFF
+        and user.vendor_id is not None
+        and user.vendor_id == order.vendor_id
+    )
+
+
+def _can_see(user: User, order: Order) -> bool:
+    # Admins monitor every order; staff see their own vendor's; everyone sees their own
+    return (
+        order.created_by == user.student_id
+        or user.role is UserRole.ADMIN
+        or _manages(user, order)
+    )
 
 
 def create_order(session: Session, user: User, data: OrderCreate) -> Order:
@@ -38,11 +52,15 @@ def create_order(session: Session, user: User, data: OrderCreate) -> Order:
             )
     if len({m.vendor_id for m in menu_items.values()}) > 1:
         raise BadRequestError("An order can only contain items from one vendor")
+    # every item has the same vendor (checked just above)
+    vendor_id = next(iter(menu_items.values())).vendor_id
+    vendor = menu_repo.get_vendor(session, vendor_id)
+    if vendor is None or not vendor.is_accepting_orders:
+        raise ConflictError("This vendor is not taking orders right now")
 
     order = Order(
         created_by=user.student_id,
-        # every item has the same vendor (checked just above)
-        vendor_id=next(iter(menu_items.values())).vendor_id,
+        vendor_id=vendor_id,
         items=[
             # unit_price is copied now so later menu price changes do not alter this order
             OrderItem(
@@ -61,7 +79,7 @@ def get_order(
 ) -> Order:
     order = repo.get(session, order_id, for_update=for_update)
     # Someone else's order looks the same as a missing one, so order ids cannot be probed
-    if order is None or (order.created_by != user.student_id and not _is_staff(user)):
+    if order is None or not _can_see(user, order):
         raise NotFoundError("Order not found")
     return order
 
@@ -74,11 +92,22 @@ def list_orders(
     limit: int = 50,
     offset: int = 0,
 ) -> Sequence[Order]:
-    # Customers only ever see their own orders; staff see everyone's unless mine=true
-    only_own = mine or not _is_staff(user)
+    # mine=true: only orders this account placed, whatever its role.
+    # Otherwise admins see every order, staff see their vendor's, customers their own.
+    created_by: str | None = None
+    vendor_id: int | None = None
+    if mine:
+        created_by = user.student_id
+    elif user.role is UserRole.ADMIN:
+        pass
+    elif user.role is UserRole.STAFF and user.vendor_id is not None:
+        vendor_id = user.vendor_id
+    else:
+        created_by = user.student_id
     return repo.list_orders(
         session,
-        created_by=user.student_id if only_own else None,
+        created_by=created_by,
+        vendor_id=vendor_id,
         status=status,
         limit=limit,
         offset=offset,
@@ -98,22 +127,26 @@ def _change_status(session: Session, order: Order, new_status: OrderStatus) -> O
 def update_status(
     session: Session, user: User, order_id: int, new_status: OrderStatus
 ) -> Order:
-    """Staff moving an order forward (or cancelling it)."""
+    """The vendor's staff moving an order forward (or cancelling it)."""
     order = get_order(session, user, order_id, for_update=True)
+    if not _manages(user, order):
+        # e.g. staff looking at an order they placed themselves at another vendor
+        raise ForbiddenError("Only the vendor's staff can change this order")
     return _change_status(session, order, new_status)
 
 
 def cancel_order(session: Session, user: User, order_id: int) -> Order:
     order = get_order(session, user, order_id, for_update=True)
-    # Once the kitchen has started, only staff can cancel.
-    # (Finished or already-cancelled orders fall through to the 409 in _change_status.)
-    if not _is_staff(user) and order.status in (
-        OrderStatus.PREPARING,
-        OrderStatus.READY,
-    ):
-        raise ForbiddenError(
-            "This order is already being prepared and can no longer be cancelled"
-        )
+    if not _manages(user, order):
+        if order.created_by != user.student_id:
+            # Only admins get here (anyone else could not see the order): they monitor only
+            raise ForbiddenError("Admins can view orders but not change them")
+        # Once the kitchen has started, only the vendor's staff can cancel.
+        # (Finished or already-cancelled orders fall through to the 409 in _change_status.)
+        if order.status in (OrderStatus.PREPARING, OrderStatus.READY):
+            raise ForbiddenError(
+                "This order is already being prepared and can no longer be cancelled"
+            )
     return _change_status(session, order, OrderStatus.CANCELLED)
 
 
