@@ -39,8 +39,11 @@ def test_staff_registers_their_vendor(
         "description": {"zh": "", "en": ""},
         "opening_hours": {"zh": "", "en": ""},
         "location": {"zh": "綜二館 1F", "en": "General Building II 1F"},
+        "area": "other",
         "is_accepting_orders": True,
         "image_url": None,
+        "cover_image_url": None,
+        "queue_count": 0,
     }
 
     # The account is now linked to it
@@ -184,3 +187,72 @@ def test_admins_customers_and_guests_can_only_read(
         assert client.get(f"/api/vendors/{vendor_id}", headers=headers).json()[
             "name"
         ] == {"zh": "測試麵館", "en": "Test Noodle House"}
+
+
+def test_area_and_cover_photo(client: TestClient, staff: dict[str, str]) -> None:
+    created = client.post(
+        "/api/vendors",
+        json=vendor_body(area="shuimu", cover_image_url="img/vendors/r4-cover.svg"),
+        headers=staff,
+    ).json()
+    assert created["area"] == "shuimu"
+    assert created["cover_image_url"] == "img/vendors/r4-cover.svg"
+
+    # Unknown areas are refused
+    moved = client.patch(
+        f"/api/vendors/{created['id']}", json={"area": "moon"}, headers=staff
+    )
+    assert moved.status_code == 422
+    # null removes the cover photo but leaves the area alone
+    updated = client.patch(
+        f"/api/vendors/{created['id']}",
+        json={"cover_image_url": None, "area": None},
+        headers=staff,
+    ).json()
+    assert updated["cover_image_url"] is None
+    assert updated["area"] == "shuimu"
+
+
+def test_queue_count_shows_orders_waiting(
+    client: TestClient, auth_headers: Headers, staff: dict[str, str]
+) -> None:
+    vendor = client.post("/api/vendors", json=vendor_body(), headers=staff).json()
+    item = client.post(
+        "/api/menu-items",
+        json={
+            "vendor_id": vendor["id"],
+            "item_name_zh": "便當",
+            "item_name_en": "Bento",
+            "category_zh": "主餐",
+            "category_en": "Mains",
+            "price": 80,
+            "prep_minutes": 5,
+        },
+        headers=staff,
+    ).json()
+    customer = auth_headers("990000001")
+
+    def queue() -> int:
+        return client.get(f"/api/vendors/{vendor['id']}").json()["queue_count"]
+
+    ids = [
+        client.post(
+            "/api/orders",
+            json={"items": [{"item_id": item["id"], "quantity": 1}]},
+            headers=customer,
+        ).json()["id"]
+        for _ in range(3)
+    ]
+    assert queue() == 3
+    # Ready and cancelled orders are no longer waiting
+    client.patch(
+        f"/api/orders/{ids[0]}/status", json={"status": "preparing"}, headers=staff
+    )
+    assert queue() == 3
+    client.patch(
+        f"/api/orders/{ids[0]}/status", json={"status": "ready"}, headers=staff
+    )
+    client.post(f"/api/orders/{ids[1]}/cancel", headers=customer)
+    assert queue() == 1
+    listed = {v["id"]: v for v in client.get("/api/vendors").json()}
+    assert listed[vendor["id"]]["queue_count"] == 1

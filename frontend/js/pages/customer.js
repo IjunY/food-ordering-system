@@ -64,6 +64,8 @@ forms.login = async (fd, form) => {
   if (!id) { toast(t('login.need_id')); form.querySelector('[name=student_id]')?.focus(); return; }
   const res = await api.login(id, fd.get('password'));
   session.set({ access_token: res.access_token, user: res.user });
+  // 管理員建立的帳號：先換密碼（換完才開始使用教學）
+  if (res.user.must_change_password) { navigate('password'); return; }
   await maybeStartTour(res.user); // 這個帳號第一次登入：開始使用教學
   navigate(homeOf(res.user.role));
 };
@@ -101,6 +103,36 @@ forms.register = async (fd, form) => {
   if (data.password.length < 8) { toast(t('register.short_password')); form.querySelector('[name=password]')?.focus(); return; }
   const res = await api.register(data);
   session.set({ access_token: res.access_token, user: res.user });
+  await maybeStartTour(res.user);
+  navigate(homeOf(res.user.role));
+};
+
+// ======================= 設定新密碼 =======================
+// 管理員建立的店家帳號第一次登入時一定會到這裡（main.js 的 guard）；換完密碼，舊的登入就失效
+export async function passwordPage() {
+  const forced = !!session.get()?.user?.must_change_password;
+  const rule = `<ul class="checks" id="pw-rules"><li>${icon('dot')}${esc(t('register.pw_rule'))}</li></ul>`;
+  return phone(`<div class="auth">
+    <section class="ahero"><div class="bar">${forced ? '<span></span>' : `<a class="back" href="#${homeOf(session.get()?.user?.role)}" aria-label="${esc(t('a11y.back'))}">${icon('back')}</a>`}${C.LangSwitch()}</div>
+      <h1>${esc(t('password.title'))}</h1><p>${esc(t(forced ? 'password.lead_forced' : 'password.lead'))}</p></section>
+    <form class="acard" data-form="password" novalidate>
+      ${C.TextField({ label: t('password.current'), name: 'current_password', type: 'password', reveal: true, extra: 'autocomplete="current-password"' })}
+      ${C.TextField({ label: t('password.new'), name: 'new_password', type: 'password', reveal: true, input: 'password-rule', extra: 'autocomplete="new-password" minlength="8" aria-describedby="pw-rules"', hint: rule })}
+      ${C.TextField({ label: t('password.confirm'), name: 'confirm_password', type: 'password', reveal: true, extra: 'autocomplete="new-password" minlength="8"' })}
+      ${C.Cta({ label: t('password.submit'), type: 'submit' })}
+      ${forced ? `<p class="alink"><button type="button" class="textlink" data-action="logout">${esc(t('profile.logout'))}</button></p>` : ''}
+    </form>
+  </div>`);
+}
+forms.password = async (fd, form) => {
+  const current = String(fd.get('current_password') || '');
+  const next = String(fd.get('new_password') || '');
+  if (!current) { toast(t('password.need_current')); form.querySelector('[name=current_password]')?.focus(); return; }
+  if (next.length < 8) { toast(t('register.short_password')); form.querySelector('[name=new_password]')?.focus(); return; }
+  if (next !== fd.get('confirm_password')) { toast(t('password.mismatch')); form.querySelector('[name=confirm_password]')?.focus(); return; }
+  const res = await api.changePassword(current, next);
+  session.set({ access_token: res.access_token, user: res.user });
+  toast(t('password.done'));
   await maybeStartTour(res.user);
   navigate(homeOf(res.user.role));
 };

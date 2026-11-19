@@ -27,3 +27,6 @@ htmlcov/
 .claude/
 *.swp
 
+
+# Photos uploaded through the app (POST /api/uploads)
+uploads/

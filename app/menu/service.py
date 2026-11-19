@@ -7,7 +7,22 @@ from app.auth.models import User
 from app.core.errors import ConflictError, ForbiddenError, NotFoundError
 from app.menu import repo
 from app.menu.models import MenuItem, Vendor
-from app.menu.schemas import MenuItemCreate, MenuItemUpdate, VendorCreate, VendorUpdate
+from app.menu.schemas import (
+    MenuItemCreate,
+    MenuItemUpdate,
+    VendorCreate,
+    VendorRead,
+    VendorUpdate,
+)
+
+# Columns that may be emptied by sending null (the photos); null is ignored for the rest
+_NULLABLE = {"image_url", "cover_image_url"}
+
+
+def _apply(row: Vendor | MenuItem, changes: dict[str, object]) -> None:
+    for field, value in changes.items():
+        if value is not None or field in _NULLABLE:
+            setattr(row, field, value)
 
 
 def _own_vendor_id(staff: User) -> int:
@@ -25,6 +40,17 @@ def _require_own_vendor(staff: User, vendor_id: int) -> None:
 # ---------- Vendors ----------
 def list_vendors(session: Session) -> Sequence[Vendor]:
     return repo.list_vendors(session)
+
+
+def to_read(session: Session, vendors: Sequence[Vendor]) -> list[VendorRead]:
+    """The API view of vendors, with how many orders each one has waiting."""
+    counts = repo.queue_counts(session, [v.id for v in vendors])
+    return [
+        VendorRead.model_validate(v).model_copy(
+            update={"queue_count": counts.get(v.id, 0)}
+        )
+        for v in vendors
+    ]
 
 
 def get_vendor(session: Session, vendor_id: int) -> Vendor:
@@ -57,11 +83,9 @@ def update_vendor(
 ) -> Vendor:
     vendor = get_vendor(session, vendor_id)
     _require_own_vendor(staff, vendor.id)
-    # Same rule as menu items: fields left out stay as they are, and null is ignored
-    # because none of the columns can be empty.
-    for field, value in data.model_dump(exclude_unset=True).items():
-        if value is not None:
-            setattr(vendor, field, value)
+    # Same rule as menu items: fields left out stay as they are; null is ignored
+    # (those columns cannot be empty), except for the photos, where it removes them.
+    _apply(vendor, data.model_dump(exclude_unset=True))
     session.commit()
     return vendor
 
@@ -96,10 +120,9 @@ def update_item(
         # Staff manage one vendor, so an item cannot be moved to someone else's
         _require_own_vendor(staff, data.vendor_id)
     # exclude_unset: fields left out of the request stay as they are.
-    # A field sent as null is ignored too, since none of the columns can be empty.
-    for field, value in data.model_dump(exclude_unset=True).items():
-        if value is not None:
-            setattr(item, field, value)
+    # A field sent as null is ignored too (those columns cannot be empty),
+    # except image_url, where null removes the photo.
+    _apply(item, data.model_dump(exclude_unset=True))
     session.commit()
     return item
 

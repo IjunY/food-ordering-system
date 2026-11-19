@@ -1,5 +1,5 @@
 {
-  "_comment": "NTHU campus vendors and menus (Fengyun Hall, Shuimu Center, Snack Bar), collected 2026-11-18 from public Google Maps listings: a menu-board photo for 珈名鮮茶 (2026-03) and reviews that list dishes with prices. Prices change; check at the counter. Vendor descriptions were written by us. Images are original illustrations in frontend/img/, not photos of the real food. Items name their vendor by vendor name_zh. Keep in sync with frontend/js/mock/data.js.",
+  "_comment": "NTHU campus vendors and menus (Fengyun Hall, Shuimu Center, Snack Bar), collected 2026-11-18 from public Google Maps listings: a menu-board photo for 珈名鮮茶 (2026-03) and reviews that list dishes with prices. Prices change; check at the counter. Vendor descriptions were written by us. Images are original illustrations in frontend/img/, not photos of the real food. Items name their vendor by vendor name_zh. This file is what the database is seeded with; the app reads menus from the database. frontend/js/mock/data.js is a separate copy used only for the first-login tutorial and for opening the frontend without a backend.",
   "vendors": [
     {
       "name_zh": "牛肉先生",
@@ -11,7 +11,9 @@
       "location_zh": "風雲樓 3F",
       "location_en": "Fengyun Hall 3F",
       "is_accepting_orders": true,
-      "image_url": "img/vendors/r1.svg"
+      "image_url": "img/vendors/r1.svg",
+      "area": "fengyun",
+      "cover_image_url": "img/vendors/r1-cover.svg"
     },
     {
       "name_zh": "炭烤小姐",
@@ -23,7 +25,9 @@
       "location_zh": "風雲樓",
       "location_en": "Fengyun Hall",
       "is_accepting_orders": true,
-      "image_url": "img/vendors/r2.svg"
+      "image_url": "img/vendors/r2.svg",
+      "area": "fengyun",
+      "cover_image_url": "img/vendors/r2-cover.svg"
     },
     {
       "name_zh": "米麵研究所",
@@ -35,7 +39,9 @@
       "location_zh": "風雲樓",
       "location_en": "Fengyun Hall",
       "is_accepting_orders": true,
-      "image_url": "img/vendors/r3.svg"
+      "image_url": "img/vendors/r3.svg",
+      "area": "fengyun",
+      "cover_image_url": "img/vendors/r3-cover.svg"
     },
     {
       "name_zh": "利竫和食",
@@ -47,7 +53,9 @@
       "location_zh": "水木生活中心 1F",
       "location_en": "Shuimu Center 1F",
       "is_accepting_orders": true,
-      "image_url": "img/vendors/r4.svg"
+      "image_url": "img/vendors/r4.svg",
+      "area": "shuimu",
+      "cover_image_url": "img/vendors/r4-cover.svg"
     },
     {
       "name_zh": "珈名鮮茶",
@@ -59,7 +67,9 @@
       "location_zh": "小吃部 1F",
       "location_en": "Snack Bar 1F",
       "is_accepting_orders": true,
-      "image_url": "img/vendors/r5.svg"
+      "image_url": "img/vendors/r5.svg",
+      "area": "snack",
+      "cover_image_url": "img/vendors/r5-cover.svg"
     },
     {
       "name_zh": "蘇記牛肉麵",
@@ -71,7 +81,9 @@
       "location_zh": "小吃部",
       "location_en": "Snack Bar",
       "is_accepting_orders": true,
-      "image_url": "img/vendors/r6.svg"
+      "image_url": "img/vendors/r6.svg",
+      "area": "snack",
+      "cover_image_url": "img/vendors/r6-cover.svg"
     }
   ],
   "items": [
@@ -83,7 +95,65 @@
       "category_en": "Rice bowl sets",
       "price": 160,
       "prep_minutes": 10,
-      "image_url": "img/items/r1-b1.svg"
+      "image_url": "img/items/r1-b1.svg",
+      "description_zh": "炙燒骰子牛、洋蔥、玉米與海苔鋪在白飯上，附小菜",
+      "description_en": "Seared diced beef with onion, corn and seaweed over rice, with sides",
+      "option_groups": [
+        {
+          "id": "rice",
+          "name": {
+            "zh": "飯量",
+            "en": "Rice"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "normal",
+              "label": {
+                "zh": "正常",
+                "en": "Regular"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少飯",
+                "en": "Less rice"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "cutlery",
+          "name": {
+            "zh": "餐具",
+            "en": "Cutlery"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "yes",
+              "label": {
+                "zh": "需要餐具",
+                "en": "Need cutlery"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "no",
+              "label": {
+                "zh": "不用，自備餐具",
+                "en": "No thanks, I have my own"
+              },
+              "price_delta": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "vendor": "牛肉先生",
@@ -93,7 +163,65 @@
       "category_en": "Rice bowl sets",
       "price": 90,
       "prep_minutes": 8,
-      "image_url": "img/items/r1-b2.svg"
+      "image_url": "img/items/r1-b2.svg",
+      "description_zh": "現炸豬排、白飯與小菜",
+      "description_en": "Fried pork cutlet, rice and sides",
+      "option_groups": [
+        {
+          "id": "rice",
+          "name": {
+            "zh": "飯量",
+            "en": "Rice"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "normal",
+              "label": {
+                "zh": "正常",
+                "en": "Regular"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少飯",
+                "en": "Less rice"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "cutlery",
+          "name": {
+            "zh": "餐具",
+            "en": "Cutlery"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "yes",
+              "label": {
+                "zh": "需要餐具",
+                "en": "Need cutlery"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "no",
+              "label": {
+                "zh": "不用，自備餐具",
+                "en": "No thanks, I have my own"
+              },
+              "price_delta": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "vendor": "牛肉先生",
@@ -103,7 +231,65 @@
       "category_en": "Rice bowl sets",
       "price": 95,
       "prep_minutes": 8,
-      "image_url": "img/items/r1-b3.svg"
+      "image_url": "img/items/r1-b3.svg",
+      "description_zh": "日式炸雞塊、微甜醬汁與洋蔥",
+      "description_en": "Japanese fried chicken with a lightly sweet sauce and onion",
+      "option_groups": [
+        {
+          "id": "rice",
+          "name": {
+            "zh": "飯量",
+            "en": "Rice"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "normal",
+              "label": {
+                "zh": "正常",
+                "en": "Regular"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少飯",
+                "en": "Less rice"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "cutlery",
+          "name": {
+            "zh": "餐具",
+            "en": "Cutlery"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "yes",
+              "label": {
+                "zh": "需要餐具",
+                "en": "Need cutlery"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "no",
+              "label": {
+                "zh": "不用，自備餐具",
+                "en": "No thanks, I have my own"
+              },
+              "price_delta": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "vendor": "牛肉先生",
@@ -113,7 +299,65 @@
       "category_en": "Rice bowl sets",
       "price": 100,
       "prep_minutes": 6,
-      "image_url": "img/items/r1-b4.svg"
+      "image_url": "img/items/r1-b4.svg",
+      "description_zh": "低溫舒肥雞胸，調味清爽",
+      "description_en": "Sous-vide chicken breast, lightly seasoned",
+      "option_groups": [
+        {
+          "id": "rice",
+          "name": {
+            "zh": "飯量",
+            "en": "Rice"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "normal",
+              "label": {
+                "zh": "正常",
+                "en": "Regular"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少飯",
+                "en": "Less rice"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "cutlery",
+          "name": {
+            "zh": "餐具",
+            "en": "Cutlery"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "yes",
+              "label": {
+                "zh": "需要餐具",
+                "en": "Need cutlery"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "no",
+              "label": {
+                "zh": "不用，自備餐具",
+                "en": "No thanks, I have my own"
+              },
+              "price_delta": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "vendor": "炭烤小姐",
@@ -123,7 +367,65 @@
       "category_en": "Grilled bento",
       "price": 110,
       "prep_minutes": 9,
-      "image_url": "img/items/r2-g1.svg"
+      "image_url": "img/items/r2-g1.svg",
+      "description_zh": "炭烤雞腿、白飯、三樣配菜",
+      "description_en": "Charcoal-grilled chicken leg, rice and three sides",
+      "option_groups": [
+        {
+          "id": "rice",
+          "name": {
+            "zh": "飯量",
+            "en": "Rice"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "normal",
+              "label": {
+                "zh": "正常",
+                "en": "Regular"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少飯",
+                "en": "Less rice"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "cutlery",
+          "name": {
+            "zh": "餐具",
+            "en": "Cutlery"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "yes",
+              "label": {
+                "zh": "需要餐具",
+                "en": "Need cutlery"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "no",
+              "label": {
+                "zh": "不用，自備餐具",
+                "en": "No thanks, I have my own"
+              },
+              "price_delta": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "vendor": "炭烤小姐",
@@ -133,7 +435,65 @@
       "category_en": "Grilled bento",
       "price": 100,
       "prep_minutes": 8,
-      "image_url": "img/items/r2-g2.svg"
+      "image_url": "img/items/r2-g2.svg",
+      "description_zh": "先炸後烤的雞柳、白飯、配菜",
+      "description_en": "Chicken strips fried then grilled, rice and sides",
+      "option_groups": [
+        {
+          "id": "rice",
+          "name": {
+            "zh": "飯量",
+            "en": "Rice"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "normal",
+              "label": {
+                "zh": "正常",
+                "en": "Regular"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少飯",
+                "en": "Less rice"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "cutlery",
+          "name": {
+            "zh": "餐具",
+            "en": "Cutlery"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "yes",
+              "label": {
+                "zh": "需要餐具",
+                "en": "Need cutlery"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "no",
+              "label": {
+                "zh": "不用，自備餐具",
+                "en": "No thanks, I have my own"
+              },
+              "price_delta": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "vendor": "炭烤小姐",
@@ -143,7 +503,65 @@
       "category_en": "Grilled bento",
       "price": 95,
       "prep_minutes": 8,
-      "image_url": "img/items/r2-g3.svg"
+      "image_url": "img/items/r2-g3.svg",
+      "description_zh": "帶骨雞排先炸後烤，介意骨頭請留意",
+      "description_en": "Bone-in chicken cutlet, fried then grilled",
+      "option_groups": [
+        {
+          "id": "rice",
+          "name": {
+            "zh": "飯量",
+            "en": "Rice"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "normal",
+              "label": {
+                "zh": "正常",
+                "en": "Regular"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少飯",
+                "en": "Less rice"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "cutlery",
+          "name": {
+            "zh": "餐具",
+            "en": "Cutlery"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "yes",
+              "label": {
+                "zh": "需要餐具",
+                "en": "Need cutlery"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "no",
+              "label": {
+                "zh": "不用，自備餐具",
+                "en": "No thanks, I have my own"
+              },
+              "price_delta": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "vendor": "炭烤小姐",
@@ -153,7 +571,65 @@
       "category_en": "Grilled bento",
       "price": 95,
       "prep_minutes": 8,
-      "image_url": "img/items/r2-g4.svg"
+      "image_url": "img/items/r2-g4.svg",
+      "description_zh": "炭烤五花肉片、白飯、配菜",
+      "description_en": "Charcoal-grilled pork belly slices, rice and sides",
+      "option_groups": [
+        {
+          "id": "rice",
+          "name": {
+            "zh": "飯量",
+            "en": "Rice"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "normal",
+              "label": {
+                "zh": "正常",
+                "en": "Regular"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少飯",
+                "en": "Less rice"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "cutlery",
+          "name": {
+            "zh": "餐具",
+            "en": "Cutlery"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "yes",
+              "label": {
+                "zh": "需要餐具",
+                "en": "Need cutlery"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "no",
+              "label": {
+                "zh": "不用，自備餐具",
+                "en": "No thanks, I have my own"
+              },
+              "price_delta": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "vendor": "米麵研究所",
@@ -163,7 +639,38 @@
       "category_en": "Fried rice",
       "price": 80,
       "prep_minutes": 7,
-      "image_url": "img/items/r3-f1.svg"
+      "image_url": "img/items/r3-f1.svg",
+      "description_zh": "醃過的嫩牛肉片與蛋炒飯",
+      "description_en": "Fried rice with marinated tender beef and egg",
+      "option_groups": [
+        {
+          "id": "cutlery",
+          "name": {
+            "zh": "餐具",
+            "en": "Cutlery"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "yes",
+              "label": {
+                "zh": "需要餐具",
+                "en": "Need cutlery"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "no",
+              "label": {
+                "zh": "不用，自備餐具",
+                "en": "No thanks, I have my own"
+              },
+              "price_delta": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "vendor": "米麵研究所",
@@ -173,7 +680,38 @@
       "category_en": "Fried rice",
       "price": 110,
       "prep_minutes": 9,
-      "image_url": "img/items/r3-f2.svg"
+      "image_url": "img/items/r3-f2.svg",
+      "description_zh": "鹹酥雞、百頁豆腐、豆芽菜",
+      "description_en": "Popcorn chicken, tofu and bean sprouts",
+      "option_groups": [
+        {
+          "id": "cutlery",
+          "name": {
+            "zh": "餐具",
+            "en": "Cutlery"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "yes",
+              "label": {
+                "zh": "需要餐具",
+                "en": "Need cutlery"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "no",
+              "label": {
+                "zh": "不用，自備餐具",
+                "en": "No thanks, I have my own"
+              },
+              "price_delta": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "vendor": "米麵研究所",
@@ -183,7 +721,38 @@
       "category_en": "Stir-fried noodles",
       "price": 75,
       "prep_minutes": 7,
-      "image_url": "img/items/r3-f3.svg"
+      "image_url": "img/items/r3-f3.svg",
+      "description_zh": "蛤蜊、蒜香與時蔬",
+      "description_en": "Clams, garlic and vegetables",
+      "option_groups": [
+        {
+          "id": "cutlery",
+          "name": {
+            "zh": "餐具",
+            "en": "Cutlery"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "yes",
+              "label": {
+                "zh": "需要餐具",
+                "en": "Need cutlery"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "no",
+              "label": {
+                "zh": "不用，自備餐具",
+                "en": "No thanks, I have my own"
+              },
+              "price_delta": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "vendor": "利竫和食",
@@ -193,7 +762,65 @@
       "category_en": "Rice bowls",
       "price": 100,
       "prep_minutes": 7,
-      "image_url": "img/items/r4-j1.svg"
+      "image_url": "img/items/r4-j1.svg",
+      "description_zh": "甜口醬汁牛肉片、高麗菜、玉米",
+      "description_en": "Beef slices in a sweet soy sauce, cabbage and corn",
+      "option_groups": [
+        {
+          "id": "rice",
+          "name": {
+            "zh": "飯量",
+            "en": "Rice"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "normal",
+              "label": {
+                "zh": "正常",
+                "en": "Regular"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少飯",
+                "en": "Less rice"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "cutlery",
+          "name": {
+            "zh": "餐具",
+            "en": "Cutlery"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "yes",
+              "label": {
+                "zh": "需要餐具",
+                "en": "Need cutlery"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "no",
+              "label": {
+                "zh": "不用，自備餐具",
+                "en": "No thanks, I have my own"
+              },
+              "price_delta": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "vendor": "利竫和食",
@@ -203,7 +830,65 @@
       "category_en": "Rice bowls",
       "price": 85,
       "prep_minutes": 7,
-      "image_url": "img/items/r4-j2.svg"
+      "image_url": "img/items/r4-j2.svg",
+      "description_zh": "豬肉片與微酸泡菜，配高麗菜、玉米",
+      "description_en": "Pork slices with tangy kimchi, cabbage and corn",
+      "option_groups": [
+        {
+          "id": "rice",
+          "name": {
+            "zh": "飯量",
+            "en": "Rice"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "normal",
+              "label": {
+                "zh": "正常",
+                "en": "Regular"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少飯",
+                "en": "Less rice"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "cutlery",
+          "name": {
+            "zh": "餐具",
+            "en": "Cutlery"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "yes",
+              "label": {
+                "zh": "需要餐具",
+                "en": "Need cutlery"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "no",
+              "label": {
+                "zh": "不用，自備餐具",
+                "en": "No thanks, I have my own"
+              },
+              "price_delta": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "vendor": "利竫和食",
@@ -213,7 +898,65 @@
       "category_en": "Rice bowls",
       "price": 100,
       "prep_minutes": 15,
-      "image_url": "img/items/r4-j3.svg"
+      "image_url": "img/items/r4-j3.svg",
+      "description_zh": "現炸雞腿配鹹香微辣咖哩，尖峰時段約需 15 分鐘",
+      "description_en": "Fried chicken leg with a mildly spicy curry; about 15 minutes at peak times",
+      "option_groups": [
+        {
+          "id": "rice",
+          "name": {
+            "zh": "飯量",
+            "en": "Rice"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "normal",
+              "label": {
+                "zh": "正常",
+                "en": "Regular"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少飯",
+                "en": "Less rice"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "cutlery",
+          "name": {
+            "zh": "餐具",
+            "en": "Cutlery"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "yes",
+              "label": {
+                "zh": "需要餐具",
+                "en": "Need cutlery"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "no",
+              "label": {
+                "zh": "不用，自備餐具",
+                "en": "No thanks, I have my own"
+              },
+              "price_delta": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "vendor": "利竫和食",
@@ -223,7 +966,65 @@
       "category_en": "Ramen",
       "price": 90,
       "prep_minutes": 8,
-      "image_url": "img/items/r4-j4.svg"
+      "image_url": "img/items/r4-j4.svg",
+      "description_zh": "叉燒、糖心蛋、青江菜、木耳、豆芽，可選豚骨或醬油湯頭",
+      "description_en": "Chashu, soft-boiled egg, bok choy, wood ear and sprouts; tonkotsu or shoyu broth",
+      "option_groups": [
+        {
+          "id": "soup",
+          "name": {
+            "zh": "湯頭",
+            "en": "Broth"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "tonkotsu",
+              "label": {
+                "zh": "豚骨",
+                "en": "Tonkotsu (pork bone)"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "shoyu",
+              "label": {
+                "zh": "醬油",
+                "en": "Shoyu (soy sauce)"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "cutlery",
+          "name": {
+            "zh": "餐具",
+            "en": "Cutlery"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "yes",
+              "label": {
+                "zh": "需要餐具",
+                "en": "Need cutlery"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "no",
+              "label": {
+                "zh": "不用，自備餐具",
+                "en": "No thanks, I have my own"
+              },
+              "price_delta": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "vendor": "利竫和食",
@@ -233,7 +1034,65 @@
       "category_en": "Campus special",
       "price": 70,
       "prep_minutes": 5,
-      "image_url": "img/items/r4-j5.svg"
+      "image_url": "img/items/r4-j5.svg",
+      "description_zh": "滷豬肉、糖心蛋、高麗菜、玉米",
+      "description_en": "Braised pork, soft-boiled egg, cabbage and corn",
+      "option_groups": [
+        {
+          "id": "rice",
+          "name": {
+            "zh": "飯量",
+            "en": "Rice"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "normal",
+              "label": {
+                "zh": "正常",
+                "en": "Regular"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少飯",
+                "en": "Less rice"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "cutlery",
+          "name": {
+            "zh": "餐具",
+            "en": "Cutlery"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "yes",
+              "label": {
+                "zh": "需要餐具",
+                "en": "Need cutlery"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "no",
+              "label": {
+                "zh": "不用，自備餐具",
+                "en": "No thanks, I have my own"
+              },
+              "price_delta": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "vendor": "珈名鮮茶",
@@ -243,7 +1102,140 @@
       "category_en": "Brewed tea",
       "price": 40,
       "prep_minutes": 2,
-      "image_url": "img/items/r5-d1.svg"
+      "image_url": "img/items/r5-d1.svg",
+      "description_zh": "現泡綠茶",
+      "description_en": "Freshly brewed green tea",
+      "option_groups": [
+        {
+          "id": "ice",
+          "name": {
+            "zh": "冰塊",
+            "en": "Ice"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "regular",
+              "label": {
+                "zh": "正常冰",
+                "en": "Regular ice"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少冰",
+                "en": "Less ice"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "none",
+              "label": {
+                "zh": "去冰",
+                "en": "No ice"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "sugar",
+          "name": {
+            "zh": "甜度",
+            "en": "Sugar"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "full",
+              "label": {
+                "zh": "正常糖",
+                "en": "Full sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少糖",
+                "en": "Less sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "half",
+              "label": {
+                "zh": "半糖",
+                "en": "Half sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "light",
+              "label": {
+                "zh": "微糖",
+                "en": "Light sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "none",
+              "label": {
+                "zh": "無糖",
+                "en": "No sugar"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "topping",
+          "name": {
+            "zh": "加料（各 +5）",
+            "en": "Toppings (+5 each)"
+          },
+          "required": false,
+          "max_select": 2,
+          "choices": [
+            {
+              "id": "pearl",
+              "label": {
+                "zh": "珍珠",
+                "en": "Tapioca pearls"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "coconut",
+              "label": {
+                "zh": "椰果",
+                "en": "Coconut jelly"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "pudding",
+              "label": {
+                "zh": "布丁",
+                "en": "Pudding"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "grass",
+              "label": {
+                "zh": "仙草凍",
+                "en": "Grass jelly"
+              },
+              "price_delta": 5
+            }
+          ]
+        }
+      ]
     },
     {
       "vendor": "珈名鮮茶",
@@ -253,7 +1245,140 @@
       "category_en": "Brewed tea",
       "price": 45,
       "prep_minutes": 2,
-      "image_url": "img/items/r5-d2.svg"
+      "image_url": "img/items/r5-d2.svg",
+      "description_zh": "現泡蜜香烏龍",
+      "description_en": "Freshly brewed honey-scented oolong",
+      "option_groups": [
+        {
+          "id": "ice",
+          "name": {
+            "zh": "冰塊",
+            "en": "Ice"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "regular",
+              "label": {
+                "zh": "正常冰",
+                "en": "Regular ice"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少冰",
+                "en": "Less ice"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "none",
+              "label": {
+                "zh": "去冰",
+                "en": "No ice"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "sugar",
+          "name": {
+            "zh": "甜度",
+            "en": "Sugar"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "full",
+              "label": {
+                "zh": "正常糖",
+                "en": "Full sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少糖",
+                "en": "Less sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "half",
+              "label": {
+                "zh": "半糖",
+                "en": "Half sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "light",
+              "label": {
+                "zh": "微糖",
+                "en": "Light sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "none",
+              "label": {
+                "zh": "無糖",
+                "en": "No sugar"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "topping",
+          "name": {
+            "zh": "加料（各 +5）",
+            "en": "Toppings (+5 each)"
+          },
+          "required": false,
+          "max_select": 2,
+          "choices": [
+            {
+              "id": "pearl",
+              "label": {
+                "zh": "珍珠",
+                "en": "Tapioca pearls"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "coconut",
+              "label": {
+                "zh": "椰果",
+                "en": "Coconut jelly"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "pudding",
+              "label": {
+                "zh": "布丁",
+                "en": "Pudding"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "grass",
+              "label": {
+                "zh": "仙草凍",
+                "en": "Grass jelly"
+              },
+              "price_delta": 5
+            }
+          ]
+        }
+      ]
     },
     {
       "vendor": "珈名鮮茶",
@@ -263,7 +1388,140 @@
       "category_en": "Brewed tea",
       "price": 45,
       "prep_minutes": 2,
-      "image_url": "img/items/r5-d3.svg"
+      "image_url": "img/items/r5-d3.svg",
+      "description_zh": "現泡凍頂烏龍",
+      "description_en": "Freshly brewed Dongding oolong",
+      "option_groups": [
+        {
+          "id": "ice",
+          "name": {
+            "zh": "冰塊",
+            "en": "Ice"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "regular",
+              "label": {
+                "zh": "正常冰",
+                "en": "Regular ice"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少冰",
+                "en": "Less ice"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "none",
+              "label": {
+                "zh": "去冰",
+                "en": "No ice"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "sugar",
+          "name": {
+            "zh": "甜度",
+            "en": "Sugar"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "full",
+              "label": {
+                "zh": "正常糖",
+                "en": "Full sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少糖",
+                "en": "Less sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "half",
+              "label": {
+                "zh": "半糖",
+                "en": "Half sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "light",
+              "label": {
+                "zh": "微糖",
+                "en": "Light sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "none",
+              "label": {
+                "zh": "無糖",
+                "en": "No sugar"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "topping",
+          "name": {
+            "zh": "加料（各 +5）",
+            "en": "Toppings (+5 each)"
+          },
+          "required": false,
+          "max_select": 2,
+          "choices": [
+            {
+              "id": "pearl",
+              "label": {
+                "zh": "珍珠",
+                "en": "Tapioca pearls"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "coconut",
+              "label": {
+                "zh": "椰果",
+                "en": "Coconut jelly"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "pudding",
+              "label": {
+                "zh": "布丁",
+                "en": "Pudding"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "grass",
+              "label": {
+                "zh": "仙草凍",
+                "en": "Grass jelly"
+              },
+              "price_delta": 5
+            }
+          ]
+        }
+      ]
     },
     {
       "vendor": "珈名鮮茶",
@@ -273,7 +1531,140 @@
       "category_en": "Flavoured tea",
       "price": 30,
       "prep_minutes": 1,
-      "image_url": "img/items/r5-d4.svg"
+      "image_url": "img/items/r5-d4.svg",
+      "description_zh": "古早味紅茶",
+      "description_en": "Classic black tea",
+      "option_groups": [
+        {
+          "id": "ice",
+          "name": {
+            "zh": "冰塊",
+            "en": "Ice"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "regular",
+              "label": {
+                "zh": "正常冰",
+                "en": "Regular ice"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少冰",
+                "en": "Less ice"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "none",
+              "label": {
+                "zh": "去冰",
+                "en": "No ice"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "sugar",
+          "name": {
+            "zh": "甜度",
+            "en": "Sugar"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "full",
+              "label": {
+                "zh": "正常糖",
+                "en": "Full sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少糖",
+                "en": "Less sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "half",
+              "label": {
+                "zh": "半糖",
+                "en": "Half sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "light",
+              "label": {
+                "zh": "微糖",
+                "en": "Light sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "none",
+              "label": {
+                "zh": "無糖",
+                "en": "No sugar"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "topping",
+          "name": {
+            "zh": "加料（各 +5）",
+            "en": "Toppings (+5 each)"
+          },
+          "required": false,
+          "max_select": 2,
+          "choices": [
+            {
+              "id": "pearl",
+              "label": {
+                "zh": "珍珠",
+                "en": "Tapioca pearls"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "coconut",
+              "label": {
+                "zh": "椰果",
+                "en": "Coconut jelly"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "pudding",
+              "label": {
+                "zh": "布丁",
+                "en": "Pudding"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "grass",
+              "label": {
+                "zh": "仙草凍",
+                "en": "Grass jelly"
+              },
+              "price_delta": 5
+            }
+          ]
+        }
+      ]
     },
     {
       "vendor": "珈名鮮茶",
@@ -283,7 +1674,140 @@
       "category_en": "Flavoured tea",
       "price": 30,
       "prep_minutes": 1,
-      "image_url": "img/items/r5-d5.svg"
+      "image_url": "img/items/r5-d5.svg",
+      "description_zh": "清爽綠茶",
+      "description_en": "Light green tea",
+      "option_groups": [
+        {
+          "id": "ice",
+          "name": {
+            "zh": "冰塊",
+            "en": "Ice"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "regular",
+              "label": {
+                "zh": "正常冰",
+                "en": "Regular ice"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少冰",
+                "en": "Less ice"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "none",
+              "label": {
+                "zh": "去冰",
+                "en": "No ice"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "sugar",
+          "name": {
+            "zh": "甜度",
+            "en": "Sugar"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "full",
+              "label": {
+                "zh": "正常糖",
+                "en": "Full sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少糖",
+                "en": "Less sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "half",
+              "label": {
+                "zh": "半糖",
+                "en": "Half sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "light",
+              "label": {
+                "zh": "微糖",
+                "en": "Light sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "none",
+              "label": {
+                "zh": "無糖",
+                "en": "No sugar"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "topping",
+          "name": {
+            "zh": "加料（各 +5）",
+            "en": "Toppings (+5 each)"
+          },
+          "required": false,
+          "max_select": 2,
+          "choices": [
+            {
+              "id": "pearl",
+              "label": {
+                "zh": "珍珠",
+                "en": "Tapioca pearls"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "coconut",
+              "label": {
+                "zh": "椰果",
+                "en": "Coconut jelly"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "pudding",
+              "label": {
+                "zh": "布丁",
+                "en": "Pudding"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "grass",
+              "label": {
+                "zh": "仙草凍",
+                "en": "Grass jelly"
+              },
+              "price_delta": 5
+            }
+          ]
+        }
+      ]
     },
     {
       "vendor": "珈名鮮茶",
@@ -293,7 +1817,140 @@
       "category_en": "Flavoured tea",
       "price": 40,
       "prep_minutes": 2,
-      "image_url": "img/items/r5-d6.svg"
+      "image_url": "img/items/r5-d6.svg",
+      "description_zh": "冬瓜茶加檸檬",
+      "description_en": "Winter melon tea with lemon",
+      "option_groups": [
+        {
+          "id": "ice",
+          "name": {
+            "zh": "冰塊",
+            "en": "Ice"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "regular",
+              "label": {
+                "zh": "正常冰",
+                "en": "Regular ice"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少冰",
+                "en": "Less ice"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "none",
+              "label": {
+                "zh": "去冰",
+                "en": "No ice"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "sugar",
+          "name": {
+            "zh": "甜度",
+            "en": "Sugar"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "full",
+              "label": {
+                "zh": "正常糖",
+                "en": "Full sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少糖",
+                "en": "Less sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "half",
+              "label": {
+                "zh": "半糖",
+                "en": "Half sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "light",
+              "label": {
+                "zh": "微糖",
+                "en": "Light sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "none",
+              "label": {
+                "zh": "無糖",
+                "en": "No sugar"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "topping",
+          "name": {
+            "zh": "加料（各 +5）",
+            "en": "Toppings (+5 each)"
+          },
+          "required": false,
+          "max_select": 2,
+          "choices": [
+            {
+              "id": "pearl",
+              "label": {
+                "zh": "珍珠",
+                "en": "Tapioca pearls"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "coconut",
+              "label": {
+                "zh": "椰果",
+                "en": "Coconut jelly"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "pudding",
+              "label": {
+                "zh": "布丁",
+                "en": "Pudding"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "grass",
+              "label": {
+                "zh": "仙草凍",
+                "en": "Grass jelly"
+              },
+              "price_delta": 5
+            }
+          ]
+        }
+      ]
     },
     {
       "vendor": "珈名鮮茶",
@@ -303,7 +1960,140 @@
       "category_en": "Flavoured tea",
       "price": 45,
       "prep_minutes": 2,
-      "image_url": "img/items/r5-d7.svg"
+      "image_url": "img/items/r5-d7.svg",
+      "description_zh": "新鮮百香果與綠茶",
+      "description_en": "Fresh passion fruit with green tea",
+      "option_groups": [
+        {
+          "id": "ice",
+          "name": {
+            "zh": "冰塊",
+            "en": "Ice"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "regular",
+              "label": {
+                "zh": "正常冰",
+                "en": "Regular ice"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少冰",
+                "en": "Less ice"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "none",
+              "label": {
+                "zh": "去冰",
+                "en": "No ice"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "sugar",
+          "name": {
+            "zh": "甜度",
+            "en": "Sugar"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "full",
+              "label": {
+                "zh": "正常糖",
+                "en": "Full sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少糖",
+                "en": "Less sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "half",
+              "label": {
+                "zh": "半糖",
+                "en": "Half sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "light",
+              "label": {
+                "zh": "微糖",
+                "en": "Light sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "none",
+              "label": {
+                "zh": "無糖",
+                "en": "No sugar"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "topping",
+          "name": {
+            "zh": "加料（各 +5）",
+            "en": "Toppings (+5 each)"
+          },
+          "required": false,
+          "max_select": 2,
+          "choices": [
+            {
+              "id": "pearl",
+              "label": {
+                "zh": "珍珠",
+                "en": "Tapioca pearls"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "coconut",
+              "label": {
+                "zh": "椰果",
+                "en": "Coconut jelly"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "pudding",
+              "label": {
+                "zh": "布丁",
+                "en": "Pudding"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "grass",
+              "label": {
+                "zh": "仙草凍",
+                "en": "Grass jelly"
+              },
+              "price_delta": 5
+            }
+          ]
+        }
+      ]
     },
     {
       "vendor": "珈名鮮茶",
@@ -313,7 +2103,140 @@
       "category_en": "Flavoured tea",
       "price": 50,
       "prep_minutes": 2,
-      "image_url": "img/items/r5-d8.svg"
+      "image_url": "img/items/r5-d8.svg",
+      "description_zh": "檸檬汁加多多",
+      "description_en": "Lemon juice with Yakult",
+      "option_groups": [
+        {
+          "id": "ice",
+          "name": {
+            "zh": "冰塊",
+            "en": "Ice"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "regular",
+              "label": {
+                "zh": "正常冰",
+                "en": "Regular ice"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少冰",
+                "en": "Less ice"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "none",
+              "label": {
+                "zh": "去冰",
+                "en": "No ice"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "sugar",
+          "name": {
+            "zh": "甜度",
+            "en": "Sugar"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "full",
+              "label": {
+                "zh": "正常糖",
+                "en": "Full sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少糖",
+                "en": "Less sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "half",
+              "label": {
+                "zh": "半糖",
+                "en": "Half sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "light",
+              "label": {
+                "zh": "微糖",
+                "en": "Light sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "none",
+              "label": {
+                "zh": "無糖",
+                "en": "No sugar"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "topping",
+          "name": {
+            "zh": "加料（各 +5）",
+            "en": "Toppings (+5 each)"
+          },
+          "required": false,
+          "max_select": 2,
+          "choices": [
+            {
+              "id": "pearl",
+              "label": {
+                "zh": "珍珠",
+                "en": "Tapioca pearls"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "coconut",
+              "label": {
+                "zh": "椰果",
+                "en": "Coconut jelly"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "pudding",
+              "label": {
+                "zh": "布丁",
+                "en": "Pudding"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "grass",
+              "label": {
+                "zh": "仙草凍",
+                "en": "Grass jelly"
+              },
+              "price_delta": 5
+            }
+          ]
+        }
+      ]
     },
     {
       "vendor": "珈名鮮茶",
@@ -323,7 +2246,140 @@
       "category_en": "Flavoured tea",
       "price": 55,
       "prep_minutes": 2,
-      "image_url": "img/items/r5-d9.svg"
+      "image_url": "img/items/r5-d9.svg",
+      "description_zh": "甘蔗汁與青茶",
+      "description_en": "Sugarcane juice with green tea",
+      "option_groups": [
+        {
+          "id": "ice",
+          "name": {
+            "zh": "冰塊",
+            "en": "Ice"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "regular",
+              "label": {
+                "zh": "正常冰",
+                "en": "Regular ice"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少冰",
+                "en": "Less ice"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "none",
+              "label": {
+                "zh": "去冰",
+                "en": "No ice"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "sugar",
+          "name": {
+            "zh": "甜度",
+            "en": "Sugar"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "full",
+              "label": {
+                "zh": "正常糖",
+                "en": "Full sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少糖",
+                "en": "Less sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "half",
+              "label": {
+                "zh": "半糖",
+                "en": "Half sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "light",
+              "label": {
+                "zh": "微糖",
+                "en": "Light sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "none",
+              "label": {
+                "zh": "無糖",
+                "en": "No sugar"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "topping",
+          "name": {
+            "zh": "加料（各 +5）",
+            "en": "Toppings (+5 each)"
+          },
+          "required": false,
+          "max_select": 2,
+          "choices": [
+            {
+              "id": "pearl",
+              "label": {
+                "zh": "珍珠",
+                "en": "Tapioca pearls"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "coconut",
+              "label": {
+                "zh": "椰果",
+                "en": "Coconut jelly"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "pudding",
+              "label": {
+                "zh": "布丁",
+                "en": "Pudding"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "grass",
+              "label": {
+                "zh": "仙草凍",
+                "en": "Grass jelly"
+              },
+              "price_delta": 5
+            }
+          ]
+        }
+      ]
     },
     {
       "vendor": "珈名鮮茶",
@@ -333,7 +2389,140 @@
       "category_en": "Lattes",
       "price": 45,
       "prep_minutes": 2,
-      "image_url": "img/items/r5-d10.svg"
+      "image_url": "img/items/r5-d10.svg",
+      "description_zh": "紅茶加鮮奶",
+      "description_en": "Black tea with fresh milk",
+      "option_groups": [
+        {
+          "id": "ice",
+          "name": {
+            "zh": "冰塊",
+            "en": "Ice"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "regular",
+              "label": {
+                "zh": "正常冰",
+                "en": "Regular ice"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少冰",
+                "en": "Less ice"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "none",
+              "label": {
+                "zh": "去冰",
+                "en": "No ice"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "sugar",
+          "name": {
+            "zh": "甜度",
+            "en": "Sugar"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "full",
+              "label": {
+                "zh": "正常糖",
+                "en": "Full sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少糖",
+                "en": "Less sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "half",
+              "label": {
+                "zh": "半糖",
+                "en": "Half sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "light",
+              "label": {
+                "zh": "微糖",
+                "en": "Light sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "none",
+              "label": {
+                "zh": "無糖",
+                "en": "No sugar"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "topping",
+          "name": {
+            "zh": "加料（各 +5）",
+            "en": "Toppings (+5 each)"
+          },
+          "required": false,
+          "max_select": 2,
+          "choices": [
+            {
+              "id": "pearl",
+              "label": {
+                "zh": "珍珠",
+                "en": "Tapioca pearls"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "coconut",
+              "label": {
+                "zh": "椰果",
+                "en": "Coconut jelly"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "pudding",
+              "label": {
+                "zh": "布丁",
+                "en": "Pudding"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "grass",
+              "label": {
+                "zh": "仙草凍",
+                "en": "Grass jelly"
+              },
+              "price_delta": 5
+            }
+          ]
+        }
+      ]
     },
     {
       "vendor": "珈名鮮茶",
@@ -343,7 +2532,140 @@
       "category_en": "Lattes",
       "price": 45,
       "prep_minutes": 2,
-      "image_url": "img/items/r5-d11.svg"
+      "image_url": "img/items/r5-d11.svg",
+      "description_zh": "黑糖與鮮奶",
+      "description_en": "Brown sugar with fresh milk",
+      "option_groups": [
+        {
+          "id": "ice",
+          "name": {
+            "zh": "冰塊",
+            "en": "Ice"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "regular",
+              "label": {
+                "zh": "正常冰",
+                "en": "Regular ice"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少冰",
+                "en": "Less ice"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "none",
+              "label": {
+                "zh": "去冰",
+                "en": "No ice"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "sugar",
+          "name": {
+            "zh": "甜度",
+            "en": "Sugar"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "full",
+              "label": {
+                "zh": "正常糖",
+                "en": "Full sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少糖",
+                "en": "Less sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "half",
+              "label": {
+                "zh": "半糖",
+                "en": "Half sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "light",
+              "label": {
+                "zh": "微糖",
+                "en": "Light sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "none",
+              "label": {
+                "zh": "無糖",
+                "en": "No sugar"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "topping",
+          "name": {
+            "zh": "加料（各 +5）",
+            "en": "Toppings (+5 each)"
+          },
+          "required": false,
+          "max_select": 2,
+          "choices": [
+            {
+              "id": "pearl",
+              "label": {
+                "zh": "珍珠",
+                "en": "Tapioca pearls"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "coconut",
+              "label": {
+                "zh": "椰果",
+                "en": "Coconut jelly"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "pudding",
+              "label": {
+                "zh": "布丁",
+                "en": "Pudding"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "grass",
+              "label": {
+                "zh": "仙草凍",
+                "en": "Grass jelly"
+              },
+              "price_delta": 5
+            }
+          ]
+        }
+      ]
     },
     {
       "vendor": "珈名鮮茶",
@@ -353,7 +2675,140 @@
       "category_en": "Lattes",
       "price": 50,
       "prep_minutes": 2,
-      "image_url": "img/items/r5-d12.svg"
+      "image_url": "img/items/r5-d12.svg",
+      "description_zh": "抹茶與鮮奶",
+      "description_en": "Matcha with fresh milk",
+      "option_groups": [
+        {
+          "id": "ice",
+          "name": {
+            "zh": "冰塊",
+            "en": "Ice"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "regular",
+              "label": {
+                "zh": "正常冰",
+                "en": "Regular ice"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少冰",
+                "en": "Less ice"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "none",
+              "label": {
+                "zh": "去冰",
+                "en": "No ice"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "sugar",
+          "name": {
+            "zh": "甜度",
+            "en": "Sugar"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "full",
+              "label": {
+                "zh": "正常糖",
+                "en": "Full sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少糖",
+                "en": "Less sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "half",
+              "label": {
+                "zh": "半糖",
+                "en": "Half sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "light",
+              "label": {
+                "zh": "微糖",
+                "en": "Light sugar"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "none",
+              "label": {
+                "zh": "無糖",
+                "en": "No sugar"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "topping",
+          "name": {
+            "zh": "加料（各 +5）",
+            "en": "Toppings (+5 each)"
+          },
+          "required": false,
+          "max_select": 2,
+          "choices": [
+            {
+              "id": "pearl",
+              "label": {
+                "zh": "珍珠",
+                "en": "Tapioca pearls"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "coconut",
+              "label": {
+                "zh": "椰果",
+                "en": "Coconut jelly"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "pudding",
+              "label": {
+                "zh": "布丁",
+                "en": "Pudding"
+              },
+              "price_delta": 5
+            },
+            {
+              "id": "grass",
+              "label": {
+                "zh": "仙草凍",
+                "en": "Grass jelly"
+              },
+              "price_delta": 5
+            }
+          ]
+        }
+      ]
     },
     {
       "vendor": "珈名鮮茶",
@@ -363,7 +2818,65 @@
       "category_en": "Fresh juice",
       "price": 45,
       "prep_minutes": 3,
-      "image_url": "img/items/r5-d13.svg"
+      "image_url": "img/items/r5-d13.svg",
+      "description_zh": "現打西瓜汁",
+      "description_en": "Freshly blended watermelon juice",
+      "option_groups": [
+        {
+          "id": "ice",
+          "name": {
+            "zh": "冰塊",
+            "en": "Ice"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "regular",
+              "label": {
+                "zh": "正常冰",
+                "en": "Regular ice"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少冰",
+                "en": "Less ice"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "none",
+              "label": {
+                "zh": "去冰",
+                "en": "No ice"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "milk",
+          "name": {
+            "zh": "升級",
+            "en": "Upgrade"
+          },
+          "required": false,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "milk",
+              "label": {
+                "zh": "加牛奶",
+                "en": "Add milk"
+              },
+              "price_delta": 10
+            }
+          ]
+        }
+      ]
     },
     {
       "vendor": "珈名鮮茶",
@@ -373,7 +2886,65 @@
       "category_en": "Fresh juice",
       "price": 45,
       "prep_minutes": 3,
-      "image_url": "img/items/r5-d14.svg"
+      "image_url": "img/items/r5-d14.svg",
+      "description_zh": "現打芭樂汁",
+      "description_en": "Freshly blended guava juice",
+      "option_groups": [
+        {
+          "id": "ice",
+          "name": {
+            "zh": "冰塊",
+            "en": "Ice"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "regular",
+              "label": {
+                "zh": "正常冰",
+                "en": "Regular ice"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少冰",
+                "en": "Less ice"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "none",
+              "label": {
+                "zh": "去冰",
+                "en": "No ice"
+              },
+              "price_delta": 0
+            }
+          ]
+        },
+        {
+          "id": "milk",
+          "name": {
+            "zh": "升級",
+            "en": "Upgrade"
+          },
+          "required": false,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "milk",
+              "label": {
+                "zh": "加牛奶",
+                "en": "Add milk"
+              },
+              "price_delta": 10
+            }
+          ]
+        }
+      ]
     },
     {
       "vendor": "珈名鮮茶",
@@ -383,7 +2954,46 @@
       "category_en": "Fresh juice",
       "price": 55,
       "prep_minutes": 3,
-      "image_url": "img/items/r5-d15.svg"
+      "image_url": "img/items/r5-d15.svg",
+      "description_zh": "香蕉與牛奶現打",
+      "description_en": "Banana blended with milk",
+      "option_groups": [
+        {
+          "id": "ice",
+          "name": {
+            "zh": "冰塊",
+            "en": "Ice"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "regular",
+              "label": {
+                "zh": "正常冰",
+                "en": "Regular ice"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少冰",
+                "en": "Less ice"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "none",
+              "label": {
+                "zh": "去冰",
+                "en": "No ice"
+              },
+              "price_delta": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "vendor": "珈名鮮茶",
@@ -393,7 +3003,46 @@
       "category_en": "Fresh juice",
       "price": 60,
       "prep_minutes": 3,
-      "image_url": "img/items/r5-d16.svg"
+      "image_url": "img/items/r5-d16.svg",
+      "description_zh": "木瓜與牛奶現打",
+      "description_en": "Papaya blended with milk",
+      "option_groups": [
+        {
+          "id": "ice",
+          "name": {
+            "zh": "冰塊",
+            "en": "Ice"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "regular",
+              "label": {
+                "zh": "正常冰",
+                "en": "Regular ice"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少冰",
+                "en": "Less ice"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "none",
+              "label": {
+                "zh": "去冰",
+                "en": "No ice"
+              },
+              "price_delta": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "vendor": "珈名鮮茶",
@@ -403,7 +3052,46 @@
       "category_en": "Fresh juice",
       "price": 60,
       "prep_minutes": 3,
-      "image_url": "img/items/r5-d17.svg"
+      "image_url": "img/items/r5-d17.svg",
+      "description_zh": "多種水果現打",
+      "description_en": "A blend of fresh fruit",
+      "option_groups": [
+        {
+          "id": "ice",
+          "name": {
+            "zh": "冰塊",
+            "en": "Ice"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "regular",
+              "label": {
+                "zh": "正常冰",
+                "en": "Regular ice"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "less",
+              "label": {
+                "zh": "少冰",
+                "en": "Less ice"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "none",
+              "label": {
+                "zh": "去冰",
+                "en": "No ice"
+              },
+              "price_delta": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "vendor": "蘇記牛肉麵",
@@ -413,7 +3101,38 @@
       "category_en": "Noodles",
       "price": 85,
       "prep_minutes": 6,
-      "image_url": "img/items/r6-s1.svg"
+      "image_url": "img/items/r6-s1.svg",
+      "description_zh": "沙茶風味、微辣，粗麵配牛肉與青蔥",
+      "description_en": "Thick noodles with beef and scallions in a mildly spicy satay sauce",
+      "option_groups": [
+        {
+          "id": "cutlery",
+          "name": {
+            "zh": "餐具",
+            "en": "Cutlery"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "yes",
+              "label": {
+                "zh": "需要餐具",
+                "en": "Need cutlery"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "no",
+              "label": {
+                "zh": "不用，自備餐具",
+                "en": "No thanks, I have my own"
+              },
+              "price_delta": 0
+            }
+          ]
+        }
+      ]
     },
     {
       "vendor": "蘇記牛肉麵",
@@ -423,7 +3142,38 @@
       "category_en": "Sides",
       "price": 40,
       "prep_minutes": 3,
-      "image_url": "img/items/r6-s2.svg"
+      "image_url": "img/items/r6-s2.svg",
+      "description_zh": "清燙高麗菜，大份量",
+      "description_en": "Plain blanched cabbage, large portion",
+      "option_groups": [
+        {
+          "id": "cutlery",
+          "name": {
+            "zh": "餐具",
+            "en": "Cutlery"
+          },
+          "required": true,
+          "max_select": 1,
+          "choices": [
+            {
+              "id": "yes",
+              "label": {
+                "zh": "需要餐具",
+                "en": "Need cutlery"
+              },
+              "price_delta": 0
+            },
+            {
+              "id": "no",
+              "label": {
+                "zh": "不用，自備餐具",
+                "en": "No thanks, I have my own"
+              },
+              "price_delta": 0
+            }
+          ]
+        }
+      ]
     }
   ]
 }

@@ -40,8 +40,14 @@ def payment_settings(client: TestClient) -> PaymentSettings:
 
 
 @pytest.fixture
-def staff(auth_headers: Headers) -> dict[str, str]:
-    return auth_headers("staff01", UserRole.STAFF)
+def vendor_id(make_vendor: Callable[..., int]) -> int:
+    return make_vendor("Test Bento", "測試便當")
+
+
+@pytest.fixture
+def staff(auth_headers: Headers, vendor_id: int) -> dict[str, str]:
+    # 這家店的店員：店員只能管自己店的菜單和訂單
+    return auth_headers("staff01", UserRole.STAFF, vendor_id=vendor_id)
 
 
 @pytest.fixture
@@ -59,13 +65,13 @@ def order(
     client: TestClient,
     staff: dict[str, str],
     customer: dict[str, str],
-    make_vendor: Callable[..., int],
+    vendor_id: int,
 ) -> dict:
     """一張 customer 下的訂單：兩個 80 元的便當，總共 160 元。"""
     item = client.post(
         "/api/menu-items",
         json={
-            "vendor_id": make_vendor("Test Bento", "測試便當"),
+            "vendor_id": vendor_id,
             "item_name_zh": "雞腿便當",
             "item_name_en": "Chicken Bento",
             "category_zh": "便當",

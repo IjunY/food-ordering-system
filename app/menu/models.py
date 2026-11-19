@@ -1,4 +1,6 @@
-from sqlalchemy import ForeignKey, String, Text, true
+from typing import Any
+
+from sqlalchemy import JSON, ForeignKey, String, Text, text, true
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
@@ -23,8 +25,16 @@ class Vendor(Base):
     is_accepting_orders: Mapped[bool] = mapped_column(
         default=True, server_default=true()
     )
-    # Photo for the vendor card; a path under the frontend (e.g. /img/...) or a URL
+    # Which part of campus the vendor is in: one of app.menu.schemas.AREAS.
+    # The home page groups vendors by it.
+    area: Mapped[str] = mapped_column(
+        String(20), default="other", server_default="other"
+    )
+    # Photo for the vendor card; a path under the frontend (e.g. img/...), an
+    # uploaded file (/uploads/...) or a URL
     image_url: Mapped[str | None] = mapped_column(String(500))
+    # Wide banner at the top of the vendor's page; same kinds of address as image_url
+    cover_image_url: Mapped[str | None] = mapped_column(String(500))
 
     @property
     def name(self) -> dict[str, str]:
@@ -52,10 +62,18 @@ class MenuItem(Base):
     item_name_en: Mapped[str] = mapped_column(String(100))
     category_zh: Mapped[str] = mapped_column(String(100))
     category_en: Mapped[str] = mapped_column(String(100))
+    description_zh: Mapped[str] = mapped_column(Text, default="", server_default="")
+    description_en: Mapped[str] = mapped_column(Text, default="", server_default="")
     price: Mapped[int] = mapped_column()
+    # Estimated preparation time for one portion
     prep_minutes: Mapped[int] = mapped_column()
     is_available: Mapped[bool] = mapped_column(default=True)
     image_url: Mapped[str | None] = mapped_column(String(500))
+    # Add-on choices (rice amount, sugar, extra toppings...). A list of groups in the
+    # shape of app.menu.schemas.OptionGroup; validated by the API before it is stored.
+    option_groups: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSON, default=list, server_default=text("'[]'")
+    )
 
     @property
     def item_name(self) -> dict[str, str]:
@@ -64,3 +82,7 @@ class MenuItem(Base):
     @property
     def category(self) -> dict[str, str]:
         return {"zh": self.category_zh, "en": self.category_en}
+
+    @property
+    def description(self) -> dict[str, str]:
+        return {"zh": self.description_zh, "en": self.description_en}

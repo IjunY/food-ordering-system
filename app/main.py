@@ -13,6 +13,7 @@ from app.core.errors import AppError
 from app.menu.router import router as menu_router
 from app.orders.router import router as orders_router
 from app.payments.router import router as payments_router
+from app.uploads.router import router as uploads_router
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
@@ -44,12 +45,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(orders_router, prefix="/api")
     app.include_router(payments_router, prefix="/api")
     app.include_router(admin_router, prefix="/api")
+    app.include_router(uploads_router, prefix="/api")
 
     # The frontend calls this on start-up to tell whether a real backend is there
     # (if not, e.g. when the pages are opened as plain files, it uses its demo data)
     @app.get("/api/health", tags=["health"])
     def health() -> dict[str, str]:
         return {"status": "ok"}
+
+    # Uploaded photos (POST /api/uploads saves them here)
+    settings.upload_dir.mkdir(parents=True, exist_ok=True)
+    app.mount("/uploads", StaticFiles(directory=settings.upload_dir), name="uploads")
 
     # Serves the frontend (frontend/index.html at "/"), so one address runs the whole app.
     # Mounted last so the /api routes above take priority.

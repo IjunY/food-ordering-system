@@ -1,6 +1,7 @@
 from datetime import datetime
+from typing import Any
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String, func
+from sqlalchemy import JSON, CheckConstraint, DateTime, ForeignKey, String, func, text
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -38,7 +39,16 @@ class OrderItem(Base):
     order_id: Mapped[int] = mapped_column(ForeignKey("orders.id"))
     item_id: Mapped[int] = mapped_column(ForeignKey("menu_items.id"))
     quantity: Mapped[int] = mapped_column()
+    # Item price plus the add-ons picked, at the time of ordering
     unit_price: Mapped[int] = mapped_column()
+    # The add-ons picked, copied from the menu when ordering (so later menu edits do
+    # not change the order): [{"id": "group:choice", "group": {zh, en},
+    # "label": {zh, en}, "price_delta": int}, ...]
+    options: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSON, default=list, server_default=text("'[]'")
+    )
+    # The customer's note for this line ("less onion"); empty when there is none
+    note: Mapped[str] = mapped_column(String(60), default="", server_default="")
 
     # link between Order.items
     order: Mapped["Order"] = relationship(back_populates="items")

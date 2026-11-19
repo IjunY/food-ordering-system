@@ -110,10 +110,12 @@ def test_staff_can_create_update_and_delete(
         "vendor_id": noodle_house,
         "item_name": {"zh": "牛肉麵", "en": "Beef Noodles"},
         "category": {"zh": "主餐", "en": "Mains"},
+        "description": {"zh": "", "en": ""},
         "price": 120,
         "prep_minutes": 5,
         "is_available": True,
         "image_url": None,
+        "option_groups": [],
     }
 
     # PATCH changes only what is sent
@@ -236,3 +238,75 @@ def test_item_used_in_an_order_cannot_be_deleted(
         client.get(f"/api/orders/{order.json()['id']}", headers=customer).status_code
         == 200
     )
+
+
+RICE = {
+    "id": "rice",
+    "name": {"zh": "飯量", "en": "Rice"},
+    "required": True,
+    "max_select": 1,
+    "choices": [
+        {"id": "normal", "label": {"zh": "正常", "en": "Regular"}, "price_delta": 0},
+        {"id": "more", "label": {"zh": "加飯", "en": "Extra rice"}, "price_delta": 10},
+    ],
+}
+
+
+def test_items_have_a_description_and_add_ons(
+    client: TestClient, staff: dict[str, str], beef_noodles: dict
+) -> None:
+    body = {
+        **beef_noodles,
+        "description_zh": "  紅燒湯頭  ",
+        "description_en": "Braised broth",
+        "image_url": "/uploads/abc.jpg",
+        "option_groups": [RICE],
+    }
+    created = client.post("/api/menu-items", json=body, headers=staff)
+    assert created.status_code == 201, created.text
+    item = created.json()
+    assert item["description"] == {"zh": "紅燒湯頭", "en": "Braised broth"}
+    assert item["option_groups"] == [RICE]
+    assert client.get(f"/api/menu-items/{item['id']}").json() == item
+
+    # Changing the description leaves the add-ons alone, and the other way round
+    patched = client.patch(
+        f"/api/menu-items/{item['id']}",
+        json={"description_en": "Rich braised broth"},
+        headers=staff,
+    ).json()
+    assert patched["option_groups"] == [RICE]
+    assert patched["description"]["en"] == "Rich braised broth"
+    cleared = client.patch(
+        f"/api/menu-items/{item['id']}", json={"option_groups": []}, headers=staff
+    ).json()
+    assert cleared["option_groups"] == []
+
+    # null removes the photo (other fields ignore null)
+    no_photo = client.patch(
+        f"/api/menu-items/{item['id']}",
+        json={"image_url": None, "price": None},
+        headers=staff,
+    ).json()
+    assert no_photo["image_url"] is None
+    assert no_photo["price"] == 120
+
+
+def test_add_on_validation(
+    client: TestClient, staff: dict[str, str], beef_noodles: dict
+) -> None:
+    same_choice = {**RICE, "choices": [RICE["choices"][0], RICE["choices"][0]]}
+    for groups in (
+        [RICE, RICE],  # two groups with the same id
+        [same_choice],  # two choices with the same id
+        [{**RICE, "max_select": 2}],  # required groups take exactly one choice
+        [{**RICE, "choices": []}],  # a group needs choices
+        [{**RICE, "id": "rice:x"}],  # ids are joined as "group:choice"
+        [{**RICE, "choices": [{**RICE["choices"][1], "price_delta": -5}]}],
+    ):
+        response = client.post(
+            "/api/menu-items",
+            json={**beef_noodles, "option_groups": groups},
+            headers=staff,
+        )
+        assert response.status_code == 422, groups

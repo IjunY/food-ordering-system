@@ -1,5 +1,6 @@
 import os
 from collections.abc import Callable, Iterator
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -24,11 +25,12 @@ TEST_DATABASE_URL = os.environ.get(
 
 # Initiating fake test settings
 @pytest.fixture
-def settings() -> Settings:
+def settings(tmp_path: Path) -> Settings:
     return Settings(
         database_url=SecretStr(TEST_DATABASE_URL),
         jwt_secret=SecretStr("test-only-secret-not-used-anywhere-else-0123456789"),
         app_env="test",
+        upload_dir=tmp_path / "uploads",  # uploaded test photos go to a temp folder
         _env_file=None,  # pyright: ignore[reportCallIssue]
     )
 
