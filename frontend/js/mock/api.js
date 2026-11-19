@@ -4,7 +4,8 @@ import { getLang } from '../i18n.js';
 import { session } from '../store.js';
 import { SEED_RESTAURANTS, SEED_MENUS, PAYMENT_METHODS, USERS, REPORTS, seedOrders } from './data.js';
 
-const DB_KEY = 'mockdb_v2';
+// v3: 換成清大學餐的真實店家與菜單；舊版存在瀏覽器裡的示範資料不再沿用
+const DB_KEY = 'mockdb_v3';
 let memoryDb = null;
 
 function freshDb() {

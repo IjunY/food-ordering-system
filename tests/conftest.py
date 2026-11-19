@@ -62,7 +62,9 @@ def auth_headers(
     client: TestClient, settings: Settings
 ) -> Callable[..., dict[str, str]]:
     def make(
-        student_id: str = "990000001", role: UserRole = UserRole.CUSTOMER
+        student_id: str = "990000001",
+        role: UserRole = UserRole.CUSTOMER,
+        vendor_id: int | None = None,  # for staff: the vendor the account manages
     ) -> dict[str, str]:
         with client.app.state.session_factory() as session:  # type: ignore[attr-defined]
             user = register_user(
@@ -75,13 +77,17 @@ def auth_headers(
                 ),
                 role=role,
             )
-        return {"Authorization": f"Bearer {create_access_token(user.id, settings)}"}
+            if vendor_id is not None:
+                user.vendor_id = vendor_id
+                session.commit()
+        token = create_access_token(user.id, settings, token_version=user.token_version)
+        return {"Authorization": f"Bearer {token}"}
 
     return make
 
 
-# Creates a vendor and returns its id. There is no API for adding vendors yet,
-# so tests (like the seed script) insert them directly.
+# Creates a vendor and returns its id. Inserted directly (like the seed script) so a
+# test can set up vendors without first making a staff account for each one.
 @pytest.fixture
 def make_vendor(client: TestClient) -> Callable[..., int]:
     def make(name_en: str, name_zh: str | None = None, **fields: object) -> int:

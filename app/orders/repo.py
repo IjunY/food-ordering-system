@@ -24,6 +24,7 @@ def get(session: Session, order_id: int, for_update: bool = False) -> Order | No
 def list_orders(
     session: Session,
     created_by: str | None = None,
+    vendor_id: int | None = None,
     status: OrderStatus | None = None,
     limit: int = 50,
     offset: int = 0,
@@ -37,6 +38,8 @@ def list_orders(
     )
     if created_by is not None:
         query = query.where(Order.created_by == created_by)
+    if vendor_id is not None:
+        query = query.where(Order.vendor_id == vendor_id)
     if status is not None:
         query = query.where(Order.status == status)
     return session.scalars(query).all()

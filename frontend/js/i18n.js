@@ -561,7 +561,7 @@ Object.assign(DICT.en, {
 // 紫色取餐券版（DESIGN.md）新增與改寫的字串
 Object.assign(DICT.zh, {
   'app.name': 'NTHU 點餐系統',
-  'sample': 'SAMPLE DATA',
+  'sample': '價格以現場為準',
   'login.lead': '下課前先點，好了再去拿。',
   'login.title': '登入',
   'auth.pw_show': '顯示密碼',
@@ -624,7 +624,7 @@ Object.assign(DICT.zh, {
 });
 Object.assign(DICT.en, {
   'app.name': 'NTHU Food Ordering',
-  'sample': 'SAMPLE DATA',
+  'sample': 'PRICES MAY CHANGE',
   'login.lead': "Order between classes. Pick up when it's ready.",
   'login.title': 'Sign in',
   'auth.pw_show': 'Show password',

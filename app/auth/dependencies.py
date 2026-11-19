@@ -18,22 +18,36 @@ _bearer = HTTPBearer(auto_error=False)
 DbSession = Annotated[Session, Depends(get_db)]
 
 
-def get_current_user(
+def get_signed_in_user(
     request: Request,
     session: DbSession,
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
 ) -> User:
+    """Any valid login, even one that still has to change its password."""
     if credentials is None:
         raise UnauthorizedError("Not signed in")
-    user_id = decode_access_token(
+    claims = decode_access_token(
         credentials.credentials, request.app.state.app_settings
     )
-    user = repo.get_by_id(session, user_id) if user_id is not None else None
-    if user is None:
+    user = repo.get_by_id(session, claims[0]) if claims is not None else None
+    # A token from before the last password change no longer counts
+    if user is None or claims is None or claims[1] != user.token_version:
         raise UnauthorizedError("Invalid or expired token")
     return user
 
 
+# Only for /auth/me and /auth/change-password: the two things an account that must
+# change its password is still allowed to do.
+SignedInUser = Annotated[User, Depends(get_signed_in_user)]
+
+
+def get_current_user(user: SignedInUser) -> User:
+    if user.must_change_password:
+        raise ForbiddenError("Change your password before continuing")
+    return user
+
+
+# What every other endpoint uses
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
@@ -48,5 +62,9 @@ def require_roles(*roles: UserRole) -> Callable[[User], User]:
     return checker
 
 
-# Vendor staff and platform admins
-StaffUser = Annotated[User, Depends(require_roles(UserRole.STAFF, UserRole.ADMIN))]
+# Vendor staff only. Admins can monitor (read everything) but not change vendors,
+# menus or orders, so they are deliberately not let through here.
+StaffUser = Annotated[User, Depends(require_roles(UserRole.STAFF))]
+
+# Platform admins: read-only monitoring, plus creating vendor staff accounts
+AdminUser = Annotated[User, Depends(require_roles(UserRole.ADMIN))]
