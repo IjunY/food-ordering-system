@@ -1,7 +1,9 @@
 # 資料存取層：整個付款模組「只有這個檔案」會寫資料庫查詢。
 # service.py 要資料就呼叫這裡的函式，不自己寫查詢。
 
-from sqlalchemy import select
+from collections.abc import Iterable
+
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.payments.models import Payment
@@ -64,3 +66,20 @@ def has_paid_payment(session: Session, order_id: int) -> bool:
     )
     # 查得到一筆就代表已付款；is not None 把結果轉成 True / False
     return session.scalar(query) is not None
+
+
+def latest_status_by_order(
+    session: Session, order_ids: Iterable[int]
+) -> dict[int, PaymentStatus]:
+    """每張訂單最新一筆付款的狀態（給 orders 顯示「付了沒」用）。沒有付款紀錄的訂單不會出現。"""
+    ids = list(order_ids)
+    if not ids:
+        return {}
+    # 每張訂單編號最大（最新）的那筆付款
+    latest = (
+        select(func.max(Payment.id))
+        .where(Payment.order_id.in_(ids))
+        .group_by(Payment.order_id)
+    )
+    query = select(Payment.order_id, Payment.status).where(Payment.id.in_(latest))
+    return {order_id: status for order_id, status in session.execute(query).all()}

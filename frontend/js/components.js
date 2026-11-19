@@ -204,26 +204,36 @@ export function paymentText(o) {
 }
 
 // ======================= 店家端 =======================
-// 看板欄位
+// 看板的四欄（像 Notion 的看板）：
+//   unpaid   未付款・到店付款（顧客選了到店付款，還沒接單）
+//   paid     已付款・待接單
+//   accepted 已接單・製作中
+//   ready    可取餐
+export const BOARD_COLUMNS = ['unpaid', 'paid', 'accepted', 'ready'];
 export function boardColumn(status) {
-  if (status === 'paid' || status === 'pending_payment') return 'new';
-  if (status === 'accepted' || status === 'preparing') return 'preparing';
+  if (status === 'pending_payment') return 'unpaid';
+  if (status === 'paid') return 'paid';
+  if (status === 'accepted' || status === 'preparing') return 'accepted';
   if (status === 'ready') return 'ready';
   return null;
 }
+// 卡片可以拖到哪一欄，拖過去等於改成哪個狀態（取餐、拒單只能按按鈕）
+export const BOARD_MOVES = { unpaid: { accepted: 'preparing' }, paid: { accepted: 'preparing' }, accepted: { ready: 'ready' } };
 
 // 廚房票：一張訂單，和顧客手上的取餐券同一套（紫＝新單、黃標＝製作中、綠＝可取餐）
 export function KitchenTicket(o, isNew = false) {
   const col = boardColumn(o.status);
   const acts = {
-    new: [['primary', 'admin.accept', 'preparing'], ['danger', 'admin.reject', 'cancelled']],
-    preparing: [['primary', 'admin.mark_ready', 'ready']],
+    unpaid: [['primary', 'admin.accept', 'preparing'], ['danger', 'admin.reject', 'cancelled']],
+    paid: [['primary', 'admin.accept', 'preparing'], ['danger', 'admin.reject', 'cancelled']],
+    accepted: [['primary', 'admin.mark_ready', 'ready']],
     ready: [['primary', 'admin.picked_up', 'picked_up'], ['secondary', 'admin.call_again', 'recall']],
   }[col];
-  const tone = { new: 's-confirming', preparing: 's-preparing', ready: 's-ready' }[col];
-  return `<article class="pass kt ${tone}${isNew ? ' snapping' : ''}" aria-label="${esc(t('pass.pickup'))} ${esc(o.pickup_number)}">
+  const tone = { unpaid: 's-confirming', paid: 's-confirming', accepted: 's-preparing', ready: 's-ready' }[col];
+  const draggable = BOARD_MOVES[col] ? ` draggable="true" data-drag-id="${esc(o.id)}" data-col="${col}" data-no="${esc(o.pickup_number)}"` : '';
+  return `<article class="pass kt ${tone}${isNew ? ' snapping' : ''}"${draggable} aria-label="${esc(t('pass.pickup'))} ${esc(o.pickup_number)}">
     <div class="top"><span class="lab">${esc(t('pass.pickup'))}</span><span class="lab">${esc(t('pass.placed'))} ${hhmm(o.created_at)}</span>
-      <span class="code">${codeHtml(o.pickup_number)}</span><div class="stat"><b>${esc(t('admin.col_' + col))}</b></div></div>
+      <span class="code">${codeHtml(o.pickup_number)}</span><div class="stat"><b>${esc(t('admin.chip.' + col))}</b></div></div>
     <div class="perf"></div>
     <ul class="kt__items">${o.items.map((i) => `<li><span class="q">${esc(i.qty)}</span><span>${esc(i.name)}${i.options_label ? `<small class="lopt">${esc(i.options_label)}</small>` : ''}</span></li>`).join('')}</ul>
     ${o.note ? `<p class="kt__note">${esc(t('admin.note', { note: o.note }))}</p>` : ''}

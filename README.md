@@ -70,6 +70,31 @@ With Docker, run the same commands inside the app container, e.g.
    photo, in Chinese and English. The item appears on the customer side right
    away; 店家設定 changes the store details and photos.
 
+## Payments
+
+The pay button goes through the backend's payments module (`app/payments`).
+`PAYMENT_PROVIDER` in `.env` picks the provider:
+
+- `mock` (default): the backend's own checkout page with "success / fail"
+  buttons. No account needed.
+- `linepay`: the LINE Pay **sandbox** (no real money).
+  1. Create a sandbox channel at
+     https://pay.line.me/tw/developers/techsupport/sandbox/creation; LINE Pay
+     emails a Channel ID and Channel Secret.
+  2. In `.env`: `PAYMENT_PROVIDER=linepay`, `PAYMENT_LINEPAY_CHANNEL_ID=...`,
+     `PAYMENT_LINEPAY_CHANNEL_SECRET=...`, then restart the app
+     (`docker compose up --build`).
+  3. Pay with "LINE Pay": the browser goes to LINE Pay's sandbox page, and
+     after approving it comes back to `/api/payments/linepay/confirm`, where
+     the server asks LINE Pay to confirm the charge and then shows the pickup
+     pass. Works on localhost: LINE Pay only redirects the browser, it does not
+     call our server.
+
+"Pay at pickup" marks the order (`POST /api/orders/{id}/pay-at-pickup`) instead.
+The vendor's board has four columns: unpaid (pay at counter), paid (not
+accepted yet), accepted (preparing) and ready. Orders that are neither paid
+nor marked pay-at-pickup stay off the board.
+
 ## Looking at the database
 
 The database runs in the `db` container (Postgres, user/database from `.env`).

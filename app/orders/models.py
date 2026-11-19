@@ -1,7 +1,16 @@
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, CheckConstraint, DateTime, ForeignKey, String, func, text
+from sqlalchemy import (
+    JSON,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    String,
+    false,
+    func,
+    text,
+)
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -22,6 +31,10 @@ class Order(Base):
     vendor_id: Mapped[int] = mapped_column(ForeignKey("vendors.id"))
 
     created_by: Mapped[str] = mapped_column(String(100))
+
+    # The customer chose to pay at the counter when picking up (no online payment).
+    # Such orders go to the vendor's board as "unpaid, pay at counter".
+    pay_at_pickup: Mapped[bool] = mapped_column(default=False, server_default=false())
 
     # Link between OrderItem.order
     # back_populates: adding an OrderItem to a list also makes the item belong to the order

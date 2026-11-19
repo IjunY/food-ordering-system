@@ -305,7 +305,7 @@ export async function adminListMenuItems() {
     categories: cats,
     items: m.items.map((i) => ({
       ...outItem(i), category_name: loc(catOf(i)?.name) ?? '',
-      edit: { name: i.name, description: i.description, category: catOf(i)?.name ?? { zh: '', en: '' } },
+      edit: { name: i.name, description: i.description, category: catOf(i)?.name ?? { zh: '', en: '' }, option_groups: i.option_groups },
     })),
   };
 }
@@ -326,6 +326,7 @@ export async function adminSaveMenuItem(data) {
   Object.assign(i, {
     name: { ...data.name }, description: { ...data.description }, category_id: cat.id,
     price: data.price, prep_minutes: data.prep_minutes, is_available: data.is_available, is_sold_out: false,
+    option_groups: structuredClone(data.option_groups ?? i.option_groups ?? []),
   });
   if ('image_url' in data) i.image_url = data.image_url || null;
   save(d);

@@ -442,6 +442,8 @@ def test_full_flow_through_the_mock_checkout_page(
         f"{created['checkout_url']}/complete", params={"success": "true"}
     )
     assert done.status_code == 200
+    # 結果頁的連結回到這張訂單的取餐券
+    assert f'href="/#paid-{order["id"]}"' in done.text
 
     # 4. 查詢付款狀態
     assert status_of(client, customer, created["payment"]["id"]) == "paid"

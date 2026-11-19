@@ -45,6 +45,12 @@ def update_order_status(
     return service.to_read(session, [order])[0]
 
 
+@router.post("/{order_id}/pay-at-pickup", response_model=OrderRead)
+def pay_at_pickup(order_id: int, session: DbSession, user: CurrentUser) -> OrderRead:
+    order = service.choose_pay_at_pickup(session, user, order_id)
+    return service.to_read(session, [order])[0]
+
+
 @router.post("/{order_id}/cancel", response_model=OrderRead)
 def cancel_order(order_id: int, session: DbSession, user: CurrentUser) -> OrderRead:
     order = service.cancel_order(session, user, order_id)

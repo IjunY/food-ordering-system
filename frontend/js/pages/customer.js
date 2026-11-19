@@ -405,7 +405,8 @@ export async function payPage({ oid }) {
         <b>${money(o.total)}</b>
         <span class="mt">${esc(t('pay.order_meta', { no: o.pickup_number, name: o.restaurant_name }))}</span>
       </section>
-      ${C.Note({ text: t('pay.mock_note') })}
+      ${['failed', 'expired'].includes(o.payment_attempt) ? C.Note({ text: t('pay.retry_note'), kind: 'err' }) : ''}
+      ${C.Note({ text: t(list.some((m) => m.method === 'line_pay') ? 'pay.sandbox_note' : 'pay.mock_note') })}
       <div class="sec"><h2>${esc(t('pay.choose'))}</h2></div>
       <div class="opts" role="radiogroup" aria-label="${esc(t('pay.choose'))}">
         ${list.map((m) => C.OptRow({ label: m.label, sub: m.hint, ic: METHOD_ICON[m.method] || 'wallet', selected: m.method === payState.method, action: 'pick-method', data: { method: m.method } })).join('')}
@@ -419,6 +420,13 @@ actions.pay = async (d, el) => {
   el.setAttribute('aria-busy', 'true');
   el.querySelector('span').textContent = t('pay.processing');
   const res = await api.pay(d.oid, payState.method);
+  if (res.status === 'redirect') {
+    // 線上付款：到金流商的付款頁（LINE Pay 或後端的模擬付款頁），付完會被導回這張單的取餐券
+    cart.clear();
+    el.querySelector('span').textContent = t('pay.redirecting');
+    location.assign(res.url);
+    return;
+  }
   if (res.status !== 'succeeded') { toast(t('pay.failed')); rerender(); return; }
   cart.clear();
   navigate(`paid-${d.oid}`);

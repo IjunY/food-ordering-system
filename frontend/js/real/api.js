@@ -1,12 +1,12 @@
 // 真後端（FastAPI，app/）的轉接層：呼叫 /api，再把回傳轉成畫面用的欄位（和 mock/api.js 同一套）。
 //
-// 資料庫是唯一的資料來源：餐廳、菜單、加點選項、訂單、店家設定、菜單管理、報表、平台管理、照片都走後端。
-// 還在前端的只有：
-// - 付款：模擬的，一律成功，付款紀錄只存在這台瀏覽器（paid_orders）
-// - 等候時間：用後端給的排隊數（queue_count）和品項的備餐時間估
+// 資料庫是唯一的資料來源：餐廳、菜單、加點選項、訂單、付款、店家設定、菜單管理、報表、平台管理、照片都走後端。
+// 付款：線上付款導到後端設定的金流商（LINE Pay sandbox，或後端自己的模擬付款頁），付完再導回取餐券；
+//       到店付款只是在訂單上註記，店家看板會顯示「未付款・到店付款」。
+// 還在前端的只有等候時間：用後端給的排隊數（queue_count）和品項的備餐時間估
 // 後端回傳的文字都是 {zh, en}，這裡依目前語言換成字串；店家要編輯兩種語言的欄位另外放在 edit 裡。
-import { getLang } from '../i18n.js';
-import { session, read, write } from '../store.js';
+import { getLang, t } from '../i18n.js';
+import { session } from '../store.js';
 import { shrinkImage } from '../image.js';
 
 export const API_BASE = '/api';
@@ -168,10 +168,13 @@ export async function getMe() {
 // 畫面：pending_payment → paid → accepted → preparing → ready → picked_up
 const toBackendStatus = (s) => (s === 'picked_up' ? 'picked up' : s === 'accepted' ? 'preparing' : s);
 
-const paidOrders = {
-  get: () => read('paid_orders', {}),
-  set: (id, method) => write('paid_orders', { ...paidOrders.get(), [id]: method }),
-};
+// 後端接的金流商：linepay 或 mock（模擬付款頁）。開一次問一次就好
+let paymentConfig = null;
+function getPaymentConfig() {
+  paymentConfig ??= http('GET', '/payments/config').catch((err) => { paymentConfig = null; throw err; });
+  return paymentConfig;
+}
+const onlineMethod = async () => ((await getPaymentConfig()).provider === 'linepay' ? 'line_pay' : 'mock');
 
 // 訂單畫面要的店家位置與品項備餐時間：30 秒內重複用
 let catalog = { at: 0, data: null };
@@ -183,15 +186,17 @@ async function getCatalog() {
   return catalog.data;
 }
 
-// 後端的訂單 → 畫面的訂單。view = 'customer'（自己的單）或 'staff'（店家看板）
-async function toOrder(o, view = 'customer') {
-  const { vendors, prep } = await getCatalog();
+// 後端的訂單 → 畫面的訂單（顧客和店家看到的一樣）
+// 「確認中」的單：線上付好了是 paid（等店家接單）；還沒付是 pending_payment（到店付款的也是，但已經選好付款方式）
+async function toOrder(o) {
+  const [{ vendors, prep }, online] = await Promise.all([getCatalog(), onlineMethod()]);
   const v = vendors.get(o.vendor_id);
   const id = String(o.id);
-  const method = view === 'customer' ? paidOrders.get()[id] ?? null : null;
+  const paid = o.payment_status === 'paid';
+  const method = paid ? online : o.pay_at_pickup ? 'cash_on_pickup' : null;
 
   let status = o.status === 'picked up' ? 'picked_up' : o.status;
-  if (status === 'confirming') status = view === 'staff' || method ? 'paid' : 'pending_payment';
+  if (status === 'confirming') status = paid ? 'paid' : 'pending_payment';
 
   const longest = Math.max(5, ...o.items.map((i) => prep.get(i.item_id) ?? 0));
   const eta = new Date(new Date(o.created_at).getTime() + longest * 60000).toISOString();
@@ -205,8 +210,11 @@ async function toOrder(o, view = 'customer') {
     restaurant_name: loc(o.vendor_name),
     restaurant_location: v ? loc(v.location) : '',
     status,
-    payment_method: view === 'staff' ? 'mock' : method,
-    payment_status: view === 'staff' || (method && method !== 'cash_on_pickup') ? 'paid' : 'unpaid',
+    payment_method: method,
+    // 到店付款的單，取餐時在櫃台付清
+    payment_status: paid || (method === 'cash_on_pickup' && status === 'picked_up') ? 'paid' : 'unpaid',
+    // 上一次線上付款的結果（failed / expired 時付款頁會說可以再試一次）
+    payment_attempt: o.payment_status,
     total: o.total,
     note: notes || null,
     pickup_type: 'asap',
@@ -234,8 +242,7 @@ export async function createOrder({ items }) {
 }
 
 export async function getOrder(id) {
-  const o = await http('GET', `/orders/${encodeURIComponent(id)}`);
-  return toOrder(o, session.get()?.user?.role === 'customer' ? 'customer' : 'staff');
+  return toOrder(await http('GET', `/orders/${encodeURIComponent(id)}`));
 }
 
 export async function listMyOrders() {
@@ -243,11 +250,23 @@ export async function listMyOrders() {
   return Promise.all(list.map((o) => toOrder(o)));
 }
 
-// 模擬付款：一律成功，只記在這台瀏覽器
+// 付款方式：後端接的線上金流（LINE Pay 或模擬付款頁）＋到店付款
+export async function listPaymentMethods() {
+  const online = (await getPaymentConfig()).provider === 'linepay'
+    ? { method: 'line_pay', short: 'LINE', label: 'LINE Pay', hint: t('pay.hint.linepay') }
+    : { method: 'mock', short: 'Pay', label: t('pay.method.mock'), hint: t('pay.hint.mock') };
+  return [online, { method: 'cash_on_pickup', short: t('pay.short.cash'), label: t('pay.method.cash_on_pickup'), hint: t('pay.hint.cash') }];
+}
+
+// 到店付款：註記在訂單上就好。線上付款：後端建立付款，回傳付款頁網址，畫面把瀏覽器導過去，
+// 付完（或取消）後金流商把瀏覽器導回後端，後端確認後再導回取餐券（#paid-訂單）或付款頁（#pay-訂單）
 export async function pay(order_id, method) {
-  await new Promise((r) => setTimeout(r, 400));
-  paidOrders.set(String(order_id), method);
-  return { payment_id: 'p' + Date.now(), status: 'succeeded' };
+  if (method === 'cash_on_pickup') {
+    await http('POST', `/orders/${encodeURIComponent(order_id)}/pay-at-pickup`);
+    return { status: 'succeeded' };
+  }
+  const res = await http('POST', '/payments', { order_id: Number(order_id) });
+  return { status: 'redirect', url: res.checkout_url };
 }
 
 // 這個店家帳號的訂單（後端只給自己店的），新的在前。since：只要這個時間之後的（一頁 200 張，往前翻到夠為止）
@@ -263,10 +282,12 @@ async function vendorOrders(since = null) {
 const startOfToday = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
 
 // ======================= 店家接單看板 =======================
+// 看板只放店家該處理的單：線上付好的、選了到店付款的，以及已接單、可取餐的。
+// 還沒付款（也沒選到店付款）的單不放，免得顧客沒付錢店家就開始做
 export async function adminListOrders() {
   const list = await http('GET', '/orders?limit=200');
-  const active = list.filter((o) => ['confirming', 'preparing', 'ready'].includes(o.status));
-  const orders = await Promise.all(active.map((o) => toOrder(o, 'staff')));
+  const active = list.filter((o) => (o.status === 'confirming' ? o.payment_status === 'paid' || o.pay_at_pickup : ['preparing', 'ready'].includes(o.status)));
+  const orders = await Promise.all(active.map((o) => toOrder(o)));
   return orders.sort((a, b) => a.created_at.localeCompare(b.created_at));
 }
 
@@ -274,7 +295,7 @@ export async function adminUpdateOrderStatus(id, status) {
   const o = status === 'cancelled'
     ? await http('POST', `/orders/${id}/cancel`)
     : await http('PATCH', `/orders/${id}/status`, { status: toBackendStatus(status) });
-  return toOrder(o, 'staff');
+  return toOrder(o);
 }
 
 // ======================= 店家設定 =======================
@@ -308,13 +329,13 @@ export async function adminListMenuItems() {
     categories: cats.map((c) => ({ id: c.id, name: loc(c), zh: c.zh, en: c.en })),
     items: cats.flatMap((c) => c.rows.map((r) => ({
       ...toItem(r, c.id), category_name: loc(c),
-      edit: { name: r.item_name, description: r.description, category: r.category },
+      edit: { name: r.item_name, description: r.description, category: r.category, option_groups: r.option_groups },
     }))),
   };
 }
 
-// data：{ id?, name: {zh,en}, category: {zh,en}, description: {zh,en}, price, prep_minutes, is_available, image_url }
-// 加點選項不在這裡改（後端保留原本的）
+// data：{ id?, name: {zh,en}, category: {zh,en}, description: {zh,en}, price, prep_minutes, is_available, image_url,
+//         option_groups: [{ id, name: {zh,en}, required, max_select, choices: [{ id, label: {zh,en}, price_delta }] }] }
 export async function adminSaveMenuItem(data) {
   const body = {
     item_name_zh: data.name.zh, item_name_en: data.name.en,
@@ -322,6 +343,7 @@ export async function adminSaveMenuItem(data) {
     description_zh: data.description.zh, description_en: data.description.en,
     price: data.price, prep_minutes: data.prep_minutes, is_available: data.is_available,
     image_url: data.image_url || null,
+    option_groups: data.option_groups,
   };
   const row = data.id
     ? await http('PATCH', `/menu-items/${encodeURIComponent(data.id)}`, body)
