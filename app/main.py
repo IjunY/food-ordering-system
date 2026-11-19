@@ -12,6 +12,7 @@ from app.core.db import get_engine
 from app.core.errors import AppError
 from app.menu.router import router as menu_router
 from app.orders.router import router as orders_router
+from app.payments.router import router as payments_router
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
@@ -41,6 +42,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(auth_router, prefix="/api")
     app.include_router(menu_router, prefix="/api")
     app.include_router(orders_router, prefix="/api")
+    app.include_router(payments_router, prefix="/api")
     app.include_router(admin_router, prefix="/api")
 
     # The frontend calls this on start-up to tell whether a real backend is there

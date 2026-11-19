@@ -23,6 +23,7 @@ services:
       APP_ENV: ${APP_ENV:-dev}
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:?set PAYMENT_WEBHOOK_SECRET in .env}
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
