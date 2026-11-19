@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -240,7 +241,8 @@ def test_item_used_in_an_order_cannot_be_deleted(
     )
 
 
-RICE = {
+# An add-on group as the API takes it (Any: the tests below build broken variants of it)
+RICE: dict[str, Any] = {
     "id": "rice",
     "name": {"zh": "飯量", "en": "Rice"},
     "required": True,

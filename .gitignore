@@ -29,4 +29,4 @@ htmlcov/
 
 
 # Photos uploaded through the app (POST /api/uploads)
-uploads/
+/uploads/
