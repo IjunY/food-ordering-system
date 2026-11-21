@@ -37,13 +37,13 @@ def get_signed_in_user(
 
 
 # Only for /auth/me and /auth/change-password: the two things an account that must
-# change its password is still allowed to do.
+# change its password (or pick its login ID) is still allowed to do.
 SignedInUser = Annotated[User, Depends(get_signed_in_user)]
 
 
 def get_current_user(user: SignedInUser) -> User:
-    if user.must_change_password:
-        raise ForbiddenError("Change your password before continuing")
+    if user.must_change_password or user.must_choose_username:
+        raise ForbiddenError("Set up your login before continuing")
     return user
 
 

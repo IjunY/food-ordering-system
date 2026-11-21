@@ -1,5 +1,5 @@
 // 顧客端畫面 C01–C11＋註冊頁（紫色取餐券版）
-import { api } from '../api.js';
+import { api, USE_MOCK } from '../api.js';
 import { t, setLang } from '../i18n.js';
 import { session, cart, cartCount, cartTotal, homeOf } from '../store.js';
 import { actions, forms, inputs, navigate, rerender, poll, toast, confirmDialog } from '../router.js';
@@ -47,14 +47,16 @@ actions['toggle-password'] = (d, el) => {
 const brand = () => esc(t('app.name')).replace(/^NTHU/, '<span class="pfx">NTHU</span>');
 
 export async function loginPage() {
+  forgotSent = false;
   return phone(`<div class="auth">
     <section class="ahero"><div class="bar"><span></span>${C.LangSwitch()}</div>
       <h1>${brand()}</h1><p>${esc(t('login.lead'))}</p></section>
     <form class="acard" data-form="login" novalidate>
       <h2>${esc(t('login.title'))}</h2>
-      ${C.TextField({ label: t('login.student_id'), name: 'student_id', num: true, extra: 'autocomplete="username" inputmode="text" autocapitalize="off" spellcheck="false"' })}
+      ${C.TextField({ label: t('login.account'), name: 'student_id', num: true, extra: 'autocomplete="username" inputmode="text" autocapitalize="off" spellcheck="false"' })}
       ${C.TextField({ label: t('login.password'), name: 'password', type: 'password', reveal: true, extra: 'autocomplete="current-password"' })}
       ${C.Cta({ label: t('login.submit'), type: 'submit' })}
+      <p class="alink"><a href="#forgot">${esc(t('login.forgot'))}</a></p>
       <p class="alink">${esc(t('login.no_account'))} <a href="#register">${esc(t('login.to_register'))}</a></p>
     </form>
   </div>`);
@@ -64,8 +66,8 @@ forms.login = async (fd, form) => {
   if (!id) { toast(t('login.need_id')); form.querySelector('[name=student_id]')?.focus(); return; }
   const res = await api.login(id, fd.get('password'));
   session.set({ access_token: res.access_token, user: res.user });
-  // 管理員建立的帳號：先換密碼（換完才開始使用教學）
-  if (res.user.must_change_password) { navigate('password'); return; }
+  // 管理員建立的帳號：先選自己的帳號、換密碼（設定完才開始使用教學）
+  if (res.user.must_change_password || res.user.must_choose_username) { navigate('password'); return; }
   await maybeStartTour(res.user); // 這個帳號第一次登入：開始使用教學
   navigate(homeOf(res.user.role));
 };
@@ -108,31 +110,133 @@ forms.register = async (fd, form) => {
 };
 
 // ======================= 設定新密碼 =======================
-// 管理員建立的店家帳號第一次登入時一定會到這裡（main.js 的 guard）；換完密碼，舊的登入就失效
+// 管理員建立的店家帳號第一次登入時一定會到這裡（main.js 的 guard）：選自己的登入帳號（之後不能改）和密碼。
+// 其他時候是一般的「修改密碼」（個人頁、店家後台上方的連結）。換完密碼，舊的登入就失效
+const pwRule = () => `<ul class="checks" id="pw-rules"><li>${icon('dot')}${esc(t('register.pw_rule'))}</li></ul>`;
 export async function passwordPage() {
-  const forced = !!session.get()?.user?.must_change_password;
-  const rule = `<ul class="checks" id="pw-rules"><li>${icon('dot')}${esc(t('register.pw_rule'))}</li></ul>`;
+  const u = session.get()?.user;
+  const pickId = !!u?.must_choose_username;
+  const forced = pickId || !!u?.must_change_password;
+  const lead = pickId ? 'setup.lead' : forced ? 'password.lead_forced' : 'password.lead';
   return phone(`<div class="auth">
-    <section class="ahero"><div class="bar">${forced ? '<span></span>' : `<a class="back" href="#${homeOf(session.get()?.user?.role)}" aria-label="${esc(t('a11y.back'))}">${icon('back')}</a>`}${C.LangSwitch()}</div>
-      <h1>${esc(t('password.title'))}</h1><p>${esc(t(forced ? 'password.lead_forced' : 'password.lead'))}</p></section>
+    <section class="ahero"><div class="bar">${forced ? '<span></span>' : `<a class="back" href="#${homeOf(u?.role)}" aria-label="${esc(t('a11y.back'))}">${icon('back')}</a>`}${C.LangSwitch()}</div>
+      <h1>${esc(t(pickId ? 'setup.title' : 'password.title'))}</h1><p>${esc(t(lead))}</p></section>
     <form class="acard" data-form="password" novalidate>
-      ${C.TextField({ label: t('password.current'), name: 'current_password', type: 'password', reveal: true, extra: 'autocomplete="current-password"' })}
-      ${C.TextField({ label: t('password.new'), name: 'new_password', type: 'password', reveal: true, input: 'password-rule', extra: 'autocomplete="new-password" minlength="8" aria-describedby="pw-rules"', hint: rule })}
+      <div class="form-err" aria-live="assertive"></div>
+      ${pickId ? C.TextField({ label: t('setup.username'), name: 'new_student_id', extra: 'autocomplete="username" autocapitalize="off" spellcheck="false" maxlength="20" aria-describedby="id-rule"', hint: `<p class="hint" id="id-rule">${esc(t('setup.username_rule'))}</p>` }) : ''}
+      ${C.TextField({ label: t(pickId ? 'setup.current' : 'password.current'), name: 'current_password', type: 'password', reveal: true, extra: 'autocomplete="current-password"' })}
+      ${C.TextField({ label: t('password.new'), name: 'new_password', type: 'password', reveal: true, input: 'password-rule', extra: 'autocomplete="new-password" minlength="8" aria-describedby="pw-rules"', hint: pwRule() })}
       ${C.TextField({ label: t('password.confirm'), name: 'confirm_password', type: 'password', reveal: true, extra: 'autocomplete="new-password" minlength="8"' })}
+      ${USE_MOCK ? `<p class="hint">${esc(t('password.mock'))}</p>` : ''}
       ${C.Cta({ label: t('password.submit'), type: 'submit' })}
       ${forced ? `<p class="alink"><button type="button" class="textlink" data-action="logout">${esc(t('profile.logout'))}</button></p>` : ''}
     </form>
   </div>`);
 }
-forms.password = async (fd, form) => {
-  const current = String(fd.get('current_password') || '');
+// 錯誤顯示在表單最上面（不重畫，打好的字不會被清掉），游標移到要改的那一欄
+function formError(form, text, field) {
+  form.querySelector('.form-err').innerHTML = C.Note({ text, kind: 'err' });
+  form.querySelector(`[name=${field}]`)?.focus();
+}
+// 新密碼的兩欄：長度、兩次一樣。不對就顯示錯誤並回傳 null
+function readNewPassword(fd, form) {
   const next = String(fd.get('new_password') || '');
-  if (!current) { toast(t('password.need_current')); form.querySelector('[name=current_password]')?.focus(); return; }
-  if (next.length < 8) { toast(t('register.short_password')); form.querySelector('[name=new_password]')?.focus(); return; }
-  if (next !== fd.get('confirm_password')) { toast(t('password.mismatch')); form.querySelector('[name=confirm_password]')?.focus(); return; }
-  const res = await api.changePassword(current, next);
+  if (next.length < 8) { formError(form, t('register.short_password'), 'new_password'); return null; }
+  if (next !== fd.get('confirm_password')) { formError(form, t('password.mismatch'), 'confirm_password'); return null; }
+  return next;
+}
+// 後端拒絕的原因（real/api.js 標上的 code）→ 翻譯好的訊息、要改的欄位
+const PASSWORD_ERRORS = {
+  wrong_current: ['password.wrong_current', 'current_password'],
+  same: ['password.same', 'new_password'],
+  id_taken: ['password.id_taken', 'new_student_id'],
+};
+forms.password = async (fd, form) => {
+  const newId = fd.has('new_student_id') ? String(fd.get('new_student_id') || '').trim() : null;
+  if (newId !== null && !/^[A-Za-z0-9]{4,20}$/.test(newId)) return formError(form, t('setup.need_username'), 'new_student_id');
+  const current = String(fd.get('current_password') || '');
+  if (!current) return formError(form, t('password.need_current'), 'current_password');
+  const next = readNewPassword(fd, form);
+  if (next === null) return;
+  if (next === current) return formError(form, t('password.same'), 'new_password');
+  let res;
+  try {
+    res = await api.changePassword(current, next, newId);
+  } catch (err) {
+    const [key, field] = PASSWORD_ERRORS[err.code] ?? [];
+    return formError(form, key ? t(key) : err.message || String(err), field ?? 'current_password');
+  }
+  session.set({ access_token: res.access_token, user: res.user });
+  toast(newId ? t('setup.done', { id: res.user.student_id }) : t('password.done'));
+  await maybeStartTour(res.user);
+  navigate(homeOf(res.user.role));
+};
+
+// ======================= 忘記密碼 =======================
+// 輸入登入帳號或 email → 後端把一次性的重設連結寄到帳號的 email。
+// 不管帳號存不存在，畫面都一樣（不透露哪些帳號存在）
+let forgotSent = false;
+export async function forgotPage() {
+  const head = `<section class="ahero"><div class="bar"><a class="back" href="#login" aria-label="${esc(t('a11y.back'))}">${icon('back')}</a>${C.LangSwitch()}</div>
+      <h1>${esc(t('forgot.title'))}</h1><p>${esc(t(forgotSent ? 'forgot.sent_lead' : 'forgot.lead'))}</p></section>`;
+  const back = `<p class="alink"><a href="#login">${esc(t('forgot.back'))}</a></p>`;
+  // 假資料模式沒有寄信的後端
+  if (!api.forgotPassword) return phone(`<div class="auth">${head}<div class="acard">${C.Note({ text: t('forgot.mock') })}${back}</div></div>`);
+  if (forgotSent) {
+    return phone(`<div class="auth">${head}<div class="acard">
+      ${C.Note({ text: t('forgot.sent_note'), kind: 'ok', ic: 'check' })}
+      ${back}
+      <p class="alink">${esc(t('forgot.no_email'))} <button type="button" class="textlink" data-action="forgot-again">${esc(t('forgot.again'))}</button></p>
+    </div></div>`);
+  }
+  return phone(`<div class="auth">${head}
+    <form class="acard" data-form="forgot" novalidate>
+      ${C.TextField({ label: t('forgot.account'), name: 'account', extra: 'autocomplete="username" autocapitalize="off" spellcheck="false" maxlength="255"' })}
+      ${C.Cta({ label: t('forgot.submit'), type: 'submit' })}
+      ${back}
+    </form>
+  </div>`);
+}
+forms.forgot = async (fd, form) => {
+  const account = String(fd.get('account') || '').trim();
+  if (!account) { toast(t('forgot.need')); form.querySelector('[name=account]')?.focus(); return; }
+  await api.forgotPassword(account);
+  forgotSent = true;
+  rerender();
+};
+actions['forgot-again'] = () => { forgotSent = false; rerender(); };
+
+// ======================= 從信裡的連結設定新密碼 =======================
+// #reset-<token>：連結只能用一次、30 分鐘內有效；設定好就直接登入
+export async function resetPage({ token }) {
+  return phone(`<div class="auth">
+    <section class="ahero"><div class="bar"><a class="back" href="#login" aria-label="${esc(t('a11y.back'))}">${icon('back')}</a>${C.LangSwitch()}</div>
+      <h1>${esc(t('reset.title'))}</h1><p>${esc(t('reset.lead'))}</p></section>
+    <form class="acard" data-form="reset" novalidate>
+      <div class="form-err" aria-live="assertive"></div>
+      <input type="hidden" name="token" value="${esc(token)}">
+      ${C.TextField({ label: t('password.new'), name: 'new_password', type: 'password', reveal: true, input: 'password-rule', extra: 'autocomplete="new-password" minlength="8" aria-describedby="pw-rules"', hint: pwRule() })}
+      ${C.TextField({ label: t('password.confirm'), name: 'confirm_password', type: 'password', reveal: true, extra: 'autocomplete="new-password" minlength="8"' })}
+      ${C.Cta({ label: t('reset.submit'), type: 'submit' })}
+      <p class="alink"><a href="#forgot">${esc(t('reset.new_link'))}</a></p>
+    </form>
+  </div>`);
+}
+forms.reset = async (fd, form) => {
+  const next = readNewPassword(fd, form);
+  if (next === null) return;
+  let res;
+  try {
+    res = await api.resetPassword(String(fd.get('token')), next);
+  } catch (err) {
+    // 用過、過期或打錯的連結
+    return formError(form, err.code === 'link_invalid' ? t('reset.invalid') : err.message || String(err), 'new_password');
+  }
+  // 這台裝置上原本登入的若是別人，購物車是他的
+  if (session.get()?.user?.id !== res.user.id) cart.clear();
   session.set({ access_token: res.access_token, user: res.user });
   toast(t('password.done'));
+  if (res.user.must_change_password || res.user.must_choose_username) { navigate('password'); return; }
   await maybeStartTour(res.user);
   navigate(homeOf(res.user.role));
 };
@@ -550,6 +654,7 @@ export async function profilePage() {
       <div class="acct">
         <div class="setrow"><span class="oi">${icon('lang')}</span><span class="tx"><b>${esc(t('lang.name'))}</b><small>${esc(t('lang.current'))}</small></span>${C.LangSwitch({ light: true })}</div>
         ${me.role === 'admin' ? '' : `<button type="button" class="setrow navrow" data-action="tour-replay"><span class="oi">${icon('info')}</span><span class="tx"><b>${esc(t('tour.replay'))}</b><small>${esc(t('tour.replay_sub'))}</small></span><span class="chev">${icon('chev')}</span></button>`}
+        <a class="setrow navrow" href="#password"><span class="oi">${icon('lock')}</span><span class="tx"><b>${esc(t('password.change'))}</b><small>${esc(t('password.change_sub'))}</small></span><span class="chev">${icon('chev')}</span></a>
         ${staff ? `<a class="setrow navrow" href="#${homeOf(me.role)}"><span class="oi">${icon('store')}</span><span class="tx"><b>${esc(t('profile.dashboard'))}</b></span><span class="chev">${icon('chev')}</span></a>` : ''}
       </div>
       <button type="button" class="signout" data-action="logout">${esc(t('profile.logout'))}</button>

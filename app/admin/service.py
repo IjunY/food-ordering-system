@@ -53,12 +53,19 @@ def grant_admin(
 def create_staff(session: Session, data: StaffCreate) -> User:
     """Creates a vendor staff account (no vendor yet; the staff registers it).
 
-    The account must change its password before it can do anything else.
+    The login ID and password are temporary: at the first sign-in the owner picks
+    their own login ID and password before they can do anything else.
 
     Duplicate student IDs or emails raise the same 409 as customer sign-up.
     """
     # The admin knows this first password, so the staff member has to replace it
-    return register_user(session, data, role=UserRole.STAFF, must_change_password=True)
+    return register_user(
+        session,
+        data,
+        role=UserRole.STAFF,
+        must_change_password=True,
+        must_choose_username=True,
+    )
 
 
 def list_staff(session: Session) -> Sequence[User]:
@@ -77,6 +84,7 @@ def create_vendor_with_staff(
             data.staff,
             role=UserRole.STAFF,
             must_change_password=True,
+            must_choose_username=True,
             vendor_id=vendor.id,
         )
     except ConflictError:

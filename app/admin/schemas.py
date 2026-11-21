@@ -7,10 +7,12 @@ from app.menu.schemas import VendorCreate, VendorRead
 class StaffCreate(UserRegister):
     """An admin creating a vendor staff account.
 
-    Same fields and rules as customer sign-up. The admin chooses the first
-    password and hands it to the vendor; the vendor has to replace it
-    (POST /api/auth/change-password) before doing anything else. The new account
-    has no vendor yet: after that it registers one with POST /api/vendors.
+    Same fields and rules as customer sign-up. The login ID and password are
+    temporary: the admin hands them to the vendor, who picks their own login ID
+    and password (POST /api/auth/change-password with new_student_id) before
+    doing anything else. The email must be the vendor's own: "forgot password"
+    links go there. The new account has no vendor yet: after that it registers
+    one with POST /api/vendors.
     """
 
 
@@ -18,7 +20,8 @@ class VendorWithStaffCreate(BaseModel):
     """An admin opening a new vendor: the store and the login that runs it, together.
 
     The staff account is linked to the new vendor and, like every account an admin
-    creates, has to change its first password before it can do anything else.
+    creates, has to pick its own login ID and password before it can do anything
+    else.
     """
 
     vendor: VendorCreate

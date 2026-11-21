@@ -62,13 +62,34 @@ With Docker, run the same commands inside the app container, e.g.
 ## Demo: opening a new vendor
 
 1. Sign in as `admin` → 餐廳管理 → 新增店家. Enter the store (names, area,
-   location) and its login (ID, first password, email, phone).
-2. Sign out, sign in with that login. The vendor is asked to set its own
-   password first, then lands on its order board (with a short tutorial that
-   uses practice orders).
+   location) and a **temporary** login (login ID and password), plus the
+   vendor's own email and phone. The email is where "forgot password" links go.
+2. Sign out, sign in with the temporary login. The vendor first picks its own
+   login ID and password ("Set up your account"), then lands on its order
+   board (with a short tutorial that uses practice orders). The temporary login
+   ID stops working; the chosen one can never be changed.
 3. 菜單管理 → 新增品項: names, category, price, prep time, description and
    photo, in Chinese and English. The item appears on the customer side right
-   away; 店家設定 changes the store details and photos.
+   away; 店家設定 changes the store details and photos, and has a "Change
+   password" button.
+
+## Passwords
+
+- **Change password** (signed in): customers on their profile page, vendors
+  under 店家設定, admins at the top of the page. Every other device is signed
+  out.
+- **Forgot password** (on the sign-in page, for every account): enter the login
+  ID or email, and a link is emailed to the account's email. It works once,
+  for 30 minutes; using it signs the user in and out
+  everywhere else. The page answers the same whether or not the account exists,
+  and sends at most one email per account per minute.
+- Sending email: set `MAIL_SMTP_HOST` etc. in `.env` (see `.env.example`; for
+  Gmail, use an [app password](https://myaccount.google.com/apppasswords)).
+  Without it, in development the email is printed in the server log instead:
+  `docker compose logs app | grep -A 20 "Email not sent"`, then open the link.
+- Links in the email point at `APP_URL` (default `http://localhost:8000`). For a
+  demo over the local network, set it to the address the other computers open,
+  e.g. `APP_URL=http://192.168.1.23:8000`.
 
 ## Payments
 
