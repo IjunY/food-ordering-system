@@ -134,6 +134,7 @@ function toSessionUser(u) {
     id: u.id, role: u.role, student_id: u.student_id, vendor_id: u.vendor_id ?? null,
     restaurant_id: u.role === 'staff' && u.vendor_id != null ? String(u.vendor_id) : null,
     must_change_password: !!u.must_change_password,
+    must_choose_username: !!u.must_choose_username,
   };
 }
 const toSession = (res) => ({ access_token: res.access_token, user: toSessionUser(res.user) });
@@ -147,9 +148,21 @@ export async function register({ student_id, email, phone_number, password }) {
   return login(student_id, password);
 }
 
-// 管理員建立的帳號第一次登入要先換密碼；換完舊的登入就失效，所以回傳新的
-export async function changePassword(current_password, new_password) {
-  return toSession(await http('POST', '/auth/change-password', { current_password, new_password }));
+// 換密碼；換完舊的登入就失效，所以回傳新的。
+// 管理員建立的店家帳號第一次登入時，同時選自己的登入帳號（new_student_id），之後帳號就不能再改
+export async function changePassword(current_password, new_password, new_student_id) {
+  const body = { current_password, new_password, ...(new_student_id ? { new_student_id } : {}) };
+  return toSession(await http('POST', '/auth/change-password', body));
+}
+
+// 忘記密碼：後端把一次性的連結寄到帳號的 email（不管帳號存不存在都回一樣的結果）
+export async function forgotPassword(account) {
+  await http('POST', '/auth/forgot-password', { account });
+}
+
+// 從信裡的連結（#reset-<token>）設定新密碼，成功就直接登入
+export async function resetPassword(token, new_password) {
+  return toSession(await http('POST', '/auth/reset-password', { token, new_password }));
 }
 
 export async function getMe() {

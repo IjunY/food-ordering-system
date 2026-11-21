@@ -40,11 +40,28 @@ class UserRead(BaseModel):
     vendor_id: int | None  # staff only: the vendor this account manages
     # True: the frontend should send the user to "change password" first
     must_change_password: bool
+    # True: on that same page the user also picks their own login ID (vendor staff
+    # whose first login ID came from an admin)
+    must_choose_username: bool
     created_at: datetime
 
 
 class PasswordChange(BaseModel):
     current_password: str = Field(max_length=128)
+    new_password: Password
+    # The login ID the user picks. Only accepted while must_choose_username is set
+    # (and then required); after that a login ID cannot change.
+    new_student_id: StudentId | None = None
+
+
+class PasswordResetRequest(BaseModel):
+    # The login ID or the email address of the account
+    account: str = Field(min_length=1, max_length=255)
+
+
+class PasswordResetConfirm(BaseModel):
+    # The token from the emailed link (#reset-<token>)
+    token: str = Field(pattern=r"^[0-9a-f]{64}$")
     new_password: Password
 
 

@@ -2,7 +2,7 @@ from datetime import datetime
 
 from sqlalchemy import DateTime, ForeignKey, String, false, func
 from sqlalchemy import Enum as SAEnum
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.auth.states import UserRole
 from app.core.db import Base
@@ -31,9 +31,40 @@ class User(Base):
     must_change_password: Mapped[bool] = mapped_column(
         default=False, server_default=false()
     )
+    # Set for accounts whose login ID an admin made up (vendor staff). At the first
+    # sign-in the owner picks their own login ID along with their password; after
+    # that the login ID never changes.
+    must_choose_username: Mapped[bool] = mapped_column(
+        default=False, server_default=false()
+    )
     # Copied into every login token; bumping it (on a password change) makes all
     # tokens issued before then invalid, so a leaked password stops working at once.
     token_version: Mapped[int] = mapped_column(default=0, server_default="0")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+
+class PasswordReset(Base):
+    """A "forgot password" link sent by email.
+
+    Only a hash of the token is kept, so someone who can read the database still
+    cannot use the links. A link works once, until expires_at; setting a new
+    password closes every open link of that account.
+    """
+
+    __tablename__ = "password_resets"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    # SHA-256 (hex) of the token in the link
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    user: Mapped[User] = relationship()

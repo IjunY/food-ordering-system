@@ -10,7 +10,9 @@ import './tour.js'; // 使用教學：登入後第一次使用時帶一遍
 // 路由表：畫面編號對應 Figma
 addRoute('login', P.loginPage, { public: true });           // C01
 addRoute('register', P.registerPage, { public: true });     // 註冊（新，Figma 還沒有）
-addRoute('password', P.passwordPage, { password: true });   // 設定新密碼（管理員建立的帳號第一次登入）
+addRoute('password', P.passwordPage, { password: true });   // 設定新密碼（管理員建立的帳號第一次登入時也選登入帳號）
+addRoute('forgot', P.forgotPage, { public: true });          // 忘記密碼：寄重設連結
+addRoute('reset-:token', P.resetPage, { open: true });       // 信裡的重設連結（登入中也能開）
 addRoute('home', P.homePage);                               // C02
 addRoute('r-:rid', P.restaurantPage);                       // C03
 addRoute('item-:rid-:iid', P.itemPage);                   // C04
@@ -28,10 +30,11 @@ addRoute('admin-platform', A.adminPlatform, { admin: true });// A06
 
 setGuard((opts) => {
   const user = session.get()?.user;
+  if (opts.open) return null;
   if (opts.public) return user ? homeOf(user.role) : null;
   if (!user) return 'login';
-  // 還沒換掉管理員給的第一組密碼：後端其他功能都會擋（403），先去換密碼
-  if (user.must_change_password && !opts.password) return 'password';
+  // 還沒換掉管理員給的第一組密碼或帳號：後端其他功能都會擋（403），先去設定
+  if ((user.must_change_password || user.must_choose_username) && !opts.password) return 'password';
   if (opts.password) return USE_MOCK ? homeOf(user.role) : null;
   if (opts.admin && user.role !== 'admin') return homeOf(user.role);
   if (opts.staff && user.role !== 'staff') return homeOf(user.role);

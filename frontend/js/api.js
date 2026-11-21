@@ -21,7 +21,11 @@ export const api = {
   // 帳號不受練習模式影響
   login: (student_id, password) => data('login')(student_id, password),
   register: (d) => (USE_MOCK ? mock.login(d.student_id, d.password) : real.register(d)),
-  changePassword: (current, next) => real.changePassword(current, next),
+  // 第三個參數：第一次登入時選的登入帳號（之後不能改）
+  changePassword: (current, next, newStudentId) => real.changePassword(current, next, newStudentId),
+  // 忘記密碼（寄重設連結）：只有真後端有，假資料模式是 null
+  forgotPassword: USE_MOCK ? null : (account) => real.forgotPassword(account),
+  resetPassword: (token, next) => real.resetPassword(token, next),
   me: () => data('getMe')(),
 
   // 餐廳與菜單

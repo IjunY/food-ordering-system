@@ -1,5 +1,5 @@
 // 店家端與平台管理畫面 A01–A06（紫色取餐券版；桌機／平板優先）
-import { api } from '../api.js';
+import { api, USE_MOCK } from '../api.js';
 import { t, getLang } from '../i18n.js';
 import { actions, forms, inputs, rerender, poll, toast, openModal, closeModal, confirmDialog } from '../router.js';
 import { icon } from '../icons.js';
@@ -16,7 +16,7 @@ async function layout(active, inner) {
     <header class="admin-bar">
       <div class="admin-bar__brand"><span class="wordmark">${esc(t('app.name'))}</span>${me.role === 'staff' && me.store_name ? `<span class="store">${esc(me.store_name)}</span>` : ''}</div>
       <nav class="admin-nav" aria-label="${esc(t('profile.dashboard'))}">${items.map(([k, key]) => `<a href="#admin-${k}"${k === active ? ' aria-current="page"' : ''}>${esc(t(key))}</a>`).join('')}</nav>
-      <div class="admin-bar__me"><span class="who">${esc(me.name)}</span>${C.LangSwitch()}${me.role === 'staff' ? `<button type="button" class="barlink" data-action="tour-replay">${esc(t('tour.replay_short'))}</button>` : ''}<button type="button" class="barlink" data-action="logout">${esc(t('profile.logout'))}</button></div>
+      <div class="admin-bar__me"><span class="who">${esc(me.name)}</span>${C.LangSwitch()}${me.role === 'staff' ? `<button type="button" class="barlink" data-action="tour-replay">${esc(t('tour.replay_short'))}</button>` : ''}${me.role === 'admin' && !USE_MOCK ? `<a class="barlink" href="#password">${esc(t('password.change_short'))}</a>` : ''}<button type="button" class="barlink" data-action="logout">${esc(t('profile.logout'))}</button></div>
     </header>
     <main class="admin-main">${inner}</main>
   </div>`;
@@ -314,8 +314,16 @@ const langPair = (key, name, value, opts = {}) => `<div class="field-pair">
   ${C.TextField({ label: inLang(key, 'en'), name: `${name}_en`, value: value?.en ?? '', ...opts })}
 </div>`;
 
+// 店家的登入帳號：帳號第一次登入時選好就不能改，密碼可以在這裡改（假資料模式沒有）
+const accountPanel = (me) => (USE_MOCK ? '' : `<section class="panel">
+  <h2>${esc(t('admin.settings.account'))}</h2>
+  <dl class="account-id"><dt>${esc(t('admin.settings.login_id'))}</dt><dd class="num">${esc(me.student_id)}</dd></dl>
+  <p class="hint">${esc(t('admin.settings.login_id_fixed'))}</p>
+  <div><a class="btn btn--sm" href="#password">${esc(t('password.change'))}</a></div>
+</section>`);
+
 export async function adminSettings() {
-  const r = await api.admin.getRestaurant();
+  const [r, me] = await Promise.all([api.admin.getRestaurant(), api.me()]);
   const e = r.edit;
   return layout('settings', `<form class="settings-form" data-form="settings" novalidate>
     ${pageHeader(t('admin.nav.settings'), '', C.Button({ label: t('common.save'), style: 'primary', size: 'sm', type: 'submit' }))}
@@ -343,6 +351,7 @@ export async function adminSettings() {
             <label class="switch-row"><span>${esc(t('admin.settings.accept_online'))}</span><input type="checkbox" class="switch" name="is_accepting_orders"${r.is_accepting_orders ? ' checked' : ''}></label>
           </div>
         </section>
+        ${accountPanel(me)}
       </div>
     </div>
   </form>`);
