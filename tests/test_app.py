@@ -33,6 +33,8 @@ def test_frontend_is_served_at_root(client: TestClient) -> None:
 
     script = client.get("/js/api.js")
     assert script.status_code == 200
+    # Browsers must check for a newer version every time (no stale mix after an update)
+    assert script.headers["cache-control"] == "no-cache"
 
     # API routes still win over the static files
     assert client.get("/api/menu-items").status_code == 200

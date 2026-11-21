@@ -35,3 +35,9 @@ class ConflictError(AppError):
 
 class PayloadTooLargeError(AppError):
     status_code = 413
+
+
+class BadGatewayError(AppError):
+    """An outside service (e.g. the payment provider) failed or could not be reached."""
+
+    status_code = 502

@@ -1,18 +1,36 @@
-# 金流商的介面，以及一個假的金流商（MockProvider）。
-# 之後要換成綠界、LINE Pay，只要新寫一個 class 實作同樣的方法，其他檔案都不用改。
+# 金流商的介面，以及兩個金流商：假的（MockProvider）和 LINE Pay（LinePayProvider，先接 sandbox）。
+# 用哪一個由 .env 的 PAYMENT_PROVIDER 決定（config.py）。
 
+import base64
 import hashlib  # 提供 SHA-256 等雜湊演算法
 import hmac  # 用「密鑰 + 內容」算出簽章，用來證明內容沒被竄改、也不是別人偽造的
 import json
-from typing import Protocol
+import urllib.error
+import urllib.request
+import uuid
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any, Protocol
+
+
+@dataclass(frozen=True)
+class Checkout:
+    """建立交易的結果：要把使用者導過去的付款頁網址，以及金流商給這筆交易的編號（有的話）。"""
+
+    url: str
+    provider_ref: str | None = None
+
+
+class PaymentProviderError(Exception):
+    """金流商回報錯誤，或連不上金流商。"""
 
 
 class PaymentProvider(Protocol):
     # Protocol 是「規格說明」：只要一個 class 有這兩個方法，就能被當成 PaymentProvider 使用。
     # 這裡的 ... 代表「只定義名稱和參數，不寫內容」
 
-    def create_checkout(self, trade_no: str, amount: int) -> str:
-        """向金流商建立一筆交易，回傳要把使用者導過去的付款頁網址。"""
+    def create_checkout(self, trade_no: str, amount: int) -> Checkout:
+        """向金流商建立一筆交易，回傳付款頁網址（和金流商的交易編號）。失敗時丟 PaymentProviderError。"""
         ...
 
     def verify_callback(self, body: bytes, signature: str) -> bool:
@@ -33,10 +51,10 @@ class MockProvider:
         # 前面加底線 _ 是 Python 的慣例，表示「內部使用，外面不要直接碰」
         self._secret = secret
 
-    def create_checkout(self, trade_no: str, amount: int) -> str:
+    def create_checkout(self, trade_no: str, amount: int) -> Checkout:
         # 真的金流商會回傳它網站上的付款頁。我們的假付款頁就做在自己的網站上
         # （所有 API 都掛在 /api 底下，所以網址以 /api/payments 開頭）
-        return f"/api/payments/mock-checkout/{trade_no}"
+        return Checkout(url=f"/api/payments/mock-checkout/{trade_no}")
 
     def verify_callback(self, body: bytes, signature: str) -> bool:
         # 自己用密鑰重算一次簽章，跟通知附上的比對。
@@ -56,3 +74,112 @@ class MockProvider:
             {"trade_no": trade_no, "amount": amount, "success": success}
         ).encode()
         return body, sign(body, self._secret)
+
+
+# ---------- LINE Pay（Online API v3） ----------
+# 流程和假金流商不同：LINE Pay 不會主動通知我們，而是
+#   1. 我們呼叫 Request API，拿到付款頁網址和 transactionId
+#   2. 使用者在 LINE Pay 付款頁同意付款後，瀏覽器被導回我們的 confirmUrl（帶著 transactionId）
+#   3. 我們再呼叫 Confirm API，LINE Pay 回 0000 才算真的扣款成功
+# 所以付款成功與否，是「我們的伺服器問 LINE Pay」得到的答案，不是瀏覽器說了算。
+# 文件：https://pay.line.me/documents/online_v3.html
+
+# 送出請求的函式：(網址, 標頭, 內容) -> 回傳的 JSON。測試時換成假的，不用真的連網路
+Sender = Callable[[str, dict[str, str], bytes], dict[str, Any]]
+
+
+def _post_json(url: str, headers: dict[str, str], body: bytes) -> dict[str, Any]:
+    request = urllib.request.Request(url, data=body, headers=headers, method="POST")
+    try:
+        with urllib.request.urlopen(request, timeout=20) as response:
+            result: dict[str, Any] = json.loads(response.read())
+            return result
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+        raise PaymentProviderError(f"Could not reach LINE Pay: {exc}") from exc
+
+
+class LinePayProvider:
+    """LINE Pay。api_url 預設是 sandbox（測試環境），不會真的扣款。"""
+
+    def __init__(
+        self,
+        channel_id: str,
+        channel_secret: str,
+        api_url: str,
+        app_url: str,
+        send: Sender = _post_json,
+    ) -> None:
+        self._channel_id = channel_id
+        self._secret = channel_secret
+        self._api_url = api_url.rstrip("/")
+        # 我們網站的網址（例如 http://127.0.0.1:8000），用來組出付款後導回來的網址
+        self._app_url = app_url.rstrip("/")
+        self._send = send
+
+    def _call(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
+        # LINE Pay 的簽章：Base64(HMAC-SHA256(channel secret, secret + 路徑 + 內容 + nonce))
+        # 簽的內容和送出的內容必須一字不差，所以先轉成字串再一起用
+        body = json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
+        nonce = str(uuid.uuid4())  # 每次都不一樣，別人錄下來重送也沒用
+        message = (self._secret + path + body + nonce).encode()
+        signature = base64.b64encode(
+            hmac.new(self._secret.encode(), message, hashlib.sha256).digest()
+        ).decode()
+        headers = {
+            "Content-Type": "application/json",
+            "X-LINE-ChannelId": self._channel_id,
+            "X-LINE-Authorization-Nonce": nonce,
+            "X-LINE-Authorization": signature,
+        }
+        result = self._send(self._api_url + path, headers, body.encode())
+        if result.get("returnCode") != "0000":
+            raise PaymentProviderError(
+                f"LINE Pay error {result.get('returnCode')}: {result.get('returnMessage')}"
+            )
+        return result
+
+    def create_checkout(self, trade_no: str, amount: int) -> Checkout:
+        # orderId 用我們的 trade_no；付款後 LINE Pay 會把 transactionId 和 orderId 加在 confirmUrl 後面
+        payments = f"{self._app_url}/api/payments/linepay"
+        result = self._call(
+            "/v3/payments/request",
+            {
+                "amount": amount,
+                "currency": "TWD",
+                "orderId": trade_no,
+                "packages": [
+                    {
+                        "id": trade_no,
+                        "amount": amount,
+                        "name": "NTHU 點餐",
+                        "products": [
+                            {"name": "NTHU 點餐訂單", "quantity": 1, "price": amount}
+                        ],
+                    }
+                ],
+                "redirectUrls": {
+                    "confirmUrl": f"{payments}/confirm",
+                    "cancelUrl": f"{payments}/cancel?trade_no={trade_no}",
+                },
+            },
+        )
+        info = result["info"]
+        # transactionId 是 19 位數的整數，存成字串（JavaScript 的數字放不下這麼長）
+        return Checkout(
+            url=info["paymentUrl"]["web"], provider_ref=str(info["transactionId"])
+        )
+
+    def confirm(self, transaction_id: str, amount: int) -> bool:
+        """使用者同意付款後，向 LINE Pay 確認扣款。成功回傳 True。"""
+        try:
+            self._call(
+                f"/v3/payments/{transaction_id}/confirm",
+                {"amount": amount, "currency": "TWD"},
+            )
+        except PaymentProviderError:
+            return False
+        return True
+
+    def verify_callback(self, body: bytes, signature: str) -> bool:
+        # LINE Pay 不送伺服器對伺服器的通知（結果靠 confirm 問），所以這個網址一律拒絕
+        return False

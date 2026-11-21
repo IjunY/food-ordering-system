@@ -4,6 +4,7 @@
 # 出錯時丟出 core/errors.py 的錯誤（NotFoundError、ConflictError…），
 # main.py 裡的處理器會自動把它們轉成對應的 HTTP 狀態碼和 {"detail": "..."}。
 
+import logging
 import secrets  # 產生安全的隨機字串（比 random 模組安全，適合用在編號、token）
 from datetime import UTC, datetime, timedelta
 
@@ -12,14 +13,25 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.auth.models import User
-from app.core.errors import BadRequestError, ConflictError, NotFoundError
+from app.core.errors import (
+    BadGatewayError,
+    BadRequestError,
+    ConflictError,
+    NotFoundError,
+)
 from app.orders.states import OrderStatus
 from app.payments import order_gateway, repo
 from app.payments.config import PaymentSettings
 from app.payments.models import Payment
-from app.payments.provider import PaymentProvider
+from app.payments.provider import (
+    LinePayProvider,
+    PaymentProvider,
+    PaymentProviderError,
+)
 from app.payments.schemas import CallbackPayload
 from app.payments.states import PaymentStatus, can_transition
+
+logger = logging.getLogger(__name__)
 
 # ---------- 小工具 ----------
 
@@ -35,6 +47,48 @@ def _expire_if_overdue(payment: Payment) -> bool:
         payment.status = PaymentStatus.EXPIRED
         return True
     return False
+
+
+def _checkout_url(session: Session, provider: PaymentProvider, payment: Payment) -> str:
+    """付款頁網址：建立過就沿用；第一次就向金流商建立交易，把網址和交易編號存起來。"""
+    if payment.checkout_url:
+        return payment.checkout_url
+    try:
+        checkout = provider.create_checkout(payment.trade_no, payment.amount)
+    except PaymentProviderError as exc:
+        # 金流商建立交易失敗：這筆作廢（之後可以重試，會建立新的一筆）。
+        # 原因（例如 LINE Pay 的錯誤代碼）寫進伺服器的 log，顧客只看到「暫時無法付款」
+        logger.warning("Payment provider refused order %s: %s", payment.order_id, exc)
+        payment.status = PaymentStatus.FAILED
+        session.commit()
+        raise BadGatewayError(
+            "The payment provider is not available right now"
+        ) from exc
+    payment.checkout_url = checkout.url
+    payment.provider_ref = checkout.provider_ref
+    session.commit()
+    return checkout.url
+
+
+def _finish(session: Session, payment: Payment, success: bool) -> Payment:
+    """金流商說「成功／失敗」之後，決定這筆付款的最終狀態並存檔（假付款通知和 LINE Pay 共用）。"""
+    # 如果訂單在付款途中被取消了（不再是「確認中」），就算金流商說成功，
+    # 也不能標成已付款，否則會出現「已取消卻已付款」的訂單。
+    # （接真的金流商時，這種情況還要另外呼叫退款，把錢還給客人）
+    order = order_gateway.get_order_for_callback(session, payment.order_id)
+    order_open = order is not None and order.status == OrderStatus.CONFIRMING
+    new_status = PaymentStatus.PAID if success and order_open else PaymentStatus.FAILED
+
+    # 用狀態機確認這個轉換是合法的
+    if not can_transition(payment.status, new_status):
+        session.rollback()
+        raise ConflictError("This payment can no longer be changed")
+
+    payment.status = new_status
+    if new_status == PaymentStatus.PAID:
+        payment.paid_at = _now()
+    session.commit()
+    return payment
 
 
 # ---------- 對外提供的功能 ----------
@@ -71,9 +125,7 @@ def create_payment(
         else:
             # 還有一筆待付款、還沒過期：直接回傳同一筆，不重複建立。
             # 這樣使用者連按兩次「去付款」，也只會有一筆付款（冪等性）
-            return existing, provider.create_checkout(
-                existing.trade_no, existing.amount
-            )
+            return existing, _checkout_url(session, provider, existing)
 
     # 5. 建立新的付款紀錄
     payment = Payment(
@@ -93,10 +145,10 @@ def create_payment(
         existing = repo.get_active_for_order(session, order_id)
         if existing is None or existing.status == PaymentStatus.PAID:
             raise ConflictError("This order is already paid") from None
-        return existing, provider.create_checkout(existing.trade_no, existing.amount)
+        return existing, _checkout_url(session, provider, existing)
 
-    # 6. 請金流商建立交易，拿到付款頁網址
-    return payment, provider.create_checkout(payment.trade_no, payment.amount)
+    # 6. 請金流商建立交易，拿到付款頁網址（和金流商的交易編號，一起存起來）
+    return payment, _checkout_url(session, provider, payment)
 
 
 def handle_callback(
@@ -136,24 +188,48 @@ def handle_callback(
         session.rollback()  # 釋放鎖，什麼都不改
         raise BadRequestError("Amount does not match")
 
-    # 7. 決定新狀態。如果訂單在付款途中被取消了（不再是「確認中」），就算金流商說成功，
-    #    也不能標成已付款，否則會出現「已取消卻已付款」的訂單。
-    #    （接真的金流商時，這種情況還要另外呼叫退款，把錢還給客人）
-    order = order_gateway.get_order_for_callback(session, payment.order_id)
-    order_open = order is not None and order.status == OrderStatus.CONFIRMING
-    new_status = (
-        PaymentStatus.PAID if data.success and order_open else PaymentStatus.FAILED
-    )
+    # 7. 決定新狀態、檢查轉換、存檔（見 _finish）
+    return _finish(session, payment, data.success)
 
-    # 8. 用狀態機確認這個轉換是合法的
-    if not can_transition(payment.status, new_status):
+
+def confirm_linepay(
+    session: Session, provider: LinePayProvider, trade_no: str, transaction_id: str
+) -> Payment:
+    """使用者在 LINE Pay 付款頁同意付款，被導回我們的網站之後：向 LINE Pay 確認扣款。
+
+    導回來的網址誰都能打，所以不相信網址裡的任何東西：交易編號要和我們建立交易時
+    LINE Pay 給的一樣，扣款成功與否也是我們的伺服器去問 LINE Pay。
+    """
+    payment = repo.get_by_trade_no(session, trade_no, for_update=True)
+    if payment is None:
+        raise NotFoundError("Payment not found")
+    # 已經處理過（例如重新整理了這一頁）：什麼都不做
+    if payment.status != PaymentStatus.PENDING:
+        session.commit()
+        return payment
+    if _expire_if_overdue(payment):
+        session.commit()
+        return payment
+    if payment.provider_ref is None or payment.provider_ref != transaction_id:
         session.rollback()
-        raise ConflictError("This payment can no longer be changed")
+        raise BadRequestError(
+            "This LINE Pay transaction does not belong to this payment"
+        )
 
-    # 9. 更新狀態並存檔
-    payment.status = new_status
-    if new_status == PaymentStatus.PAID:
-        payment.paid_at = _now()
+    # 訂單已經被取消：不要向 LINE Pay 確認（沒確認就不會扣款），直接作廢
+    order = order_gateway.get_order_for_callback(session, payment.order_id)
+    if order is None or order.status != OrderStatus.CONFIRMING:
+        return _finish(session, payment, success=False)
+    return _finish(session, payment, provider.confirm(transaction_id, payment.amount))
+
+
+def cancel_checkout(session: Session, trade_no: str) -> Payment:
+    """使用者在付款頁按了取消：這筆付款作廢（可以重新付款，會建立新的一筆）。"""
+    payment = repo.get_by_trade_no(session, trade_no, for_update=True)
+    if payment is None:
+        raise NotFoundError("Payment not found")
+    if payment.status == PaymentStatus.PENDING:
+        payment.status = PaymentStatus.FAILED
     session.commit()
     return payment
 

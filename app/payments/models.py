@@ -59,6 +59,12 @@ class Payment(Base):
     # 付款期限，超過就視為逾時
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
+    # 付款頁網址：同一筆付款再按一次「去付款」時直接沿用（LINE Pay 不能用同一個編號建立兩次交易）
+    checkout_url: Mapped[str | None] = mapped_column(String(500), default=None)
+
+    # 金流商那邊的交易編號（LINE Pay 的 transactionId）。確認付款時要和導回來的編號一致
+    provider_ref: Mapped[str | None] = mapped_column(String(64), default=None)
+
     # 付款成功的時間。還沒付款時是 None（資料庫裡是 NULL）
     paid_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), default=None

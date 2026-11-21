@@ -24,8 +24,15 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
       PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:?set PAYMENT_WEBHOOK_SECRET in .env}
+      PAYMENT_EXPIRE_MINUTES: ${PAYMENT_EXPIRE_MINUTES:-15}
+      # mock (the backend's own checkout page) or linepay (LINE Pay sandbox; needs the two keys below)
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-mock}
+      PAYMENT_LINEPAY_CHANNEL_ID: ${PAYMENT_LINEPAY_CHANNEL_ID:-}
+      PAYMENT_LINEPAY_CHANNEL_SECRET: ${PAYMENT_LINEPAY_CHANNEL_SECRET:-}
     ports:
-      - "127.0.0.1:8000:8000"
+      # Only this computer by default. For a demo with other computers on the same
+      # network, set APP_BIND=0.0.0.0 (in .env or on the command line).
+      - "${APP_BIND:-127.0.0.1}:8000:8000"
     volumes:
       # photos uploaded through the app survive rebuilding the container
       - uploads:/code/uploads

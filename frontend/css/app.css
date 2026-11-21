@@ -396,6 +396,22 @@ button.setrow { width: 100%; text-align: left; }
 .dialog__head .icon-btn { margin: -8px -10px -8px 0; }
 .dialog__foot { display: flex; align-items: center; gap: 8px; padding-top: 4px; }
 .dialog__sub { margin-top: 4px; font-size: 15px; font-weight: 700; }
+.dialog--wide { max-width: 44rem; }
+/* 菜單品項視窗裡的加點選項編輯：每個群組一塊淺底，選項一列一個（中文、英文、加價、刪除） */
+.og-editor { display: grid; gap: 10px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.og-editor > .btn { justify-self: start; }
+.og-list { display: grid; gap: 12px; }
+.og { display: grid; gap: 8px; padding: 12px; border-radius: var(--r-field); background: var(--fill); }
+.og__head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.og__rule { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.og__rule select { height: 44px; padding: 0 10px; border: 1.5px solid var(--field-stroke); border-radius: var(--r-field); background: var(--card-white); color: var(--ink); font-size: 15px; }
+.og__rule select:focus-visible { border-color: var(--nthu-purple); box-shadow: var(--sh-halo); outline: 0; }
+.og__max .input { width: 6rem; }
+.og__cols, .og-choice { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 7rem 44px; gap: 8px; align-items: center; }
+.og__cols { font-size: 12px; font-weight: 700; color: var(--mute); }
+.og__choices { display: grid; gap: 6px; }
+.og > .lnk { justify-self: start; }
+@media (max-width: 40rem) { .og__cols { display: none; } .og-choice { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
 .dialog__sub + .hint { margin-top: -10px; }
 .grow { flex: 1 1 auto; min-width: 0; }
 .rows { display: grid; }
@@ -439,6 +455,23 @@ button.setrow { width: 100%; text-align: left; }
 .rail__head h2 { font-size: 18px; }
 .rail__head .cnt { padding: 1px 8px; border-radius: var(--r-tag-lg); background: var(--card-white); color: var(--mute); font: 700 14px/1.5 var(--font-num); }
 .rail__empty { padding: 20px 16px; border: 1px dashed var(--control-off); border-radius: var(--r-field); font-size: 14px; color: var(--mute); }
+/* 接單看板（像 Notion 的看板）：四欄並排，窄螢幕左右滑；欄名是帶色塊的標籤，數量在旁邊 */
+.rails.board { grid-template-columns: repeat(4, minmax(16.5rem, 1fr)); gap: 14px; overflow-x: auto; padding-bottom: 6px; }
+@media (max-width: 52rem) { .rails.board { grid-template-columns: repeat(4, minmax(16.5rem, 82vw)); scroll-snap-type: x mandatory; } .board .rail { scroll-snap-align: start; } }
+.board .rail { min-height: 14rem; padding: 10px 10px 14px; border-radius: var(--r-card); background: color-mix(in srgb, var(--hairline) 45%, var(--lilac-ground)); transition: background var(--dur-micro), box-shadow var(--dur-micro); }
+.board .rail.can-drop { box-shadow: inset 0 0 0 2px var(--control-off); }
+.board .rail.is-drop { background: var(--purple-tint); box-shadow: inset 0 0 0 2px var(--nthu-purple); }
+.board .rail__head { padding: 2px 2px 4px; }
+.rail__head .rail__tag { display: inline-flex; align-items: center; gap: 7px; padding: 3px 10px 3px 8px; border-radius: var(--r-tag-lg); background: var(--tag-bg); color: var(--tag-ink); font-size: 14px; font-weight: 700; }
+.rail__tag i { width: 8px; height: 8px; border-radius: 2px; background: var(--tag-dot); }
+.board .rail__head .cnt { background: transparent; }
+.rail--unpaid { --tag-bg: var(--card-white); --tag-ink: var(--ink); --tag-dot: var(--faint); }
+.rail--paid { --tag-bg: var(--purple-tint); --tag-ink: var(--purple-deep); --tag-dot: var(--nthu-purple); }
+.rail--accepted { --tag-bg: var(--sun-yellow); --tag-ink: var(--sun-ink); --tag-dot: var(--sun-ink); }
+.rail--ready { --tag-bg: var(--success-tint); --tag-ink: var(--success-ink); --tag-dot: var(--ready-green); }
+.board .rail__empty { border-color: var(--control-off); }
+.board .kt[draggable="true"] { cursor: grab; }
+.board .kt.is-dragging { opacity: .45; }
 .kt .code { font-size: 48px; }
 .kt__items { display: grid; gap: 8px; padding: 14px 16px 4px; }
 .kt__items li { display: grid; grid-template-columns: 2.4ch minmax(0, 1fr); gap: 8px; align-items: baseline; font-size: 17px; }

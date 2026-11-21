@@ -4,6 +4,8 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import sessionmaker
+from starlette.responses import Response
+from starlette.types import Scope
 
 from app.admin.router import router as admin_router
 from app.auth.router import router as auth_router
@@ -16,6 +18,20 @@ from app.payments.router import router as payments_router
 from app.uploads.router import router as uploads_router
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
+
+
+class FrontendFiles(StaticFiles):
+    """The frontend's files, with Cache-Control: no-cache.
+
+    Without it, browsers guess how long a file stays fresh and can keep an old
+    js/*.js after an update while loading the new ones next to it. no-cache makes
+    them ask every time; unchanged files come back as a quick 304.
+    """
+
+    async def get_response(self, path: str, scope: Scope) -> Response:
+        response = await super().get_response(path, scope)
+        response.headers.setdefault("Cache-Control", "no-cache")
+        return response
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -60,6 +76,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # Serves the frontend (frontend/index.html at "/"), so one address runs the whole app.
     # Mounted last so the /api routes above take priority.
     if FRONTEND_DIR.is_dir():
-        app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
+        app.mount(
+            "/", FrontendFiles(directory=FRONTEND_DIR, html=True), name="frontend"
+        )
 
     return app

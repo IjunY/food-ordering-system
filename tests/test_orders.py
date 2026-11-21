@@ -508,3 +508,47 @@ def test_add_on_rules(client: TestClient, customer: dict[str, str], bento: int) 
         "note": "x" * 61,
     }
     assert order_lines(client, customer, too_long).status_code == 422
+
+
+# ---------- paying at the counter ----------
+def test_customer_chooses_to_pay_at_pickup(
+    client: TestClient,
+    customer: dict[str, str],
+    staff: dict[str, str],
+    auth_headers: Headers,
+    menu: dict[str, int],
+) -> None:
+    order = place(client, customer, (menu["noodles"], 1))
+    assert (order["payment_status"], order["pay_at_pickup"]) == ("unpaid", False)
+
+    # Only the customer who placed it decides how to pay
+    other = auth_headers("990000002")
+    assert (
+        client.post(
+            f"/api/orders/{order['id']}/pay-at-pickup", headers=other
+        ).status_code
+        == 404
+    )
+    assert (
+        client.post(
+            f"/api/orders/{order['id']}/pay-at-pickup", headers=staff
+        ).status_code
+        == 403
+    )
+
+    chosen = client.post(f"/api/orders/{order['id']}/pay-at-pickup", headers=customer)
+    assert chosen.status_code == 200, chosen.text
+    assert chosen.json()["pay_at_pickup"] is True
+    # The vendor sees it too
+    seen = client.get(f"/api/orders/{order['id']}", headers=staff).json()
+    assert (seen["pay_at_pickup"], seen["payment_status"]) == (True, "unpaid")
+
+    # Once the vendor has started, it is too late to change how to pay
+    later = place(client, customer, (menu["dumplings"], 1))
+    set_status(client, staff, later["id"], "preparing")
+    assert (
+        client.post(
+            f"/api/orders/{later['id']}/pay-at-pickup", headers=customer
+        ).status_code
+        == 409
+    )

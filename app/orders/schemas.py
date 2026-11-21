@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, StringConstraints
 
@@ -51,3 +51,6 @@ class OrderRead(BaseModel):
     vendor_name: dict[str, str]  # {"zh": ..., "en": ...}
     items: list[OrderItemRead]
     total: int
+    # The latest online payment for this order ("unpaid": none started yet)
+    payment_status: Literal["unpaid", "pending", "paid", "failed", "expired"]
+    pay_at_pickup: bool  # the customer will pay at the counter

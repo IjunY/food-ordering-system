@@ -38,8 +38,8 @@ export const api = {
   // 上傳照片：真後端存成檔案（POST /api/uploads）；假資料模式存在瀏覽器
   uploadImage: (file) => data('uploadImage')(file),
 
-  // 付款：模擬的；真後端模式也只記在這台瀏覽器
-  listPaymentMethods: () => mock.listPaymentMethods(),
+  // 付款：真後端導到後端設定的金流商（LINE Pay sandbox 或模擬付款頁）；練習時是假的，一律成功
+  listPaymentMethods: () => pick('listPaymentMethods')(),
   pay: (order_id, method) => pick('pay')(order_id, method),
 
   // 店家後台

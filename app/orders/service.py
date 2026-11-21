@@ -17,6 +17,7 @@ from app.orders import repo
 from app.orders.models import Order, OrderItem
 from app.orders.schemas import OrderCreate, OrderItemRead, OrderRead
 from app.orders.states import ALLOWED_TRANSITIONS, OrderStatus
+from app.payments import repo as payments_repo
 
 
 def _manages(user: User, order: Order) -> bool:
@@ -201,6 +202,22 @@ def cancel_order(session: Session, user: User, order_id: int) -> Order:
     return _change_status(session, order, OrderStatus.CANCELLED)
 
 
+def choose_pay_at_pickup(session: Session, user: User, order_id: int) -> Order:
+    """The customer will pay at the counter instead of online; the order then shows
+    up on the vendor's board as unpaid."""
+    order = get_order(session, user, order_id, for_update=True)
+    if order.created_by != user.student_id:
+        # staff and admins can see the order, but only the customer decides how to pay
+        raise ForbiddenError("Only the customer who placed the order can choose this")
+    if order.status is not OrderStatus.CONFIRMING:
+        raise ConflictError("This order is no longer waiting for payment")
+    if payments_repo.has_paid_payment(session, order.id):
+        raise ConflictError("This order is already paid")
+    order.pay_at_pickup = True
+    session.commit()
+    return order
+
+
 def _options_label(options: list[dict[str, Any]]) -> dict[str, str] | None:
     if not options:
         return None
@@ -216,6 +233,12 @@ def to_read(session: Session, orders: Sequence[Order]) -> list[OrderRead]:
     menu_items = {m.id: m for m in menu_repo.get_many(session, item_ids)}
     vendor_ids = {order.vendor_id for order in orders}
     vendors = {v.id: v for v in menu_repo.get_vendors(session, vendor_ids)}
+    payment_status = {
+        order_id: status.value
+        for order_id, status in payments_repo.latest_status_by_order(
+            session, [o.id for o in orders]
+        ).items()
+    }
 
     result = []
     for order in orders:
@@ -243,6 +266,8 @@ def to_read(session: Session, orders: Sequence[Order]) -> list[OrderRead]:
                 vendor_name=vendors[order.vendor_id].name,
                 items=lines,
                 total=sum(line.subtotal for line in lines),
+                payment_status=payment_status.get(order.id, "unpaid"),
+                pay_at_pickup=order.pay_at_pickup,
             )
         )
     return result

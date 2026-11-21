@@ -25,40 +25,85 @@ function pageHeader(title, sub = '', right = '') {
   return `<div class="page-head"><div><h1>${esc(title)}</h1>${sub ? `<p class="page-head__sub">${esc(sub)}</p>` : ''}</div>${right ? `<div class="page-head__right">${right}</div>` : ''}</div>`;
 }
 
-// ======================= A01 接單看板：票軌 =======================
+// ======================= A01 接單看板（像 Notion 的看板） =======================
+// 四欄：未付款・到店付款 → 已付款・待接單 → 已接單・製作中 → 可取餐。
+// 卡片可以拖到下一欄（接單、做好了），也可以按卡片上的按鈕；取餐、拒單只能按按鈕
 let seenOrderIds = null;
+let dragging = null; // 拖曳中的卡片 { id, col, no }；拖曳時不要定時重畫
 export async function adminBoard() {
   const [r, orders] = await Promise.all([api.admin.getRestaurant(), api.admin.listOrders()]);
   const fresh = new Set(seenOrderIds ? orders.filter((o) => !seenOrderIds.has(o.id)).map((o) => o.id) : []);
   if (fresh.size) toast(t('admin.new_order_toast', { n: fresh.size }));
   seenOrderIds = new Set(orders.map((o) => o.id));
-  poll(rerender, 4000);
+  poll(() => { if (!dragging) rerender(); }, 4000);
 
-  const cols = [['new', 'admin.col_new'], ['preparing', 'admin.col_preparing'], ['ready', 'admin.col_ready']];
   const accepting = r.is_accepting_orders;
   const right = `<label class="accepting${accepting ? '' : ' is-paused'}"><span>${esc(t(accepting ? 'admin.accepting' : 'admin.paused'))}</span>${C.Toggle({ on: accepting, action: 'toggle-accepting', label: t('admin.accepting') })}</label>`;
   return layout('orders', `
-    ${pageHeader(t('admin.nav.orders'), t('admin.board_sub', { n: r.today_order_count ?? 0 }), right)}
-    <div class="rails">${cols.map(([k, key]) => {
+    ${pageHeader(t('admin.nav.orders'), `${t('admin.board_sub', { n: r.today_order_count ?? 0 })} · ${t('admin.board_hint')}`, right)}
+    <div class="rails board">${C.BOARD_COLUMNS.map((k) => {
       const list = orders.filter((o) => C.boardColumn(o.status) === k);
-      return `<section class="rail" aria-label="${esc(t(key))}">
-        <div class="rail__head"><h2>${esc(t(key))}</h2><span class="cnt">${list.length}</span></div>
+      return `<section class="rail rail--${k}" data-col="${k}" aria-label="${esc(t('admin.col.' + k))}">
+        <div class="rail__head"><h2 class="rail__tag"><i aria-hidden="true"></i>${esc(t('admin.col.' + k))}</h2><span class="cnt">${list.length}</span></div>
         ${list.map((o) => C.KitchenTicket(o, fresh.has(o.id))).join('') || `<p class="rail__empty">${esc(t('admin.col_empty'))}</p>`}
       </section>`;
     }).join('')}</div>`);
 }
-actions['order-status'] = async (d) => {
+async function changeStatus(d) {
   if (d.to === 'recall') { toast(t('admin.called', { no: d.no })); return; }
   if (d.to === 'cancelled' && !(await confirmDialog(t('admin.reject_confirm', { no: d.no }), { danger: true }))) return;
   await api.admin.updateOrderStatus(d.id, d.to);
   if (d.to === 'ready') toast(t('admin.notified', { no: d.no }));
   rerender();
-};
+}
+actions['order-status'] = (d) => changeStatus(d);
 actions['toggle-accepting'] = async () => {
   const r = await api.admin.getRestaurant();
   await api.admin.updateRestaurant({ is_accepting_orders: !r.is_accepting_orders });
   rerender();
 };
+
+// 拖曳：只有 C.BOARD_MOVES 允許的欄位會亮起來、可以放
+const dropTarget = (ev) => {
+  const rail = ev.target.closest?.('.board .rail');
+  return rail && dragging && C.BOARD_MOVES[dragging.col]?.[rail.dataset.col] ? rail : null;
+};
+const clearDrop = () => document.querySelectorAll('.board .rail.is-drop, .board .rail.can-drop').forEach((el) => el.classList.remove('is-drop', 'can-drop'));
+document.addEventListener('dragstart', (ev) => {
+  const card = ev.target.closest?.('.board [data-drag-id]');
+  if (!card) return;
+  dragging = { id: card.dataset.dragId, col: card.dataset.col, no: card.dataset.no };
+  ev.dataTransfer.effectAllowed = 'move';
+  ev.dataTransfer.setData('text/plain', card.dataset.no);
+  card.classList.add('is-dragging');
+  for (const col of Object.keys(C.BOARD_MOVES[dragging.col] ?? {})) document.querySelector(`.board .rail[data-col="${col}"]`)?.classList.add('can-drop');
+});
+document.addEventListener('dragover', (ev) => {
+  const rail = dropTarget(ev);
+  if (!rail) return;
+  ev.preventDefault();
+  ev.dataTransfer.dropEffect = 'move';
+  if (!rail.classList.contains('is-drop')) { clearDrop(); rail.classList.add('is-drop', 'can-drop'); }
+});
+document.addEventListener('drop', async (ev) => {
+  const rail = dropTarget(ev);
+  const d = dragging;
+  if (!rail || !d) return;
+  ev.preventDefault();
+  dragging = null;
+  clearDrop();
+  try {
+    await changeStatus({ id: d.id, no: d.no, to: C.BOARD_MOVES[d.col][rail.dataset.col] });
+  } catch (err) {
+    toast(err.message || String(err));
+    rerender();
+  }
+});
+document.addEventListener('dragend', (ev) => {
+  ev.target.closest?.('[data-drag-id]')?.classList.remove('is-dragging');
+  dragging = null;
+  clearDrop();
+});
 
 // ======================= A02 菜單管理 / A03 品項編輯 =======================
 // 每一列一個「供應中」開關：關掉後顧客看得到但不能點（顯示售完）
@@ -104,13 +149,12 @@ function menuDialog(item) {
   const blank = { zh: '', en: '' };
   const cat = cats.find((c) => c.id === menuState.cat) ?? cats[0];
   const i = item ?? { id: '', price: '', prep_minutes: '', is_available: true, is_sold_out: false, option_groups: [], image_url: null,
-    edit: { name: blank, description: blank, category: cat ? { zh: cat.zh, en: cat.en } : blank } };
+    edit: { name: blank, description: blank, category: cat ? { zh: cat.zh, en: cat.en } : blank, option_groups: [] } };
   const e = i.edit;
   const title = t(isNew ? 'admin.menu.new_title' : 'admin.menu.edit_title');
-  const groups = i.option_groups.map((g) => `<li><b>${esc(g.name)}</b> <span class="mute">${esc(t(g.required ? 'item.pick_one' : 'item.optional'))}</span><br><span class="small">${esc(g.choices.map((c) => `${c.label} +${c.price_delta}`).join(t('fmt.list_sep')))}</span></li>`).join('');
   // 分類可以選現有的，也可以打新的；選了現有的中文名稱會自動帶出英文
   const list = (id, lang) => `<datalist id="${id}">${cats.map((c) => `<option value="${esc(c[lang])}"></option>`).join('')}</datalist>`;
-  return `<form class="dialog" data-form="menu-item" role="dialog" aria-modal="true" aria-label="${esc(title)}" novalidate>
+  return `<form class="dialog dialog--wide" data-form="menu-item" role="dialog" aria-modal="true" aria-label="${esc(title)}" novalidate>
     <input type="hidden" name="id" value="${esc(i.id)}">
     <div class="dialog__head"><h2>${esc(title)}</h2><button type="button" class="icon-btn" data-action="modal-close" aria-label="${esc(t('common.close'))}">${icon('x')}</button></div>
     <div class="field-pair">
@@ -129,7 +173,7 @@ function menuDialog(item) {
     ${C.TextField({ label: inLang('admin.menu.f_desc', 'zh'), name: 'description_zh', value: e.description.zh, textarea: true, extra: 'maxlength="1000"' })}
     ${C.TextField({ label: inLang('admin.menu.f_desc', 'en'), name: 'description_en', value: e.description.en, textarea: true, extra: 'maxlength="1000"' })}
     ${C.PhotoField({ name: 'image_url', label: t('admin.menu.f_photo'), url: i.image_url, kind: 'hero' })}
-    ${groups ? `<div class="field"><span class="field__label">${esc(t('admin.menu.option_groups'))}</span><ul class="rows">${groups}</ul><p class="hint">${esc(t('admin.menu.options_readonly'))}</p></div>` : ''}
+    ${addOnEditor(e.option_groups ?? [])}
     <div class="switch-rows">
       <label class="switch-row"><span>${esc(t('admin.menu.f_available'))}</span><input type="checkbox" class="switch" name="is_available"${availableNow(i) ? ' checked' : ''}></label>
     </div>
@@ -166,7 +210,10 @@ function invalid(form) {
 }
 forms['menu-item'] = async (fd, form) => {
   if (invalid(form)) return;
+  const option_groups = readAddOns(form);
+  if (option_groups.some((g) => !g.choices.length)) { toast(t('admin.og.need_choice')); return; }
   await api.admin.saveMenuItem({
+    option_groups,
     id: fd.get('id') || undefined,
     name: pair(fd, 'name'),
     category: pair(fd, 'category'),
@@ -180,6 +227,82 @@ forms['menu-item'] = async (fd, form) => {
   toast(t('common.saved'));
   rerender();
 };
+
+// ---------- 加點選項編輯（菜單品項視窗裡） ----------
+// 每個群組：名稱（中英）、怎麼選（必選一項／可不選、最多 N 項）、選項（名稱中英＋加價）。
+// 欄位沒有 name，送出時照畫面順序讀（readAddOns）；原本的群組、選項編號保留，新的自動產生
+const newId = (prefix) => prefix + Math.random().toString(36).slice(2, 8);
+const ogInput = (cls, value, label, extra = '') => `<span class="input input--sm"><input class="${cls}" value="${esc(value)}" aria-label="${esc(label)}" ${extra}></span>`;
+
+function choiceRow(c) {
+  return `<li class="og-choice" data-cid="${esc(c.id)}">
+    ${ogInput('oc-zh', c.label.zh, inLang('admin.og.choice', 'zh'), 'required maxlength="100"')}
+    ${ogInput('oc-en', c.label.en, inLang('admin.og.choice', 'en'), 'required maxlength="100"')}
+    ${ogInput('oc-price', c.price_delta ?? 0, t('admin.og.price'), 'type="number" min="0" max="10000" step="1" inputmode="numeric"')}
+    <button type="button" class="icon-btn" data-action="og-remove-choice" aria-label="${esc(t('admin.og.remove_choice'))}">${icon('x')}</button>
+  </li>`;
+}
+
+function groupBlock(g) {
+  const multi = !g.required;
+  return `<div class="og" data-gid="${esc(g.id)}">
+    <div class="og__head">
+      ${ogInput('og-zh', g.name.zh, inLang('admin.og.name', 'zh'), `required maxlength="100" placeholder="${esc(inLang('admin.og.name', 'zh'))}"`)}
+      ${ogInput('og-en', g.name.en, inLang('admin.og.name', 'en'), `required maxlength="100" placeholder="${esc(inLang('admin.og.name', 'en'))}"`)}
+      <button type="button" class="icon-btn" data-action="og-remove-group" aria-label="${esc(t('admin.og.remove_group'))}">${icon('x')}</button>
+    </div>
+    <div class="og__rule">
+      <select class="og-rule" data-input="og-rule" aria-label="${esc(t('admin.og.rule'))}">
+        <option value="one"${multi ? '' : ' selected'}>${esc(t('admin.og.rule_one'))}</option>
+        <option value="multi"${multi ? ' selected' : ''}>${esc(t('admin.og.rule_multi'))}</option>
+      </select>
+      <span class="og__max"${multi ? '' : ' hidden'}>${ogInput('og-max', g.max_select ?? 1, t('admin.og.max'), 'type="number" min="1" max="20" step="1" inputmode="numeric"')}</span>
+    </div>
+    <div class="og__cols" aria-hidden="true"><span>${esc(inLang('admin.og.choice', 'zh'))}</span><span>${esc(inLang('admin.og.choice', 'en'))}</span><span>${esc(t('admin.og.price'))}</span></div>
+    <ul class="og__choices">${g.choices.map(choiceRow).join('')}</ul>
+    <button type="button" class="lnk" data-action="og-add-choice">＋ ${esc(t('admin.og.add_choice'))}</button>
+  </div>`;
+}
+
+function addOnEditor(groups) {
+  return `<fieldset class="og-editor">
+    <legend class="field__label">${esc(t('admin.og.title'))}</legend>
+    <p class="hint">${esc(t('admin.og.hint'))}</p>
+    <div class="og-list">${groups.map(groupBlock).join('')}</div>
+    <button type="button" class="btn btn--sm" data-action="og-add-group">＋ ${esc(t('admin.og.add_group'))}</button>
+  </fieldset>`;
+}
+
+const blankChoice = () => ({ id: newId('c'), label: { zh: '', en: '' }, price_delta: 0 });
+actions['og-add-group'] = (_, el) => {
+  const list = el.closest('.og-editor').querySelector('.og-list');
+  list.insertAdjacentHTML('beforeend', groupBlock({ id: newId('g'), name: { zh: '', en: '' }, required: true, max_select: 1, choices: [blankChoice()] }));
+  list.lastElementChild.querySelector('.og-zh').focus();
+};
+actions['og-remove-group'] = (_, el) => el.closest('.og').remove();
+actions['og-add-choice'] = (_, el) => {
+  const ul = el.closest('.og').querySelector('.og__choices');
+  ul.insertAdjacentHTML('beforeend', choiceRow(blankChoice()));
+  ul.lastElementChild.querySelector('.oc-zh').focus();
+};
+actions['og-remove-choice'] = (_, el) => el.closest('.og-choice').remove();
+inputs['og-rule'] = (el) => { el.closest('.og').querySelector('.og__max').hidden = el.value !== 'multi'; };
+
+function readAddOns(form) {
+  const val = (root, sel) => root.querySelector(sel).value.trim();
+  return [...form.querySelectorAll('.og')].map((g) => {
+    const required = g.querySelector('.og-rule').value === 'one';
+    const choices = [...g.querySelectorAll('.og-choice')].map((c) => ({
+      id: c.dataset.cid, label: { zh: val(c, '.oc-zh'), en: val(c, '.oc-en') },
+      price_delta: Math.max(0, Math.round(Number(c.querySelector('.oc-price').value) || 0)),
+    }));
+    const max = Math.round(Number(g.querySelector('.og-max').value) || 1);
+    return {
+      id: g.dataset.gid, name: { zh: val(g, '.og-zh'), en: val(g, '.og-en') }, required,
+      max_select: required ? 1 : Math.max(1, Math.min(max, choices.length || 1)), choices,
+    };
+  });
+}
 
 // ======================= A04 店家設定 =======================
 const AREAS = [['fengyun', 'home.loc_fengyun'], ['shuimu', 'home.loc_shuimu'], ['snack', 'home.loc_snack'], ['other', 'area.other']];
