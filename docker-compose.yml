@@ -26,9 +26,13 @@ services:
       PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:?set PAYMENT_WEBHOOK_SECRET in .env}
     ports:
       - "127.0.0.1:8000:8000"
+    volumes:
+      # photos uploaded through the app survive rebuilding the container
+      - uploads:/code/uploads
     depends_on:
       db:
         condition: service_healthy
 
 volumes:
   pgdata:
+  uploads:

@@ -1,61 +1,66 @@
 // 前端唯一的資料入口。頁面只呼叫這裡的函式，不直接 fetch。
 //
 // 開機時先問 /api/health：
-// - 有真後端（用 uvicorn 開，網址同一個）→ 登入、註冊、下單、訂單、店家接單看板、接單開關走 js/real/api.js
-// - 沒有（直接開檔案、python -m http.server、claude.ai 上的示範頁）→ 全部用 js/mock/api.js 的資料
-// 餐廳與菜單的內容（清大學餐的真實店家）兩種情況都來自 js/mock/data.js；真後端模式下「是否接單」以後端為準。
-// 等候時間、付款、店家其餘設定、菜單管理、報表、平台管理兩種情況都是假資料。
+// - 有真後端（用 uvicorn 開，網址同一個）→ 全部走 js/real/api.js，資料庫是唯一的資料來源
+// - 沒有（直接開檔案、python -m http.server、claude.ai 上的示範頁）→ 全部用 js/mock/api.js 的假資料
 //
-// 使用教學進行中（練習模式）時，下單、付款、訂單、接單看板一律走假資料：
-// 練習下的單不會送到真的店家，店家練習接單也不會改到真的訂單。
+// 使用教學進行中（練習模式）時，顧客點餐的整個流程（餐廳、菜單、下單、付款、訂單）和店家的接單看板
+// 一律走假資料：練習下的單不會送到真的店家，店家練習接單也不會改到真的訂單。
+// 店家設定、菜單管理、報表在教學裡只是看看，照樣顯示自己店的真實資料。
 import * as mock from './mock/api.js';
 import * as real from './real/api.js';
 import { inPractice } from './store.js';
 
 export const USE_MOCK = !(await real.isAvailable());
+// 顧客點餐流程與接單看板：練習時走假資料
 const pick = (name) => (USE_MOCK || inPractice() ? mock[name] : real[name]);
+// 其餘：只看有沒有真後端
+const data = (name) => (USE_MOCK ? mock[name] : real[name]);
 
 export const api = {
-  // auth（真後端）
-  // 帳號不受練習模式影響，一律照有沒有真後端
-  login: (student_id, password) => (USE_MOCK ? mock : real).login(student_id, password),
-  register: (data) => (USE_MOCK ? mock.login(data.student_id, data.password) : real.register(data)),
-  me: () => (USE_MOCK ? mock : real).getMe(),
+  // 帳號不受練習模式影響
+  login: (student_id, password) => data('login')(student_id, password),
+  register: (d) => (USE_MOCK ? mock.login(d.student_id, d.password) : real.register(d)),
+  changePassword: (current, next) => real.changePassword(current, next),
+  me: () => data('getMe')(),
 
-  // menu：內容來自 mock/data.js；真後端模式下「是否接單」用後端的
+  // 餐廳與菜單
   listRestaurants: (params = {}) => pick('listRestaurants')(params),
   getRestaurant: (id) => pick('getRestaurant')(id),
-  getMenu: (id) => mock.getMenu(id),
-  getWaitEstimate: (id) => mock.getWaitEstimate(id),
+  getMenu: (id) => pick('getMenu')(id),
+  getWaitEstimate: (id) => pick('getWaitEstimate')(id),
 
-  // orders（真後端）
+  // 訂單
   createOrder: (payload) => pick('createOrder')(payload),
   getOrder: (id) => pick('getOrder')(id),
   listMyOrders: () => pick('listMyOrders')(),
 
-  // 上傳圖片：真後端還沒有 POST /api/uploads，先用假資料（存在瀏覽器）
-  uploadImage: (file) => mock.uploadImage(file),
+  // 上傳照片：真後端存成檔案（POST /api/uploads）；假資料模式存在瀏覽器
+  uploadImage: (file) => data('uploadImage')(file),
 
-  // payments（模擬付款；真後端模式只記在這台瀏覽器）
+  // 付款：模擬的；真後端模式也只記在這台瀏覽器
   listPaymentMethods: () => mock.listPaymentMethods(),
   pay: (order_id, method) => pick('pay')(order_id, method),
 
-  // admin（店家）：接單看板與接單開關接真後端，其餘假資料
+  // 店家後台
   admin: {
     listOrders: () => pick('adminListOrders')(),
     updateOrderStatus: (id, status) => pick('adminUpdateOrderStatus')(id, status),
-    getRestaurant: () => pick('adminGetRestaurant')(),
-    updateRestaurant: (patch) => pick('adminUpdateRestaurant')(patch),
-    listMenuItems: () => mock.adminListMenuItems(),
-    saveMenuItem: (item) => mock.adminSaveMenuItem(item),
-    patchMenuItem: (id, patch) => mock.adminPatchMenuItem(id, patch),
-    deleteMenuItem: (id) => mock.adminDeleteMenuItem(id),
-    reports: (range) => mock.adminReports(range),
+    getRestaurant: () => data('adminGetRestaurant')(),
+    updateRestaurant: (patch) => data('adminUpdateRestaurant')(patch),
+    listMenuItems: () => data('adminListMenuItems')(),
+    saveMenuItem: (item) => data('adminSaveMenuItem')(item),
+    patchMenuItem: (id, patch) => data('adminPatchMenuItem')(id, patch),
+    deleteMenuItem: (id) => data('adminDeleteMenuItem')(id),
+    reports: (range) => data('adminReports')(range),
   },
 
-  // 平台管理（role = admin）：假資料
+  // 平台管理（role = admin）
   platform: {
-    listRestaurants: () => mock.platformListRestaurants(),
-    setRestaurantStatus: (id, status) => mock.platformSetRestaurantStatus(id, status),
+    overview: () => data('platformOverview')(),
+    // 開新店（店家資料＋登入帳號）：只有真後端有
+    createVendor: USE_MOCK ? null : (d) => real.platformCreateVendor(d),
+    // 停權／核准：只有假資料有（後端的管理員只看不改店家）
+    setRestaurantStatus: USE_MOCK ? (id, status) => mock.platformSetRestaurantStatus(id, status) : null,
   },
 };

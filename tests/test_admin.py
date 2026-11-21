@@ -216,3 +216,136 @@ def test_only_admins_manage_staff_accounts(
             == 403
         )
         assert client.get("/api/admin/staff", headers=headers).status_code == 403
+
+
+NEW_VENDOR = {
+    "vendor": {
+        "name_zh": "測試咖哩",
+        "name_en": "Test Curry",
+        "area": "shuimu",
+        "location_zh": "水木 2F",
+        "location_en": "Shuimu 2F",
+    },
+    "staff": {**NEW_STAFF, "student_id": "curry01", "email": "curry01@example.com"},
+}
+
+
+def test_admin_opens_a_vendor_with_its_staff_account(
+    client: TestClient, auth_headers: Callable[..., dict[str, str]]
+) -> None:
+    admin = auth_headers("admin01", UserRole.ADMIN)
+
+    created = client.post("/api/admin/vendors", json=NEW_VENDOR, headers=admin)
+    assert created.status_code == 201, created.text
+    vendor, staff = created.json()["vendor"], created.json()["staff"]
+    assert vendor["name"] == {"zh": "測試咖哩", "en": "Test Curry"}
+    assert vendor["area"] == "shuimu"
+    assert staff["role"] == "staff"
+    assert staff["vendor_id"] == vendor["id"]
+    assert staff["must_change_password"] is True
+    assert client.get(f"/api/vendors/{vendor['id']}").status_code == 200
+
+    # The vendor signs in, sets its own password and can build its menu right away
+    login = client.post(
+        "/api/auth/login",
+        json={"student_id": "curry01", "password": NEW_STAFF["password"]},
+    ).json()
+    changed = client.post(
+        "/api/auth/change-password",
+        json={
+            "current_password": NEW_STAFF["password"],
+            "new_password": "curry-pass-789",
+        },
+        headers={"Authorization": f"Bearer {login['access_token']}"},
+    ).json()
+    headers = {"Authorization": f"Bearer {changed['access_token']}"}
+    assert client.get("/api/vendors/me", headers=headers).json()["id"] == vendor["id"]
+    item = client.post(
+        "/api/menu-items",
+        json={
+            "vendor_id": vendor["id"],
+            "item_name_zh": "咖哩飯",
+            "item_name_en": "Curry Rice",
+            "category_zh": "主餐",
+            "category_en": "Mains",
+            "price": 110,
+            "prep_minutes": 7,
+        },
+        headers=headers,
+    )
+    assert item.status_code == 201, item.text
+
+    # It shows up on the admin overview with its login
+    overview = client.get("/api/admin/overview", headers=admin).json()
+    row = next(v for v in overview["vendors"] if v["vendor"]["id"] == vendor["id"])
+    assert row["staff_accounts"] == ["curry01"]
+    assert row["orders_today"] == 0
+
+
+def test_vendor_is_not_created_when_its_login_cannot_be(
+    client: TestClient, auth_headers: Callable[..., dict[str, str]]
+) -> None:
+    admin = auth_headers("admin01", UserRole.ADMIN)
+    auth_headers("curry01")  # the login ID is already taken
+
+    taken = client.post("/api/admin/vendors", json=NEW_VENDOR, headers=admin)
+    assert taken.status_code == 409
+    names = [v["name"]["zh"] for v in client.get("/api/vendors").json()]
+    assert "測試咖哩" not in names
+
+    bad_area = {**NEW_VENDOR, "vendor": {**NEW_VENDOR["vendor"], "area": "moon"}}
+    assert (
+        client.post("/api/admin/vendors", json=bad_area, headers=admin).status_code
+        == 422
+    )
+
+
+def test_overview_counts_todays_orders_and_customers(
+    client: TestClient,
+    auth_headers: Callable[..., dict[str, str]],
+    make_vendor: Callable[..., int],
+) -> None:
+    admin = auth_headers("admin01", UserRole.ADMIN)
+    before = client.get("/api/admin/overview", headers=admin).json()
+
+    vendor_id = make_vendor("Overview Test", "總覽測試")
+    staff = auth_headers("staff01", UserRole.STAFF, vendor_id=vendor_id)
+    item_id = client.post(
+        "/api/menu-items",
+        json={
+            "vendor_id": vendor_id,
+            "item_name_zh": "飯",
+            "item_name_en": "Rice",
+            "category_zh": "主餐",
+            "category_en": "Mains",
+            "price": 10,
+            "prep_minutes": 1,
+        },
+        headers=staff,
+    ).json()["id"]
+    customer = auth_headers("990000001")
+    orders = [
+        client.post(
+            "/api/orders",
+            json={"items": [{"item_id": item_id, "quantity": 1}]},
+            headers=customer,
+        ).json()["id"]
+        for _ in range(2)
+    ]
+    client.post(f"/api/orders/{orders[1]}/cancel", headers=customer)
+
+    after = client.get("/api/admin/overview", headers=admin).json()
+    row = next(v for v in after["vendors"] if v["vendor"]["id"] == vendor_id)
+    assert row["orders_today"] == 1  # the cancelled one is left out
+    assert row["staff_accounts"] == ["staff01"]
+    assert after["orders_today"] == before["orders_today"] + 1
+    assert after["customer_count"] == before["customer_count"] + 1
+
+    for headers in (staff, customer):
+        assert client.get("/api/admin/overview", headers=headers).status_code == 403
+        assert (
+            client.post(
+                "/api/admin/vendors", json=NEW_VENDOR, headers=headers
+            ).status_code
+            == 403
+        )

@@ -3,7 +3,8 @@
 
 ## Running
 
-With Docker (app + Postgres; needs a `.env` with `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`):
+With Docker (app + Postgres; needs a `.env` like `.env.example`, including
+`JWT_SECRET` and `PAYMENT_WEBHOOK_SECRET`, or Compose will not start even the database):
 
 ```bash
 docker compose up --build
@@ -46,3 +47,38 @@ With Docker, run the same commands inside the app container, e.g.
   not change them. The seed links the demo `staff` account to 牛肉先生.
 - A vendor that is not accepting orders (`is_accepting_orders = false`) cannot
   receive new orders (409).
+- The app shows vendors, menus, add-ons and orders from the database only.
+  `frontend/js/mock/data.js` is a separate copy used for the first-login
+  tutorial (practice orders never reach the database) and for opening the
+  frontend without a backend.
+- Each vendor has an `area` (`fengyun`, `shuimu`, `snack` or `other`; the home
+  page tabs) and a `cover_image_url`. Each menu item has a description,
+  `prep_minutes` and `option_groups` (add-ons such as rice amount or toppings).
+  Orders keep the add-ons and note the customer picked, and the price includes
+  the add-ons.
+- Photos uploaded in the app (`POST /api/uploads`, staff and admins) are saved
+  in `uploads/` (a Docker volume) and served at `/uploads/...`.
+
+## Demo: opening a new vendor
+
+1. Sign in as `admin` → 餐廳管理 → 新增店家. Enter the store (names, area,
+   location) and its login (ID, first password, email, phone).
+2. Sign out, sign in with that login. The vendor is asked to set its own
+   password first, then lands on its order board (with a short tutorial that
+   uses practice orders).
+3. 菜單管理 → 新增品項: names, category, price, prep time, description and
+   photo, in Chinese and English. The item appears on the customer side right
+   away; 店家設定 changes the store details and photos.
+
+## Looking at the database
+
+The database runs in the `db` container (Postgres, user/database from `.env`).
+
+- From the terminal:
+  `docker compose exec db psql -U meal -d meal`, then e.g. `\dt` (tables),
+  `select id, name_zh, area from vendors;`, `\q` to quit.
+- With a GUI (TablePlus, DBeaver, pgAdmin, or the VS Code PostgreSQL
+  extension): host `localhost`, port `5433`, user and database `meal`, and the
+  `POSTGRES_PASSWORD` from `.env`.
+- Through the API: http://127.0.0.1:8000/docs lists every endpoint and can
+  call them.

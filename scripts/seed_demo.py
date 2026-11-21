@@ -4,13 +4,12 @@
 
 - Vendors and menu: scripts/nthu_menu.json (real stalls in Fengyun Hall, Shuimu
   Center and the Snack Bar; see the file's _comment for where the data came
-  from). The frontend shows menus from frontend/js/mock/data.js and matches them
-  to these rows by vendor + item name (Chinese) when ordering, so the two files
-  must list the same names.
+  from), with their areas, photos, descriptions and add-on choices. The app
+  shows vendors and menus from the database, so this file is where they start.
 - Accounts: a customer (112012345), a vendor staff account (staff, managing
-  牛肉先生, the vendor the frontend's demo staff account runs) and an admin
-  (admin, with its row in the admins table), all with the password given on
-  the command line.
+  牛肉先生) and an admin (admin, with its row in the admins table), all with
+  the password given on the command line. More vendors and their staff
+  accounts can then be added by the admin in the app.
 
 Running it again adds what is missing and brings vendors and items that are
 already there (matched by Chinese name) up to date with the file. Nothing is
@@ -39,7 +38,7 @@ from app.menu.schemas import MenuItemCreate, VendorCreate
 
 MENU_FILE = Path(__file__).with_name("nthu_menu.json")
 
-# The vendor the demo staff account manages (frontend/js/mock/data.js: USERS.staff -> r1)
+# The vendor the demo staff account manages
 DEMO_STAFF_VENDOR = "牛肉先生"
 
 DEMO_ACCOUNTS = [

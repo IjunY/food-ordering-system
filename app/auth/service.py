@@ -14,6 +14,7 @@ def register_user(
     data: UserRegister,
     role: UserRole = UserRole.CUSTOMER,
     must_change_password: bool = False,
+    vendor_id: int | None = None,
 ) -> User:
     email = data.email.lower()
     if repo.get_by_student_id(session, data.student_id) is not None:
@@ -28,6 +29,7 @@ def register_user(
         password_hash=hash_password(data.password),
         role=role,
         must_change_password=must_change_password,
+        vendor_id=vendor_id,
     )
     try:
         repo.add(session, user)

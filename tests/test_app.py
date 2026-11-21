@@ -49,24 +49,18 @@ def test_menu_file_is_valid() -> None:
     for row in menu["vendors"]:
         vendor = VendorCreate.model_validate(row)
         vendor_names.add(vendor.name_zh)
+        assert vendor.area != "other", row  # every NTHU vendor is on a campus tab
         assert vendor.image_url and (FRONTEND / vendor.image_url).is_file(), row
+        cover = vendor.cover_image_url
+        assert cover and (FRONTEND / cover).is_file(), row
     for row in menu["items"]:
         # items name their vendor; the seed script swaps that for the vendor's id
         assert row["vendor"] in vendor_names, row
         fields = {key: value for key, value in row.items() if key != "vendor"}
+        # also checks the add-on groups (unique ids, required groups take one choice)
         item = MenuItemCreate.model_validate({**fields, "vendor_id": 1})
         assert item.image_url and (FRONTEND / item.image_url).is_file(), row
-
-
-def test_frontend_menu_lists_the_same_names() -> None:
-    # The frontend still shows its own copy of the menu (js/mock/data.js) and finds
-    # the database rows by vendor + item name when ordering, so the names must match.
-    menu = json.loads(Path(MENU_FILE).read_text(encoding="utf-8"))
-    script = (FRONTEND / "js" / "mock" / "data.js").read_text(encoding="utf-8")
-    names = [v["name_zh"] for v in menu["vendors"]]
-    names += [i["item_name_zh"] for i in menu["items"]]
-    missing = [name for name in names if f'"zh": "{name}"' not in script]
-    assert missing == []
+        assert item.description_zh and item.description_en, row
 
 
 def test_seed_is_idempotent(client: TestClient) -> None:

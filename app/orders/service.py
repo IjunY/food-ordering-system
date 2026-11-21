@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -11,6 +12,7 @@ from app.core.errors import (
     NotFoundError,
 )
 from app.menu import repo as menu_repo
+from app.menu.models import MenuItem
 from app.orders import repo
 from app.orders.models import Order, OrderItem
 from app.orders.schemas import OrderCreate, OrderItemRead, OrderRead
@@ -35,14 +37,58 @@ def _can_see(user: User, order: Order) -> bool:
     )
 
 
-def create_order(session: Session, user: User, data: OrderCreate) -> Order:
-    # The same item listed twice becomes one line with the quantities added up
-    quantities: dict[int, int] = {}
-    for line in data.items:
-        quantities[line.item_id] = quantities.get(line.item_id, 0) + line.quantity
+def _pick_options(
+    menu_item: MenuItem, option_ids: Sequence[str]
+) -> list[dict[str, Any]]:
+    """Checks the add-ons picked for one order line against the item's option groups.
 
-    menu_items = {m.id: m for m in menu_repo.get_many(session, quantities)}
-    for item_id in quantities:
+    Returns them as they are stored on the order line (names and prices copied
+    from the menu, in menu order).
+    """
+    groups = {group["id"]: group for group in menu_item.option_groups}
+    picked: dict[str, set[str]] = {}
+    for ref in option_ids:
+        group_id, choice_id = ref.split(":", 1)
+        group = groups.get(group_id)
+        if group is None or all(c["id"] != choice_id for c in group["choices"]):
+            raise BadRequestError(f"'{menu_item.item_name_zh}' has no add-on '{ref}'")
+        picked.setdefault(group_id, set()).add(choice_id)
+
+    options = []
+    for group in menu_item.option_groups:
+        chosen = picked.get(group["id"], set())
+        if group.get("required") and len(chosen) != 1:
+            raise BadRequestError(
+                f"Pick one option for '{group['name']['zh']}' ({menu_item.item_name_zh})"
+            )
+        if len(chosen) > group.get("max_select", 1):
+            raise BadRequestError(
+                f"Too many options for '{group['name']['zh']}' ({menu_item.item_name_zh})"
+            )
+        options += [
+            {
+                "id": f"{group['id']}:{choice['id']}",
+                "group": group["name"],
+                "label": choice["label"],
+                "price_delta": choice.get("price_delta", 0),
+            }
+            for choice in group["choices"]
+            if choice["id"] in chosen
+        ]
+    return options
+
+
+def create_order(session: Session, user: User, data: OrderCreate) -> Order:
+    # The same item with the same add-ons and note, listed twice, becomes one line
+    # with the quantities added up
+    quantities: dict[tuple[int, tuple[str, ...], str], int] = {}
+    for line in data.items:
+        key = (line.item_id, tuple(sorted(set(line.option_ids))), line.note)
+        quantities[key] = quantities.get(key, 0) + line.quantity
+
+    item_ids = {item_id for item_id, _, _ in quantities}
+    menu_items = {m.id: m for m in menu_repo.get_many(session, item_ids)}
+    for item_id in item_ids:
         menu_item = menu_items.get(item_id)
         if menu_item is None:
             raise NotFoundError(f"Menu item {item_id} does not exist")
@@ -58,17 +104,22 @@ def create_order(session: Session, user: User, data: OrderCreate) -> Order:
     if vendor is None or not vendor.is_accepting_orders:
         raise ConflictError("This vendor is not taking orders right now")
 
-    order = Order(
-        created_by=user.student_id,
-        vendor_id=vendor_id,
-        items=[
-            # unit_price is copied now so later menu price changes do not alter this order
+    lines = []
+    for (item_id, option_ids, note), quantity in quantities.items():
+        menu_item = menu_items[item_id]
+        options = _pick_options(menu_item, option_ids)
+        # unit_price is copied now so later menu price changes do not alter this order
+        unit_price = menu_item.price + sum(o["price_delta"] for o in options)
+        lines.append(
             OrderItem(
-                item_id=item_id, quantity=quantity, unit_price=menu_items[item_id].price
+                item_id=item_id,
+                quantity=quantity,
+                unit_price=unit_price,
+                options=options,
+                note=note,
             )
-            for item_id, quantity in quantities.items()
-        ],
-    )
+        )
+    order = Order(created_by=user.student_id, vendor_id=vendor_id, items=lines)
     repo.add(session, order)
     session.commit()
     return order
@@ -150,6 +201,15 @@ def cancel_order(session: Session, user: User, order_id: int) -> Order:
     return _change_status(session, order, OrderStatus.CANCELLED)
 
 
+def _options_label(options: list[dict[str, Any]]) -> dict[str, str] | None:
+    if not options:
+        return None
+    return {
+        "zh": "、".join(option["label"]["zh"] for option in options),
+        "en": ", ".join(option["label"]["en"] for option in options),
+    }
+
+
 def to_read(session: Session, orders: Sequence[Order]) -> list[OrderRead]:
     """Builds the API response, adding item names, vendor and totals from the menu."""
     item_ids = {item.item_id for order in orders for item in order.items}
@@ -167,6 +227,9 @@ def to_read(session: Session, orders: Sequence[Order]) -> list[OrderRead]:
                 quantity=item.quantity,
                 unit_price=item.unit_price,
                 subtotal=item.quantity * item.unit_price,
+                option_ids=[option["id"] for option in item.options],
+                options_label=_options_label(item.options),
+                note=item.note,
             )
             for item in sorted(order.items, key=lambda i: i.id)
         ]

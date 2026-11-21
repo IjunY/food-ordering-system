@@ -29,6 +29,8 @@ FROM python:3.12-slim
 RUN groupadd --system app && useradd --system --gid app --no-create-home app
 
 COPY --from=builder /code /code
+# Uploaded photos go here (a volume in docker-compose.yml); the app user must be able to write it
+RUN mkdir -p /code/uploads && chown app:app /code/uploads
 ENV PATH="/code/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1

@@ -19,19 +19,19 @@ router = APIRouter(tags=["menu"])
 
 # ---------- Public: anyone (admins included) can browse vendors and the menu ----------
 @router.get("/vendors", response_model=list[VendorRead])
-def list_vendors(session: DbSession) -> Sequence[Vendor]:
-    return service.list_vendors(session)
+def list_vendors(session: DbSession) -> list[VendorRead]:
+    return service.to_read(session, service.list_vendors(session))
 
 
 # Declared before /vendors/{vendor_id} so "me" is not read as an id
 @router.get("/vendors/me", response_model=VendorRead)
-def get_my_vendor(session: DbSession, staff: StaffUser) -> Vendor:
-    return service.get_own_vendor(session, staff)
+def get_my_vendor(session: DbSession, staff: StaffUser) -> VendorRead:
+    return service.to_read(session, [service.get_own_vendor(session, staff)])[0]
 
 
 @router.get("/vendors/{vendor_id}", response_model=VendorRead)
-def get_vendor(vendor_id: int, session: DbSession) -> Vendor:
-    return service.get_vendor(session, vendor_id)
+def get_vendor(vendor_id: int, session: DbSession) -> VendorRead:
+    return service.to_read(session, [service.get_vendor(session, vendor_id)])[0]
 
 
 @router.get("/menu-items", response_model=list[MenuItemRead])

@@ -395,6 +395,8 @@ button.setrow { width: 100%; text-align: left; }
 .dialog__head h2 { flex: 1; font-size: 20px; }
 .dialog__head .icon-btn { margin: -8px -10px -8px 0; }
 .dialog__foot { display: flex; align-items: center; gap: 8px; padding-top: 4px; }
+.dialog__sub { margin-top: 4px; font-size: 15px; font-weight: 700; }
+.dialog__sub + .hint { margin-top: -10px; }
 .grow { flex: 1 1 auto; min-width: 0; }
 .rows { display: grid; }
 .rows > li { padding: 10px 0; border-bottom: 1px solid var(--hairline); font-size: 15px; }

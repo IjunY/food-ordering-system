@@ -1,9 +1,11 @@
 from collections.abc import Iterable, Sequence
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.menu.models import MenuItem, Vendor
+from app.orders.models import Order
+from app.orders.states import OrderStatus
 
 
 # ---------- Vendors ----------
@@ -20,6 +22,22 @@ def get_vendors(session: Session, vendor_ids: Iterable[int]) -> Sequence[Vendor]
     if not ids:
         return []
     return session.scalars(select(Vendor).where(Vendor.id.in_(ids))).all()
+
+
+def queue_counts(session: Session, vendor_ids: Iterable[int]) -> dict[int, int]:
+    """vendor id -> orders still waiting there (confirming or preparing)."""
+    ids = list(vendor_ids)
+    if not ids:
+        return {}
+    rows = session.execute(
+        select(Order.vendor_id, func.count())
+        .where(
+            Order.vendor_id.in_(ids),
+            Order.status.in_([OrderStatus.CONFIRMING, OrderStatus.PREPARING]),
+        )
+        .group_by(Order.vendor_id)
+    ).all()
+    return {vendor_id: count for vendor_id, count in rows}
 
 
 def add_vendor(session: Session, vendor: Vendor) -> Vendor:

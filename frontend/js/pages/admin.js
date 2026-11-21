@@ -1,6 +1,6 @@
 // 店家端與平台管理畫面 A01–A06（紫色取餐券版；桌機／平板優先）
 import { api } from '../api.js';
-import { t } from '../i18n.js';
+import { t, getLang } from '../i18n.js';
 import { actions, forms, inputs, rerender, poll, toast, openModal, closeModal, confirmDialog } from '../router.js';
 import { icon } from '../icons.js';
 import * as C from '../components.js';
@@ -61,12 +61,18 @@ actions['toggle-accepting'] = async () => {
 };
 
 // ======================= A02 菜單管理 / A03 品項編輯 =======================
+// 每一列一個「供應中」開關：關掉後顧客看得到但不能點（顯示售完）
 const menuState = { cat: 'all', data: null };
+const availableNow = (i) => i.is_available && !i.is_sold_out;
+// 兩種語言的欄位標籤：「品名（中文）」「品名（英文）」
+const inLang = (key, lang) => t(key) + t('fmt.paren', { x: t('field.' + lang) });
+
 export async function adminMenu() {
   const data = await api.admin.listMenuItems();
   menuState.data = data;
+  if (menuState.cat !== 'all' && !data.categories.some((c) => c.id === menuState.cat)) menuState.cat = 'all';
   const items = menuState.cat === 'all' ? data.items : data.items.filter((i) => i.category_id === menuState.cat);
-  const soldOut = data.items.filter((i) => i.is_sold_out).length;
+  const soldOut = data.items.filter((i) => !availableNow(i)).length;
   const tabs = [{ id: 'all', name: t('home.loc_all') }, ...data.categories];
   const L = (k) => esc(t(k));
   const rows = items.map((i) => `<tr>
@@ -74,49 +80,58 @@ export async function adminMenu() {
       <td data-label="${L('admin.menu.col_category')}" class="mute">${esc(i.category_name)}</td>
       <td data-label="${L('admin.menu.col_price')}" class="num">${unit(i.price)}</td>
       <td data-label="${L('admin.menu.col_prep')}" class="num">${esc(t('unit.minutes', { n: i.prep_minutes }))}</td>
-      <td data-label="${L('admin.menu.col_listed')}">${C.Toggle({ on: i.is_available, action: 'menu-toggle', data: { id: i.id, field: 'is_available' }, label: `${i.name} ${t('admin.menu.col_listed')}` })}</td>
-      <td data-label="${L('admin.menu.col_sold_out')}">${C.Toggle({ on: i.is_sold_out, action: 'menu-toggle', data: { id: i.id, field: 'is_sold_out' }, label: `${i.name} ${t('admin.menu.col_sold_out')}` })}</td>
+      <td data-label="${L('admin.menu.col_available')}">${C.Toggle({ on: availableNow(i), action: 'menu-toggle', data: { id: i.id }, label: `${i.name} ${t('admin.menu.col_available')}` })}</td>
       <td class="act">${C.Button({ label: t('common.edit'), size: 'sm', action: 'menu-edit', data: { id: i.id } })}</td>
     </tr>`).join('');
   return layout('menu', `
     ${pageHeader(t('admin.nav.menu'), t('admin.menu.sub', { n: data.items.length, s: soldOut }), C.Button({ label: t('admin.menu.new'), style: 'primary', size: 'sm', action: 'menu-new' }))}
-    ${C.Tabs(tabs.map((c) => ({ name: c.name, selected: c.id === menuState.cat, action: 'admin-menu-cat', data: { cat: c.id } })), { label: t('admin.menu.col_category') })}
+    ${data.categories.length > 1 ? C.Tabs(tabs.map((c) => ({ name: c.name, selected: c.id === menuState.cat, action: 'admin-menu-cat', data: { cat: c.id } })), { label: t('admin.menu.col_category') }) : ''}
     ${items.length ? `<div class="table-wrap"><table class="data data--stack">
-      <thead><tr><th scope="col">${L('admin.menu.col_item')}</th><th scope="col">${L('admin.menu.col_category')}</th><th scope="col" class="num">${L('admin.menu.col_price')}</th><th scope="col" class="num">${L('admin.menu.col_prep')}</th><th scope="col">${L('admin.menu.col_listed')}</th><th scope="col">${L('admin.menu.col_sold_out')}</th><th scope="col" class="act"><span class="visually-hidden">${L('admin.menu.col_actions')}</span></th></tr></thead>
+      <thead><tr><th scope="col">${L('admin.menu.col_item')}</th><th scope="col">${L('admin.menu.col_category')}</th><th scope="col" class="num">${L('admin.menu.col_price')}</th><th scope="col" class="num">${L('admin.menu.col_prep')}</th><th scope="col">${L('admin.menu.col_available')}</th><th scope="col" class="act"><span class="visually-hidden">${L('admin.menu.col_actions')}</span></th></tr></thead>
       <tbody>${rows}</tbody></table></div>`
       : `<div class="state"><p>${esc(t('menu.empty'))}</p>${C.Button({ label: t('admin.menu.new'), style: 'primary', size: 'sm', action: 'menu-new' })}</div>`}`);
 }
 actions['admin-menu-cat'] = (d) => { menuState.cat = d.cat; rerender(); };
 actions['menu-toggle'] = async (d) => {
   const item = menuState.data.items.find((i) => i.id === d.id);
-  await api.admin.patchMenuItem(d.id, { [d.field]: !item[d.field] });
+  await api.admin.patchMenuItem(d.id, { is_available: !availableNow(item) });
   rerender();
 };
 
 function menuDialog(item) {
   const cats = menuState.data.categories;
   const isNew = !item;
-  const i = item ?? { id: '', name: '', description: '', price: '', prep_minutes: '', category_id: menuState.cat !== 'all' ? menuState.cat : cats[0]?.id, is_available: true, is_sold_out: false, option_groups: [] };
+  const blank = { zh: '', en: '' };
+  const cat = cats.find((c) => c.id === menuState.cat) ?? cats[0];
+  const i = item ?? { id: '', price: '', prep_minutes: '', is_available: true, is_sold_out: false, option_groups: [], image_url: null,
+    edit: { name: blank, description: blank, category: cat ? { zh: cat.zh, en: cat.en } : blank } };
+  const e = i.edit;
   const title = t(isNew ? 'admin.menu.new_title' : 'admin.menu.edit_title');
   const groups = i.option_groups.map((g) => `<li><b>${esc(g.name)}</b> <span class="mute">${esc(t(g.required ? 'item.pick_one' : 'item.optional'))}</span><br><span class="small">${esc(g.choices.map((c) => `${c.label} +${c.price_delta}`).join(t('fmt.list_sep')))}</span></li>`).join('');
+  // 分類可以選現有的，也可以打新的；選了現有的中文名稱會自動帶出英文
+  const list = (id, lang) => `<datalist id="${id}">${cats.map((c) => `<option value="${esc(c[lang])}"></option>`).join('')}</datalist>`;
   return `<form class="dialog" data-form="menu-item" role="dialog" aria-modal="true" aria-label="${esc(title)}" novalidate>
     <input type="hidden" name="id" value="${esc(i.id)}">
     <div class="dialog__head"><h2>${esc(title)}</h2><button type="button" class="icon-btn" data-action="modal-close" aria-label="${esc(t('common.close'))}">${icon('x')}</button></div>
     <div class="field-pair">
-      ${C.TextField({ label: t('admin.menu.f_name'), name: 'name', value: i.name, required: true })}
-      <div class="field"><label for="f-category_id">${esc(t('admin.menu.col_category'))}</label>
-        <select id="f-category_id" name="category_id">${cats.map((c) => `<option value="${esc(c.id)}"${c.id === i.category_id ? ' selected' : ''}>${esc(c.name)}</option>`).join('')}</select></div>
+      ${C.TextField({ label: inLang('admin.menu.f_name', 'zh'), name: 'name_zh', value: e.name.zh, required: true, extra: 'maxlength="100"' })}
+      ${C.TextField({ label: inLang('admin.menu.f_name', 'en'), name: 'name_en', value: e.name.en, required: true, extra: 'maxlength="100"' })}
     </div>
     <div class="field-pair">
-      ${C.TextField({ label: t('admin.menu.f_price'), name: 'price', type: 'number', value: i.price, required: true, extra: 'min="0" step="1" inputmode="numeric"' })}
-      ${C.TextField({ label: t('admin.menu.f_prep'), name: 'prep_minutes', type: 'number', value: i.prep_minutes, required: true, extra: 'min="0" step="1" inputmode="numeric"' })}
+      ${C.TextField({ label: inLang('admin.menu.col_category', 'zh'), name: 'category_zh', value: e.category.zh, required: true, input: 'category-zh', extra: 'maxlength="100" list="cats-zh" autocomplete="off"' })}
+      ${C.TextField({ label: inLang('admin.menu.col_category', 'en'), name: 'category_en', value: e.category.en, required: true, extra: 'maxlength="100" list="cats-en" autocomplete="off"' })}
     </div>
-    ${C.TextField({ label: t('admin.menu.f_desc'), name: 'description', value: i.description, textarea: true })}
+    ${list('cats-zh', 'zh')}${list('cats-en', 'en')}
+    <div class="field-pair">
+      ${C.TextField({ label: t('admin.menu.f_price'), name: 'price', type: 'number', value: i.price, required: true, extra: 'min="0" max="100000" step="1" inputmode="numeric"' })}
+      ${C.TextField({ label: t('admin.menu.f_prep'), name: 'prep_minutes', type: 'number', value: i.prep_minutes, required: true, extra: 'min="0" max="180" step="1" inputmode="numeric"' })}
+    </div>
+    ${C.TextField({ label: inLang('admin.menu.f_desc', 'zh'), name: 'description_zh', value: e.description.zh, textarea: true, extra: 'maxlength="1000"' })}
+    ${C.TextField({ label: inLang('admin.menu.f_desc', 'en'), name: 'description_en', value: e.description.en, textarea: true, extra: 'maxlength="1000"' })}
     ${C.PhotoField({ name: 'image_url', label: t('admin.menu.f_photo'), url: i.image_url, kind: 'hero' })}
-    ${groups ? `<div class="field"><span class="field__label">${esc(t('admin.menu.option_groups'))}</span><ul class="rows">${groups}</ul></div>` : ''}
+    ${groups ? `<div class="field"><span class="field__label">${esc(t('admin.menu.option_groups'))}</span><ul class="rows">${groups}</ul><p class="hint">${esc(t('admin.menu.options_readonly'))}</p></div>` : ''}
     <div class="switch-rows">
-      <label class="switch-row"><span>${esc(t('admin.menu.f_listed'))}</span><input type="checkbox" class="switch" name="is_available"${i.is_available ? ' checked' : ''}></label>
-      <label class="switch-row"><span>${esc(t('admin.menu.f_sold_out'))}</span><input type="checkbox" class="switch" name="is_sold_out"${i.is_sold_out ? ' checked' : ''}></label>
+      <label class="switch-row"><span>${esc(t('admin.menu.f_available'))}</span><input type="checkbox" class="switch" name="is_available"${availableNow(i) ? ' checked' : ''}></label>
     </div>
     <div class="dialog__foot">
       ${isNew ? '' : C.Button({ label: t('admin.menu.delete'), style: 'danger', size: 'sm', action: 'menu-delete', data: { id: i.id } })}
@@ -126,8 +141,13 @@ function menuDialog(item) {
     </div>
   </form>`;
 }
-actions['menu-new'] = () => { openModal(menuDialog(null)); document.getElementById('f-name')?.focus(); };
-actions['menu-edit'] = (d) => { openModal(menuDialog(menuState.data.items.find((i) => i.id === d.id))); document.getElementById('f-name')?.focus(); };
+inputs['category-zh'] = (el) => {
+  const cat = menuState.data?.categories.find((c) => c.zh === el.value.trim());
+  const other = el.form?.querySelector('[name=category_en]');
+  if (cat && other && !other.value.trim()) other.value = cat.en;
+};
+actions['menu-new'] = () => { openModal(menuDialog(null)); document.getElementById('f-name_zh')?.focus(); };
+actions['menu-edit'] = (d) => { openModal(menuDialog(menuState.data.items.find((i) => i.id === d.id))); document.getElementById('f-name_zh')?.focus(); };
 actions['menu-delete'] = async (d) => {
   if (!(await confirmDialog(t('admin.menu.delete_confirm'), { danger: true }))) return;
   await api.admin.deleteMenuItem(d.id);
@@ -135,17 +155,25 @@ actions['menu-delete'] = async (d) => {
   toast(t('admin.menu.deleted'));
   rerender();
 };
+const pair = (fd, name) => ({ zh: String(fd.get(`${name}_zh`) || '').trim(), en: String(fd.get(`${name}_en`) || '').trim() });
+function invalid(form) {
+  // 空白也算沒填
+  form.querySelectorAll('[required]').forEach((el) => el.setCustomValidity(el.value.trim() ? '' : t('form.required')));
+  if (form.checkValidity()) return false;
+  form.reportValidity();
+  form.querySelector(':invalid')?.focus();
+  return true;
+}
 forms['menu-item'] = async (fd, form) => {
-  if (!form.checkValidity()) { form.reportValidity(); form.querySelector(':invalid')?.focus(); return; }
+  if (invalid(form)) return;
   await api.admin.saveMenuItem({
     id: fd.get('id') || undefined,
-    name: String(fd.get('name')).trim(),
-    description: String(fd.get('description') || '').trim(),
-    category_id: fd.get('category_id'),
+    name: pair(fd, 'name'),
+    category: pair(fd, 'category'),
+    description: pair(fd, 'description'),
     price: Number(fd.get('price')),
     prep_minutes: Number(fd.get('prep_minutes')),
     is_available: fd.get('is_available') === 'on',
-    is_sold_out: fd.get('is_sold_out') === 'on',
     image_url: fd.get('image_url') || null,
   });
   closeModal();
@@ -154,41 +182,42 @@ forms['menu-item'] = async (fd, form) => {
 };
 
 // ======================= A04 店家設定 =======================
+const AREAS = [['fengyun', 'home.loc_fengyun'], ['shuimu', 'home.loc_shuimu'], ['snack', 'home.loc_snack'], ['other', 'area.other']];
+const areaSelect = (value, name = 'area') => `<div class="field"><label for="f-${name}">${esc(t('admin.settings.f_area'))}</label>
+  <select id="f-${name}" name="${name}">${AREAS.map(([k, key]) => `<option value="${k}"${k === value ? ' selected' : ''}>${esc(t(key))}</option>`).join('')}</select></div>`;
+// 一組中英文欄位，並排
+const langPair = (key, name, value, opts = {}) => `<div class="field-pair">
+  ${C.TextField({ label: inLang(key, 'zh'), name: `${name}_zh`, value: value?.zh ?? '', ...opts })}
+  ${C.TextField({ label: inLang(key, 'en'), name: `${name}_en`, value: value?.en ?? '', ...opts })}
+</div>`;
+
 export async function adminSettings() {
   const r = await api.admin.getRestaurant();
-  const switchRow = (name, title, checked) => `<label class="switch-row"><span>${esc(title)}</span><input type="checkbox" class="switch" name="${name}"${checked ? ' checked' : ''}></label>`;
+  const e = r.edit;
   return layout('settings', `<form class="settings-form" data-form="settings" novalidate>
     ${pageHeader(t('admin.nav.settings'), '', C.Button({ label: t('common.save'), style: 'primary', size: 'sm', type: 'submit' }))}
     <div class="settings">
       <div class="settings__col">
       <section class="panel">
         <h2>${esc(t('admin.settings.profile'))}</h2>
-        ${C.TextField({ label: t('admin.settings.f_name'), name: 'name', value: r.name, required: true, extra: 'autocomplete="organization"' })}
-        ${C.TextField({ label: t('admin.settings.f_location'), name: 'location', value: r.location, required: true })}
-        ${C.TextField({ label: t('admin.settings.f_desc'), name: 'description', value: r.description, textarea: true })}
-        ${C.TextField({ label: t('admin.settings.f_phone'), name: 'phone', value: r.phone, type: 'tel', extra: 'autocomplete="tel" inputmode="tel"' })}
-      </section>
-      <section class="panel">
-        <h2>${esc(t('admin.settings.photos'))}</h2>
-        ${C.PhotoField({ name: 'cover_image_url', label: t('admin.settings.cover'), url: r.cover_image_url, kind: 'cover' })}
-        ${C.PhotoField({ name: 'image_url', label: t('admin.settings.thumb'), url: r.image_url, kind: 'thumb' })}
+        ${langPair('admin.settings.f_name', 'name', e.name, { required: true, extra: 'maxlength="100" autocomplete="off"' })}
+        ${areaSelect(e.area)}
+        ${langPair('admin.settings.f_location', 'location', e.location, { extra: 'maxlength="100"' })}
+        ${langPair('admin.settings.hours', 'opening_hours', e.opening_hours, { extra: 'maxlength="100"' })}
+        ${C.TextField({ label: inLang('admin.settings.f_desc', 'zh'), name: 'description_zh', value: e.description.zh, textarea: true })}
+        ${C.TextField({ label: inLang('admin.settings.f_desc', 'en'), name: 'description_en', value: e.description.en, textarea: true })}
       </section>
       </div>
       <div class="settings__col">
         <section class="panel">
-          <h2>${esc(t('admin.settings.hours'))}</h2>
-          ${r.opening_hours.length ? `<dl class="hours">${r.opening_hours.map((h) => `<dt>${esc(h.days)}</dt><dd>${esc(h.hours)}</dd>`).join('')}</dl>` : `<p class="mute">${esc(r.opening_hours_label)}</p>`}
+          <h2>${esc(t('admin.settings.photos'))}</h2>
+          ${C.PhotoField({ name: 'cover_image_url', label: t('admin.settings.cover'), url: r.cover_image_url, kind: 'cover' })}
+          ${C.PhotoField({ name: 'image_url', label: t('admin.settings.thumb'), url: r.image_url, kind: 'thumb' })}
         </section>
         <section class="panel">
           <h2>${esc(t('admin.settings.orders'))}</h2>
           <div class="switch-rows">
-            ${switchRow('is_accepting_orders', t('admin.settings.accept_online'), r.is_accepting_orders)}
-            ${switchRow('allow_cash_on_pickup', t('admin.settings.cash'), r.allow_cash_on_pickup)}
-            ${switchRow('allow_scheduled_pickup', t('admin.settings.scheduled'), r.allow_scheduled_pickup)}
-          </div>
-          <div class="field-pair">
-            ${C.TextField({ label: t('admin.settings.capacity'), name: 'concurrent_capacity', type: 'number', value: r.concurrent_capacity, extra: 'min="1" step="1" inputmode="numeric"' })}
-            ${C.TextField({ label: t('admin.settings.hold'), name: 'pickup_hold_minutes', type: 'number', value: r.pickup_hold_minutes, extra: 'min="5" step="5" inputmode="numeric"' })}
+            <label class="switch-row"><span>${esc(t('admin.settings.accept_online'))}</span><input type="checkbox" class="switch" name="is_accepting_orders"${r.is_accepting_orders ? ' checked' : ''}></label>
           </div>
         </section>
       </div>
@@ -196,13 +225,11 @@ export async function adminSettings() {
   </form>`);
 }
 forms.settings = async (fd, form) => {
-  if (!form.checkValidity()) { form.reportValidity(); form.querySelector(':invalid')?.focus(); return; }
+  if (invalid(form)) return;
   await api.admin.updateRestaurant({
-    name: String(fd.get('name')).trim(), location: String(fd.get('location')).trim(),
-    description: String(fd.get('description') || '').trim(), phone: String(fd.get('phone') || '').trim(),
-    is_accepting_orders: fd.get('is_accepting_orders') === 'on', allow_cash_on_pickup: fd.get('allow_cash_on_pickup') === 'on',
-    allow_scheduled_pickup: fd.get('allow_scheduled_pickup') === 'on',
-    concurrent_capacity: Number(fd.get('concurrent_capacity')), pickup_hold_minutes: Number(fd.get('pickup_hold_minutes')),
+    name: pair(fd, 'name'), location: pair(fd, 'location'), opening_hours: pair(fd, 'opening_hours'),
+    description: pair(fd, 'description'), area: fd.get('area'),
+    is_accepting_orders: fd.get('is_accepting_orders') === 'on',
     cover_image_url: fd.get('cover_image_url') || null, image_url: fd.get('image_url') || null,
   });
   toast(t('common.saved'));
@@ -228,6 +255,8 @@ function barChart(slots) {
 export async function adminReports() {
   const { summary: s, orders_by_slot, top_items } = await api.admin.reports(reportState.range);
   const sign = (n) => (n > 0 ? `+${n}` : `${n}`.replace('-', '−'));
+  // 算不出來的數字（例如沒有前一段的訂單可比）顯示「—」，比較那一行留空
+  const vsPct = (d) => (d == null ? '' : `${vs} ${sign(d)}%`);
   const ranges = [['today', 'reports.today'], ['week', 'reports.week'], ['month', 'reports.month']];
   const vs = t('reports.vs_' + reportState.range);
   const fig = (label, value, delta) => `<div><dt>${esc(label)}</dt><dd>${esc(value)}</dd><dd class="delta">${esc(delta)}</dd></div>`;
@@ -235,51 +264,97 @@ export async function adminReports() {
   return layout('reports', `
     ${pageHeader(t('admin.nav.reports'), '', seg)}
     <dl class="figures">
-      ${fig(t('reports.orders'), s.order_count.toLocaleString('en-US'), `${vs} ${sign(s.delta_orders)}%`)}
-      ${fig(t('reports.revenue'), money(s.revenue), `${vs} ${sign(s.delta_revenue)}%`)}
-      ${fig(t('reports.avg_wait'), t('unit.minutes', { n: s.avg_wait_minutes }), `${vs} ${t('unit.minutes', { n: sign(s.delta_wait) })}`)}
-      ${fig(t('reports.cancel_rate'), `${s.cancel_rate}%`, `${vs} ${sign(s.delta_cancel)}%`)}
+      ${fig(t('reports.orders'), s.order_count.toLocaleString('en-US'), vsPct(s.delta_orders))}
+      ${fig(t('reports.revenue'), money(s.revenue), vsPct(s.delta_revenue))}
+      ${fig(t('reports.avg_wait'), s.avg_wait_minutes == null ? '—' : t('unit.minutes', { n: s.avg_wait_minutes }), s.delta_wait == null ? '' : `${vs} ${t('unit.minutes', { n: sign(s.delta_wait) })}`)}
+      ${fig(t('reports.cancel_rate'), `${s.cancel_rate}%`, vsPct(s.delta_cancel))}
     </dl>
     <div class="reports-row">
       <section class="panel"><h2>${esc(t('reports.chart_title'))}</h2>${barChart(orders_by_slot)}</section>
       <section class="panel"><h2>${esc(t('reports.top_items'))}</h2>
         <table class="data"><thead><tr><th scope="col" class="num">#</th><th scope="col">${esc(t('admin.menu.col_item'))}</th><th scope="col" class="num">${esc(t('cart.qty'))}</th><th scope="col" class="num">${esc(t('reports.revenue'))}</th></tr></thead>
-        <tbody>${top_items.map((x, k) => `<tr><td class="num">${k + 1}</td><td>${esc(x.name)}</td><td class="num">${esc(x.qty)}</td><td class="num">${money(x.revenue)}</td></tr>`).join('')}</tbody></table>
+        <tbody>${top_items.map((x, k) => `<tr><td class="num">${k + 1}</td><td>${esc(x.name)}</td><td class="num">${esc(x.qty)}</td><td class="num">${money(x.revenue)}</td></tr>`).join('') || `<tr><td colspan="4" class="mute">${esc(t('reports.none'))}</td></tr>`}</tbody></table>
       </section>
     </div>`);
 }
 actions['report-range'] = (d) => { reportState.range = d.range; rerender(); };
 
 // ======================= A06 平台管理 =======================
+// 真後端：列出所有店家、登入帳號與今日訂單，可以開新店（店家資料＋登入帳號一起建立）。
+// 管理員只看不改店家，所以沒有停權按鈕；假資料模式才有停權／核准的示範。
 export async function adminPlatform() {
-  const { stats, restaurants } = await api.platform.listRestaurants();
+  const { stats, restaurants } = await api.platform.overview();
   const L = (k) => esc(t(k));
+  const moderate = !!api.platform.setRestaurantStatus;
   const rows = restaurants.map((r) => {
-    const [key, cls] = C.restaurantStatus(r);
+    const [key, cls] = r.status === 'active' && r.is_accepting_orders === false ? ['restaurant.paused', 'chip--off'] : C.restaurantStatus(r);
     const act = r.status === 'pending' ? ['admin.platform.approve', 'active', 'primary'] : r.status === 'suspended' ? ['admin.platform.restore', 'active', 'secondary'] : ['admin.platform.suspend', 'suspended', 'danger'];
     return `<tr>
       <td data-label="${L('admin.platform.col_name')}"><span class="cell-media">${C.Photo({ url: r.image_url, kind: 'mini' })}<span>${esc(r.name)}</span></span></td>
       <td data-label="${L('admin.settings.f_location')}" class="mute">${esc(r.location)}</td>
-      <td data-label="${L('admin.platform.col_account')}">${esc(r.owner_account)}</td>
+      <td data-label="${L('admin.platform.col_account')}">${esc(r.owner_account || '—')}</td>
       <td data-label="${L('admin.platform.col_status')}"><span class="chip ${cls}">${esc(t(key))}</span></td>
       <td data-label="${L('admin.platform.col_orders')}" class="num">${r.status === 'pending' ? '' : esc(r.today_order_count)}</td>
-      <td class="act">${C.Button({ label: t(act[0]), style: act[2], size: 'sm', action: 'restaurant-status', data: { id: r.id, to: act[1] } })}</td>
+      ${moderate ? `<td class="act">${C.Button({ label: t(act[0]), style: act[2], size: 'sm', action: 'restaurant-status', data: { id: r.id, to: act[1] } })}</td>` : ''}
     </tr>`;
   }).join('');
+  const sub = (text) => (text ? `<dd class="delta">${esc(text)}</dd>` : '');
+  const create = api.platform.createVendor ? C.Button({ label: t('admin.platform.new'), style: 'primary', size: 'sm', action: 'vendor-new' }) : '';
   return layout('platform', `
-    ${pageHeader(t('admin.platform.title'))}
+    ${pageHeader(t('admin.platform.title'), '', create)}
     <dl class="figures">
-      <div><dt>${L('admin.platform.restaurants')}</dt><dd>${esc(t('admin.platform.count', { n: stats.restaurant_count }))}</dd><dd class="delta">${esc(t('admin.platform.pending_n', { n: stats.pending_count }))}</dd></div>
-      <div><dt>${L('admin.platform.orders_today')}</dt><dd>${esc(stats.orders_today.toLocaleString('en-US'))}</dd><dd class="delta">${esc(`${t('reports.vs_today')} +${stats.delta_orders}%`)}</dd></div>
-      <div><dt>${L('admin.platform.users')}</dt><dd>${esc(stats.users.toLocaleString('en-US'))}</dd><dd class="delta">${esc(t('admin.platform.new_users', { n: stats.new_users_week }))}</dd></div>
+      <div><dt>${L('admin.platform.restaurants')}</dt><dd>${esc(t('admin.platform.count', { n: stats.restaurant_count }))}</dd>${sub(stats.pending_count != null ? t('admin.platform.pending_n', { n: stats.pending_count }) : t('admin.platform.accepting_n', { n: stats.accepting_count }))}</div>
+      <div><dt>${L('admin.platform.orders_today')}</dt><dd>${esc(stats.orders_today.toLocaleString('en-US'))}</dd>${sub(stats.delta_orders != null ? `${t('reports.vs_today')} +${stats.delta_orders}%` : '')}</div>
+      <div><dt>${L(moderate ? 'admin.platform.users' : 'admin.platform.customers')}</dt><dd>${esc(stats.users.toLocaleString('en-US'))}</dd>${sub(stats.new_users_week != null ? t('admin.platform.new_users', { n: stats.new_users_week }) : '')}</div>
     </dl>
     <div class="table-wrap"><table class="data data--stack">
-      <thead><tr><th scope="col">${L('admin.platform.col_name')}</th><th scope="col">${L('admin.settings.f_location')}</th><th scope="col">${L('admin.platform.col_account')}</th><th scope="col">${L('admin.platform.col_status')}</th><th scope="col" class="num">${L('admin.platform.col_orders')}</th><th scope="col" class="act"><span class="visually-hidden">${L('admin.menu.col_actions')}</span></th></tr></thead>
+      <thead><tr><th scope="col">${L('admin.platform.col_name')}</th><th scope="col">${L('admin.settings.f_location')}</th><th scope="col">${L('admin.platform.col_account')}</th><th scope="col">${L('admin.platform.col_status')}</th><th scope="col" class="num">${L('admin.platform.col_orders')}</th>${moderate ? `<th scope="col" class="act"><span class="visually-hidden">${L('admin.menu.col_actions')}</span></th>` : ''}</tr></thead>
       <tbody>${rows}</tbody></table></div>`);
 }
 actions['restaurant-status'] = async (d) => {
   if (d.to === 'suspended' && !(await confirmDialog(t('admin.platform.suspend_confirm'), { danger: true }))) return;
   await api.platform.setRestaurantStatus(d.id, d.to);
+  rerender();
+};
+
+// 新增店家：店家資料＋給店家用的登入帳號（第一次登入要換密碼）
+function vendorDialog() {
+  const title = t('admin.platform.new_title');
+  return `<form class="dialog" data-form="vendor-new" role="dialog" aria-modal="true" aria-label="${esc(title)}" novalidate>
+    <div class="dialog__head"><h2>${esc(title)}</h2><button type="button" class="icon-btn" data-action="modal-close" aria-label="${esc(t('common.close'))}">${icon('x')}</button></div>
+    <h3 class="dialog__sub">${esc(t('admin.platform.store'))}</h3>
+    ${langPair('admin.settings.f_name', 'name', null, { required: true, extra: 'maxlength="100" autocomplete="off"' })}
+    ${areaSelect('fengyun')}
+    ${langPair('admin.settings.f_location', 'location', null, { extra: 'maxlength="100"' })}
+    <h3 class="dialog__sub">${esc(t('admin.platform.login'))}</h3>
+    <p class="hint">${esc(t('admin.platform.login_hint'))}</p>
+    <div class="field-pair">
+      ${C.TextField({ label: t('admin.platform.f_account'), name: 'student_id', required: true, num: true, extra: 'maxlength="20" pattern="[A-Za-z0-9]{4,20}" autocomplete="off" autocapitalize="off" spellcheck="false"', hint: `<p class="hint">${esc(t('admin.platform.account_rule'))}</p>` })}
+      ${C.TextField({ label: t('admin.platform.f_password'), name: 'password', required: true, extra: 'minlength="8" maxlength="128" autocomplete="new-password"' })}
+    </div>
+    <div class="field-pair">
+      ${C.TextField({ label: t('register.email'), name: 'email', type: 'email', required: true, extra: 'autocomplete="off"' })}
+      ${C.TextField({ label: t('register.phone'), name: 'phone_number', type: 'tel', required: true, num: true, extra: 'pattern="\\+?[0-9]{8,15}" inputmode="tel" autocomplete="off"' })}
+    </div>
+    <div class="dialog__foot">
+      <span class="grow"></span>
+      ${C.Button({ label: t('common.cancel'), style: 'text', size: 'sm', action: 'modal-close' })}
+      ${C.Button({ label: t('admin.platform.create'), style: 'primary', size: 'sm', type: 'submit' })}
+    </div>
+  </form>`;
+}
+actions['vendor-new'] = () => { openModal(vendorDialog()); document.getElementById('f-name_zh')?.focus(); };
+forms['vendor-new'] = async (fd, form) => {
+  if (invalid(form)) return;
+  const name = pair(fd, 'name');
+  const location = pair(fd, 'location');
+  const staff = Object.fromEntries(['student_id', 'password', 'email', 'phone_number'].map((k) => [k, String(fd.get(k) || '').trim()]));
+  await api.platform.createVendor({
+    vendor: { name_zh: name.zh, name_en: name.en, area: fd.get('area'), location_zh: location.zh, location_en: location.en },
+    staff,
+  });
+  closeModal();
+  toast(t('admin.platform.created', { name: getLang() === 'en' ? name.en : name.zh, id: staff.student_id }));
   rerender();
 };
 

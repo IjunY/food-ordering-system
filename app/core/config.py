@@ -1,4 +1,5 @@
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import Field, SecretStr
@@ -14,6 +15,10 @@ class Settings(BaseSettings):
     # Signs the login tokens (HS256). No default on purpose: a guessable secret lets anyone forge a login.
     jwt_secret: SecretStr = Field(min_length=32)
     access_token_expire_minutes: int = 60 * 24
+
+    # Where uploaded photos are saved (served at /uploads/...). Relative paths are
+    # relative to the folder the app is started from; in Docker this is a volume.
+    upload_dir: Path = Path("uploads")
 
 
 @lru_cache

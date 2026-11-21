@@ -1,7 +1,10 @@
 // 假後端：照 Figma 封面的 API 總表實作，資料存在瀏覽器 localStorage（同一台電腦的分頁共用，
-// 所以顧客分頁下的單會出現在店家分頁的接單看板）。接真後端後這個檔案就不用了。
+// 所以顧客分頁下的單會出現在店家分頁的接單看板）。
+// 有真後端時只在使用教學（練習模式）用到：練習點餐、練習接單都走這裡，不會送到資料庫。
+// 沒有真後端時（直接開檔案、claude.ai 上的示範頁）全部畫面都用這裡的資料。
 import { getLang } from '../i18n.js';
 import { session } from '../store.js';
+import { shrinkImage } from '../image.js';
 import { SEED_RESTAURANTS, SEED_MENUS, PAYMENT_METHODS, USERS, REPORTS, seedOrders } from './data.js';
 
 // v3: 換成清大學餐的真實店家與菜單；舊版存在瀏覽器裡的示範資料不再沿用
@@ -217,7 +220,11 @@ export async function pay(order_id, method) {
 }
 
 // ======================= 店家端 =======================
-const myRestaurantId = () => me().restaurant_id ?? fail('No restaurant');
+// 真後端的店家帳號在練習接單時，自己的店不在假資料裡：借用第一家（牛肉先生）的菜單出練習單
+const myRestaurantId = () => {
+  const rid = me().restaurant_id ?? fail('No restaurant');
+  return db().restaurants.some((r) => r.id === rid) ? rid : SEED_RESTAURANTS[0].id;
+};
 
 // 店家教學用的練習單：直接放進自己店的「新訂單」，不會自己往下走（auto: false）
 export async function addPracticeOrder() {
@@ -264,58 +271,74 @@ export async function adminUpdateOrderStatus(id, status) {
   return outOrder(d, o);
 }
 
+// 店家設定頁編輯用：兩種語言的原始欄位（和 real/api.js 的 edit 一樣）
+const editOf = (r) => ({ name: r.name, location: r.location, description: r.description, opening_hours: r.opening_hours_label, area: r.area });
+
 export async function adminGetRestaurant() {
   await sleep(40);
   const d = db();
-  return outRestaurant(d, findRestaurant(d, myRestaurantId()));
+  const r = findRestaurant(d, myRestaurantId());
+  return { ...outRestaurant(d, r), edit: editOf(r) };
 }
 
+// patch：name / location / description / opening_hours 是 {zh, en}，其餘照原樣
 export async function adminUpdateRestaurant(patch) {
   await sleep();
   const d = db();
   const r = findRestaurant(d, myRestaurantId());
-  const lang = getLang();
   for (const [k, v] of Object.entries(patch)) {
-    if (r[k] && typeof r[k] === 'object' && 'zh' in r[k]) r[k][lang] = v; // 多語欄位只改目前語言
+    if (k === 'opening_hours') r.opening_hours_label = { ...v };
+    else if (k === 'location') { r.location = { ...v }; r.location_detail = { ...v }; }
+    else if (v && typeof v === 'object' && 'zh' in v) r[k] = { ...v };
     else r[k] = v;
   }
-  if ('location' in patch) r.location_detail[lang] = patch.location;
   save(d);
-  return outRestaurant(d, r);
+  return { ...outRestaurant(d, r), edit: editOf(r) };
 }
 
 export async function adminListMenuItems() {
   await sleep(60);
   const m = db().menus[myRestaurantId()];
-  const cats = m.categories.map((c) => ({ id: c.id, name: loc(c.name) }));
-  return { categories: cats, items: m.items.map((i) => ({ ...outItem(i), category_name: cats.find((c) => c.id === i.category_id)?.name ?? '' })) };
+  const cats = m.categories.map((c) => ({ id: c.id, name: loc(c.name), zh: c.name.zh, en: c.name.en }));
+  const catOf = (i) => m.categories.find((c) => c.id === i.category_id);
+  return {
+    categories: cats,
+    items: m.items.map((i) => ({
+      ...outItem(i), category_name: loc(catOf(i)?.name) ?? '',
+      edit: { name: i.name, description: i.description, category: catOf(i)?.name ?? { zh: '', en: '' } },
+    })),
+  };
 }
 
+// data：{ id?, name: {zh,en}, category: {zh,en}, description: {zh,en}, price, prep_minutes, is_available, image_url }
+// 分類用中文名稱找，找不到就新增一類
 export async function adminSaveMenuItem(data) {
   await sleep();
   const d = db();
   const m = d.menus[myRestaurantId()];
-  const lang = getLang();
+  let cat = m.categories.find((c) => c.name.zh === data.category.zh);
+  if (!cat) m.categories.push((cat = { id: 'c' + Date.now(), name: { ...data.category } }));
   let i = data.id ? m.items.find((x) => x.id === data.id) : null;
   if (!i) {
-    i = { id: 'm' + Date.now(), name: { zh: '', en: '' }, description: { zh: '', en: '' }, option_groups: [], image_url: null };
+    i = { id: 'm' + Date.now(), option_groups: [], image_url: null };
     m.items.push(i);
   }
-  for (const k of ['name', 'description']) {
-    i[k][lang] = data[k];
-    for (const other of ['zh', 'en']) if (!i[k][other]) i[k][other] = data[k];
-  }
-  Object.assign(i, { category_id: data.category_id, price: data.price, prep_minutes: data.prep_minutes, is_available: data.is_available, is_sold_out: data.is_sold_out });
+  Object.assign(i, {
+    name: { ...data.name }, description: { ...data.description }, category_id: cat.id,
+    price: data.price, prep_minutes: data.prep_minutes, is_available: data.is_available, is_sold_out: false,
+  });
   if ('image_url' in data) i.image_url = data.image_url || null;
   save(d);
   return outItem(i);
 }
 
+// 表格上的「供應中」開關：打開時順便清掉「售完」
 export async function adminPatchMenuItem(id, patch) {
   await sleep(60);
   const d = db();
   const i = d.menus[myRestaurantId()].items.find((x) => x.id === id) ?? fail('Item not found');
   Object.assign(i, patch);
+  if (patch.is_available) i.is_sold_out = false;
   save(d);
   return outItem(i);
 }
@@ -341,7 +364,7 @@ export async function adminReports(range = 'today') {
 }
 
 // ======================= 平台管理（admin） =======================
-export async function platformListRestaurants() {
+export async function platformOverview() {
   await sleep();
   if (me().role !== 'admin') fail('Forbidden');
   const d = db();
@@ -361,18 +384,6 @@ export async function platformSetRestaurantStatus(id, status) {
 
 // 上傳圖片：假後端把照片縮到長邊 720px、轉成 JPEG data URL（存在 localStorage，不能太大）
 export async function uploadImage(file) {
-  if (!file || !file.type.startsWith('image/')) throw new Error(getLang() === 'en' ? 'Please choose an image file' : '請選擇圖片檔');
-  if (file.size > 10 * 1024 * 1024) throw new Error(getLang() === 'en' ? 'Please choose a photo under 10 MB' : '照片太大，請選 10 MB 以下的檔案');
-  const url = URL.createObjectURL(file);
-  try {
-    const img = await new Promise((resolve, reject) => { const i = new Image(); i.onload = () => resolve(i); i.onerror = reject; i.src = url; });
-    const scale = Math.min(1, 720 / Math.max(img.naturalWidth, img.naturalHeight));
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(img.naturalWidth * scale);
-    canvas.height = Math.round(img.naturalHeight * scale);
-    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-    return { url: canvas.toDataURL('image/jpeg', 0.78) };
-  } finally {
-    URL.revokeObjectURL(url);
-  }
+  const canvas = await shrinkImage(file, 720);
+  return { url: canvas.toDataURL('image/jpeg', 0.78) };
 }

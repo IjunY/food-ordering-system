@@ -387,3 +387,124 @@ def test_cancelling(
     by_staff = client.post(f"/api/orders/{started['id']}/cancel", headers=staff)
     assert by_staff.status_code == 200
     assert by_staff.json()["status"] == "cancelled"
+
+
+# ---------- add-ons and notes ----------
+@pytest.fixture
+def bento(client: TestClient, staff: dict[str, str], vendors: dict[str, int]) -> int:
+    """A noodle-house item with a required rice choice and optional paid extras."""
+    body = {
+        "vendor_id": vendors["noodles"],
+        "item_name_zh": "排骨飯",
+        "item_name_en": "Pork Chop Rice",
+        "category_zh": "主餐",
+        "category_en": "Mains",
+        "price": 100,
+        "prep_minutes": 8,
+        "option_groups": [
+            {
+                "id": "rice",
+                "name": {"zh": "飯量", "en": "Rice"},
+                "required": True,
+                "choices": [
+                    {"id": "normal", "label": {"zh": "正常", "en": "Regular"}},
+                    {"id": "less", "label": {"zh": "少飯", "en": "Less rice"}},
+                ],
+            },
+            {
+                "id": "extra",
+                "name": {"zh": "加點", "en": "Extras"},
+                "max_select": 2,
+                "choices": [
+                    {
+                        "id": "egg",
+                        "label": {"zh": "加蛋", "en": "Egg"},
+                        "price_delta": 15,
+                    },
+                    {
+                        "id": "tofu",
+                        "label": {"zh": "加豆干", "en": "Tofu"},
+                        "price_delta": 10,
+                    },
+                    {
+                        "id": "veg",
+                        "label": {"zh": "加青菜", "en": "Greens"},
+                        "price_delta": 20,
+                    },
+                ],
+            },
+        ],
+    }
+    response = client.post("/api/menu-items", json=body, headers=staff)
+    assert response.status_code == 201, response.text
+    return response.json()["id"]
+
+
+def order_lines(client: TestClient, headers: dict[str, str], *lines: dict):
+    return client.post("/api/orders", json={"items": list(lines)}, headers=headers)
+
+
+def test_add_ons_are_priced_and_kept_with_the_order(
+    client: TestClient, customer: dict[str, str], staff: dict[str, str], bento: int
+) -> None:
+    response = order_lines(
+        client,
+        customer,
+        {
+            "item_id": bento,
+            "quantity": 2,
+            "option_ids": ["extra:tofu", "rice:less", "extra:egg"],
+            "note": "  不要辣  ",
+        },
+        {"item_id": bento, "quantity": 1, "option_ids": ["rice:normal"]},
+    )
+    assert response.status_code == 201, response.text
+    order = response.json()
+    first, second = order["items"]
+    # menu order, not the order they were sent in
+    assert first["option_ids"] == ["rice:less", "extra:egg", "extra:tofu"]
+    assert first["options_label"] == {
+        "zh": "少飯、加蛋、加豆干",
+        "en": "Less rice, Egg, Tofu",
+    }
+    assert first["note"] == "不要辣"
+    assert (first["unit_price"], first["subtotal"]) == (125, 250)
+    assert second["options_label"] == {"zh": "正常", "en": "Regular"}
+    assert (second["unit_price"], second["note"]) == (100, "")
+    assert order["total"] == 350
+
+    # Later menu changes do not touch the order
+    client.patch(f"/api/menu-items/{bento}", json={"option_groups": []}, headers=staff)
+    again = client.get(f"/api/orders/{order['id']}", headers=customer).json()
+    assert again["items"] == order["items"]
+
+
+def test_same_add_ons_and_note_are_merged(
+    client: TestClient, customer: dict[str, str], bento: int
+) -> None:
+    line = {"item_id": bento, "quantity": 1, "option_ids": ["rice:less"], "note": "x"}
+    order = order_lines(client, customer, line, line, {**line, "note": "y"}).json()
+    assert [(i["quantity"], i["note"]) for i in order["items"]] == [(2, "x"), (1, "y")]
+
+
+def test_add_on_rules(client: TestClient, customer: dict[str, str], bento: int) -> None:
+    for option_ids in (
+        [],  # the rice choice is required
+        ["rice:normal", "rice:less"],  # ... and takes one
+        ["rice:normal", "extra:egg", "extra:tofu", "extra:veg"],  # at most two extras
+        ["rice:normal", "extra:bacon"],  # not on the menu
+        ["rice:normal", "sauce:hot"],
+    ):
+        response = order_lines(
+            client,
+            customer,
+            {"item_id": bento, "quantity": 1, "option_ids": option_ids},
+        )
+        assert response.status_code == 400, option_ids
+    too_long = {
+        "item_id": bento,
+        "quantity": 1,
+        "option_ids": ["rice:normal"],
+        "note": "x" * 61,
+    }
+    assert order_lines(client, customer, too_long).status_code == 422
