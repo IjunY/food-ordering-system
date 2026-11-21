@@ -35,7 +35,6 @@ setGuard((opts) => {
   if (!user) return 'login';
   // 還沒換掉管理員給的第一組密碼或帳號：後端其他功能都會擋（403），先去設定
   if ((user.must_change_password || user.must_choose_username) && !opts.password) return 'password';
-  if (opts.password) return USE_MOCK ? homeOf(user.role) : null;
   if (opts.admin && user.role !== 'admin') return homeOf(user.role);
   if (opts.staff && user.role !== 'staff') return homeOf(user.role);
   return null;

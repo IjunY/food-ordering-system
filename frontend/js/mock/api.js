@@ -116,6 +116,13 @@ export async function getMe() {
   return { id: u.id, role: s.role, name: loc(u.name), first_name: loc(u.first_name), student_id: s.student_id || '112012345', department: loc(u.department), restaurant_id: s.restaurant_id, store_name: r ? loc(r.name) : null };
 }
 
+// 假資料模式沒有密碼：一律成功，登入狀態不變
+export async function changePassword() {
+  await sleep();
+  const s = session.get() ?? fail('Not signed in');
+  return { access_token: s.access_token, user: { ...s.user, must_change_password: false, must_choose_username: false } };
+}
+
 export async function listRestaurants({ location = 'all', sort = 'wait' } = {}) {
   await sleep();
   const d = db();

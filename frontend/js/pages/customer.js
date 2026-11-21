@@ -122,30 +122,50 @@ export async function passwordPage() {
     <section class="ahero"><div class="bar">${forced ? '<span></span>' : `<a class="back" href="#${homeOf(u?.role)}" aria-label="${esc(t('a11y.back'))}">${icon('back')}</a>`}${C.LangSwitch()}</div>
       <h1>${esc(t(pickId ? 'setup.title' : 'password.title'))}</h1><p>${esc(t(lead))}</p></section>
     <form class="acard" data-form="password" novalidate>
+      <div class="form-err" aria-live="assertive"></div>
       ${pickId ? C.TextField({ label: t('setup.username'), name: 'new_student_id', extra: 'autocomplete="username" autocapitalize="off" spellcheck="false" maxlength="20" aria-describedby="id-rule"', hint: `<p class="hint" id="id-rule">${esc(t('setup.username_rule'))}</p>` }) : ''}
       ${C.TextField({ label: t(pickId ? 'setup.current' : 'password.current'), name: 'current_password', type: 'password', reveal: true, extra: 'autocomplete="current-password"' })}
       ${C.TextField({ label: t('password.new'), name: 'new_password', type: 'password', reveal: true, input: 'password-rule', extra: 'autocomplete="new-password" minlength="8" aria-describedby="pw-rules"', hint: pwRule() })}
       ${C.TextField({ label: t('password.confirm'), name: 'confirm_password', type: 'password', reveal: true, extra: 'autocomplete="new-password" minlength="8"' })}
+      ${USE_MOCK ? `<p class="hint">${esc(t('password.mock'))}</p>` : ''}
       ${C.Cta({ label: t('password.submit'), type: 'submit' })}
       ${forced ? `<p class="alink"><button type="button" class="textlink" data-action="logout">${esc(t('profile.logout'))}</button></p>` : ''}
     </form>
   </div>`);
 }
-// 新密碼的兩欄：長度、兩次一樣。不對就提示並回傳 null
+// 錯誤顯示在表單最上面（不重畫，打好的字不會被清掉），游標移到要改的那一欄
+function formError(form, text, field) {
+  form.querySelector('.form-err').innerHTML = C.Note({ text, kind: 'err' });
+  form.querySelector(`[name=${field}]`)?.focus();
+}
+// 新密碼的兩欄：長度、兩次一樣。不對就顯示錯誤並回傳 null
 function readNewPassword(fd, form) {
   const next = String(fd.get('new_password') || '');
-  if (next.length < 8) { toast(t('register.short_password')); form.querySelector('[name=new_password]')?.focus(); return null; }
-  if (next !== fd.get('confirm_password')) { toast(t('password.mismatch')); form.querySelector('[name=confirm_password]')?.focus(); return null; }
+  if (next.length < 8) { formError(form, t('register.short_password'), 'new_password'); return null; }
+  if (next !== fd.get('confirm_password')) { formError(form, t('password.mismatch'), 'confirm_password'); return null; }
   return next;
 }
+// 後端拒絕的原因（real/api.js 標上的 code）→ 翻譯好的訊息、要改的欄位
+const PASSWORD_ERRORS = {
+  wrong_current: ['password.wrong_current', 'current_password'],
+  same: ['password.same', 'new_password'],
+  id_taken: ['password.id_taken', 'new_student_id'],
+};
 forms.password = async (fd, form) => {
   const newId = fd.has('new_student_id') ? String(fd.get('new_student_id') || '').trim() : null;
-  if (newId !== null && !/^[A-Za-z0-9]{4,20}$/.test(newId)) { toast(t('setup.need_username')); form.querySelector('[name=new_student_id]')?.focus(); return; }
+  if (newId !== null && !/^[A-Za-z0-9]{4,20}$/.test(newId)) return formError(form, t('setup.need_username'), 'new_student_id');
   const current = String(fd.get('current_password') || '');
-  if (!current) { toast(t('password.need_current')); form.querySelector('[name=current_password]')?.focus(); return; }
+  if (!current) return formError(form, t('password.need_current'), 'current_password');
   const next = readNewPassword(fd, form);
   if (next === null) return;
-  const res = await api.changePassword(current, next, newId);
+  if (next === current) return formError(form, t('password.same'), 'new_password');
+  let res;
+  try {
+    res = await api.changePassword(current, next, newId);
+  } catch (err) {
+    const [key, field] = PASSWORD_ERRORS[err.code] ?? [];
+    return formError(form, key ? t(key) : err.message || String(err), field ?? 'current_password');
+  }
   session.set({ access_token: res.access_token, user: res.user });
   toast(newId ? t('setup.done', { id: res.user.student_id }) : t('password.done'));
   await maybeStartTour(res.user);
@@ -193,6 +213,7 @@ export async function resetPage({ token }) {
     <section class="ahero"><div class="bar"><a class="back" href="#login" aria-label="${esc(t('a11y.back'))}">${icon('back')}</a>${C.LangSwitch()}</div>
       <h1>${esc(t('reset.title'))}</h1><p>${esc(t('reset.lead'))}</p></section>
     <form class="acard" data-form="reset" novalidate>
+      <div class="form-err" aria-live="assertive"></div>
       <input type="hidden" name="token" value="${esc(token)}">
       ${C.TextField({ label: t('password.new'), name: 'new_password', type: 'password', reveal: true, input: 'password-rule', extra: 'autocomplete="new-password" minlength="8" aria-describedby="pw-rules"', hint: pwRule() })}
       ${C.TextField({ label: t('password.confirm'), name: 'confirm_password', type: 'password', reveal: true, extra: 'autocomplete="new-password" minlength="8"' })}
@@ -209,8 +230,7 @@ forms.reset = async (fd, form) => {
     res = await api.resetPassword(String(fd.get('token')), next);
   } catch (err) {
     // 用過、過期或打錯的連結
-    if (/invalid|expired/i.test(err.message)) { toast(t('reset.invalid')); return; }
-    throw err;
+    return formError(form, err.code === 'link_invalid' ? t('reset.invalid') : err.message || String(err), 'new_password');
   }
   // 這台裝置上原本登入的若是別人，購物車是他的
   if (session.get()?.user?.id !== res.user.id) cart.clear();
@@ -634,7 +654,7 @@ export async function profilePage() {
       <div class="acct">
         <div class="setrow"><span class="oi">${icon('lang')}</span><span class="tx"><b>${esc(t('lang.name'))}</b><small>${esc(t('lang.current'))}</small></span>${C.LangSwitch({ light: true })}</div>
         ${me.role === 'admin' ? '' : `<button type="button" class="setrow navrow" data-action="tour-replay"><span class="oi">${icon('info')}</span><span class="tx"><b>${esc(t('tour.replay'))}</b><small>${esc(t('tour.replay_sub'))}</small></span><span class="chev">${icon('chev')}</span></button>`}
-        ${USE_MOCK ? '' : `<a class="setrow navrow" href="#password"><span class="oi">${icon('lock')}</span><span class="tx"><b>${esc(t('password.change'))}</b><small>${esc(t('password.change_sub'))}</small></span><span class="chev">${icon('chev')}</span></a>`}
+        <a class="setrow navrow" href="#password"><span class="oi">${icon('lock')}</span><span class="tx"><b>${esc(t('password.change'))}</b><small>${esc(t('password.change_sub'))}</small></span><span class="chev">${icon('chev')}</span></a>
         ${staff ? `<a class="setrow navrow" href="#${homeOf(me.role)}"><span class="oi">${icon('store')}</span><span class="tx"><b>${esc(t('profile.dashboard'))}</b></span><span class="chev">${icon('chev')}</span></a>` : ''}
       </div>
       <button type="button" class="signout" data-action="logout">${esc(t('profile.logout'))}</button>

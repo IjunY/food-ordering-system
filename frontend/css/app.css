@@ -286,6 +286,8 @@ input.switch { appearance: none; border: 0; }
 .acard { position: relative; display: grid; gap: 18px; margin: -36px 16px 24px; padding: 22px 18px 20px; border-radius: var(--r-card); background: var(--card-white); box-shadow: var(--sh-overlap); }
 .acard h2 { font-size: 20px; }
 .acard .cta { margin-top: 4px; }
+.form-err:empty { display: none; }
+.form-err .note { margin: 0; }
 .alink { text-align: center; font-size: 15px; color: var(--mute); }
 .alink a { padding: 10px 2px; color: var(--nthu-purple); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 
