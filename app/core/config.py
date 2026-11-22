@@ -20,6 +20,14 @@ class Settings(BaseSettings):
     # relative to the folder the app is started from; in Docker this is a volume.
     upload_dir: Path = Path("uploads")
 
+    # The address people open the app at. Links in emails (password reset) point
+    # here; it is not taken from the request, so a forged Host header cannot send
+    # a reset link to someone else's site. For a demo over the local network, set
+    # it to that address, e.g. http://192.168.1.23:8000
+    app_url: str = "http://localhost:8000"
+    # How long a password reset link works
+    password_reset_minutes: int = Field(default=30, gt=0)
+
 
 @lru_cache
 def get_settings() -> Settings:

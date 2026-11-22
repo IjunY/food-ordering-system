@@ -129,8 +129,9 @@ def test_admin_creates_a_staff_account_that_can_set_up_its_vendor(
     assert listed()["staff01"] == staff
     assert all(row["role"] == "staff" for row in listed().values())
 
-    # The admin knows this first password, so the account starts locked down
+    # The admin made up this login, so the account starts locked down
     assert staff["must_change_password"] is True
+    assert staff["must_choose_username"] is True
 
     # The new account signs in with the password the admin chose ...
     login = client.post(
@@ -148,16 +149,19 @@ def test_admin_creates_a_staff_account_that_can_set_up_its_vendor(
         headers=first,
     )
     assert blocked.status_code == 403
+    # Keeping the login ID the admin chose is fine, as long as it is a choice
     changed = client.post(
         "/api/auth/change-password",
         json={
             "current_password": NEW_STAFF["password"],
             "new_password": "my-own-password-456",
+            "new_student_id": "staff01",
         },
         headers=first,
     )
     assert changed.status_code == 200, changed.text
     assert changed.json()["user"]["must_change_password"] is False
+    assert changed.json()["user"]["must_choose_username"] is False
     headers = {"Authorization": f"Bearer {changed.json()['access_token']}"}
     # ... and then registers its vendor
     vendor = client.post(
@@ -243,9 +247,11 @@ def test_admin_opens_a_vendor_with_its_staff_account(
     assert staff["role"] == "staff"
     assert staff["vendor_id"] == vendor["id"]
     assert staff["must_change_password"] is True
+    assert staff["must_choose_username"] is True
     assert client.get(f"/api/vendors/{vendor['id']}").status_code == 200
 
-    # The vendor signs in, sets its own password and can build its menu right away
+    # The vendor signs in with the temporary login, picks its own login ID and
+    # password, and can build its menu right away
     login = client.post(
         "/api/auth/login",
         json={"student_id": "curry01", "password": NEW_STAFF["password"]},
@@ -255,9 +261,11 @@ def test_admin_opens_a_vendor_with_its_staff_account(
         json={
             "current_password": NEW_STAFF["password"],
             "new_password": "curry-pass-789",
+            "new_student_id": "currymaster",
         },
         headers={"Authorization": f"Bearer {login['access_token']}"},
     ).json()
+    assert changed["user"]["student_id"] == "currymaster"
     headers = {"Authorization": f"Bearer {changed['access_token']}"}
     assert client.get("/api/vendors/me", headers=headers).json()["id"] == vendor["id"]
     item = client.post(
@@ -278,7 +286,7 @@ def test_admin_opens_a_vendor_with_its_staff_account(
     # It shows up on the admin overview with its login
     overview = client.get("/api/admin/overview", headers=admin).json()
     row = next(v for v in overview["vendors"] if v["vendor"]["id"] == vendor["id"])
-    assert row["staff_accounts"] == ["curry01"]
+    assert row["staff_accounts"] == ["currymaster"]
     assert row["orders_today"] == 0
 
 
@@ -349,3 +357,87 @@ def test_overview_counts_todays_orders_and_customers(
             ).status_code
             == 403
         )
+
+
+def test_vendor_picks_its_login_id_once(
+    client: TestClient, auth_headers: Callable[..., dict[str, str]]
+) -> None:
+    admin = auth_headers("admin01", UserRole.ADMIN)
+    auth_headers("taken01")  # someone else's login ID
+    client.post("/api/admin/vendors", json=NEW_VENDOR, headers=admin)
+    first = client.post(
+        "/api/auth/login",
+        json={"student_id": "curry01", "password": NEW_STAFF["password"]},
+    ).json()
+    temp = {"Authorization": f"Bearer {first['access_token']}"}
+
+    def setup(**fields: str) -> int:
+        body = {
+            "current_password": NEW_STAFF["password"],
+            "new_password": "curry-pass-789",
+            **fields,
+        }
+        response = client.post("/api/auth/change-password", json=body, headers=temp)
+        return response.status_code
+
+    # Until the vendor picks a login ID, nothing else works
+    assert client.get("/api/vendors/me", headers=temp).status_code == 403
+    assert setup() == 400  # a password alone is not enough the first time
+    assert setup(new_student_id="taken01") == 409
+    assert setup(new_student_id="no spaces") == 422
+    assert setup(new_student_id="currychef") == 200
+
+    # The temporary login ID is gone; the chosen one signs in
+    old = {"student_id": "curry01", "password": "curry-pass-789"}
+    assert client.post("/api/auth/login", json=old).status_code == 401
+    login = client.post(
+        "/api/auth/login",
+        json={"student_id": "currychef", "password": "curry-pass-789"},
+    )
+    assert login.status_code == 200
+    assert login.json()["user"]["must_choose_username"] is False
+    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+    # From now on the login ID is fixed; the password can still change
+    renamed = client.post(
+        "/api/auth/change-password",
+        json={
+            "current_password": "curry-pass-789",
+            "new_password": "curry-pass-000",
+            "new_student_id": "curryking",
+        },
+        headers=headers,
+    )
+    assert renamed.status_code == 400
+    changed = client.post(
+        "/api/auth/change-password",
+        json={"current_password": "curry-pass-789", "new_password": "curry-pass-000"},
+        headers=headers,
+    )
+    assert changed.status_code == 200
+    assert changed.json()["user"]["student_id"] == "currychef"
+
+
+def test_customers_cannot_change_their_login_id(client: TestClient) -> None:
+    alice = {
+        "student_id": "990000001",
+        "email": "alice@example.com",
+        "phone_number": "0912345678",
+        "password": "correct-horse-battery",
+    }
+    assert client.post("/api/auth/register", json=alice).status_code == 201
+    login = client.post(
+        "/api/auth/login",
+        json={"student_id": alice["student_id"], "password": alice["password"]},
+    ).json()
+    assert login["user"]["must_choose_username"] is False
+    response = client.post(
+        "/api/auth/change-password",
+        json={
+            "current_password": alice["password"],
+            "new_password": "brand-new-password-42",
+            "new_student_id": "alice",
+        },
+        headers={"Authorization": f"Bearer {login['access_token']}"},
+    )
+    assert response.status_code == 400

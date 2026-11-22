@@ -286,6 +286,8 @@ input.switch { appearance: none; border: 0; }
 .acard { position: relative; display: grid; gap: 18px; margin: -36px 16px 24px; padding: 22px 18px 20px; border-radius: var(--r-card); background: var(--card-white); box-shadow: var(--sh-overlap); }
 .acard h2 { font-size: 20px; }
 .acard .cta { margin-top: 4px; }
+.form-err:empty { display: none; }
+.form-err .note { margin: 0; }
 .alink { text-align: center; font-size: 15px; color: var(--mute); }
 .alink a { padding: 10px 2px; color: var(--nthu-purple); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 
@@ -488,6 +490,9 @@ button.setrow { width: 100%; text-align: left; }
 /* 白色面板、表格 */
 .panel { display: grid; align-content: start; gap: 16px; padding: 18px 20px 20px; border-radius: var(--r-card); background: var(--card-white); box-shadow: var(--sh-card); }
 .panel > h2 { font-size: 18px; }
+.account-id { display: flex; align-items: baseline; gap: 12px; }
+.account-id dt { font-size: 14px; color: var(--mute); }
+.account-id dd { font-size: 18px; font-weight: 700; }
 .table-wrap { width: 100%; overflow-x: auto; border-radius: var(--r-card); background: var(--card-white); box-shadow: var(--sh-card); }
 .panel .table-wrap, .panel table.data { box-shadow: none; }
 table.data { width: 100%; border-collapse: collapse; font-size: 15px; }

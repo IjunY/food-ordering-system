@@ -1,12 +1,20 @@
+import hashlib
+import secrets
+from datetime import UTC, datetime, timedelta
+
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.auth import repo
-from app.auth.models import User
+from app.auth.models import PasswordReset, User
 from app.auth.schemas import UserRegister
 from app.auth.security import DUMMY_PASSWORD_HASH, hash_password, verify_password
 from app.auth.states import UserRole
 from app.core.errors import BadRequestError, ConflictError, UnauthorizedError
+
+# At most one reset email per account per minute, so the form cannot be used to
+# flood someone's inbox
+RESET_EMAIL_INTERVAL = timedelta(minutes=1)
 
 
 def register_user(
@@ -15,6 +23,7 @@ def register_user(
     role: UserRole = UserRole.CUSTOMER,
     must_change_password: bool = False,
     vendor_id: int | None = None,
+    must_choose_username: bool = False,
 ) -> User:
     email = data.email.lower()
     if repo.get_by_student_id(session, data.student_id) is not None:
@@ -29,6 +38,7 @@ def register_user(
         password_hash=hash_password(data.password),
         role=role,
         must_change_password=must_change_password,
+        must_choose_username=must_choose_username,
         vendor_id=vendor_id,
     )
     try:
@@ -52,9 +62,17 @@ def authenticate(session: Session, student_id: str, password: str) -> User:
 
 
 def change_password(
-    session: Session, user: User, current_password: str, new_password: str
+    session: Session,
+    user: User,
+    current_password: str,
+    new_password: str,
+    new_student_id: str | None = None,
 ) -> User:
     """Sets a new password and signs out every other session.
+
+    For an account that still has the login ID an admin made up
+    (must_choose_username), this is also where its owner picks their own login ID;
+    any other account keeps its login ID for good.
 
     Bumping token_version invalidates all tokens issued so far, including the one
     used for this request; the router hands back a fresh token so this session
@@ -69,8 +87,91 @@ def change_password(
     if verify_password(new_password, user.password_hash):
         raise BadRequestError("The new password must be different from the current one")
 
+    if user.must_choose_username:
+        if new_student_id is None:
+            raise BadRequestError("Choose your own login ID")
+        if new_student_id != user.student_id:
+            if repo.get_by_student_id(session, new_student_id) is not None:
+                raise ConflictError("This login ID is already taken")
+            user.student_id = new_student_id
+        user.must_choose_username = False
+    elif new_student_id is not None and new_student_id != user.student_id:
+        raise BadRequestError("A login ID cannot be changed")
+
     user.password_hash = hash_password(new_password)
     user.must_change_password = False
     user.token_version += 1
+    repo.close_resets(session, user.id, datetime.now(UTC))
+    try:
+        session.commit()
+    except IntegrityError as exc:
+        # Someone else took the same login ID at the same moment
+        session.rollback()
+        raise ConflictError("This login ID is already taken") from exc
+    return user
+
+
+def _hash_token(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def request_password_reset(
+    session: Session, account: str, valid_for: timedelta, now: datetime | None = None
+) -> tuple[User, str] | None:
+    """Makes a reset link for the account with this login ID or email.
+
+    Returns the account and the token to email, or None when there is nothing to
+    send: no such account, or a link already went out in the last minute. The
+    caller answers the same either way, so the form does not reveal which
+    accounts exist.
+    """
+    now = now or datetime.now(UTC)
+    account = account.strip()
+    user = (
+        repo.get_by_email(session, account.lower())
+        if "@" in account
+        else repo.get_by_student_id(session, account)
+    )
+    if user is None:
+        return None
+    last = repo.last_reset_sent(session, user.id)
+    if last is not None and now - last < RESET_EMAIL_INTERVAL:
+        return None
+
+    token = secrets.token_hex(
+        32
+    )  # 256 random bits, hex so it fits the #reset-<token> route
+    repo.add_reset(
+        session,
+        PasswordReset(
+            user_id=user.id,
+            token_hash=_hash_token(token),
+            created_at=now,
+            expires_at=now + valid_for,
+        ),
+    )
+    session.commit()
+    return user, token
+
+
+def reset_password(
+    session: Session, token: str, new_password: str, now: datetime | None = None
+) -> User:
+    """Sets a new password from an emailed link. The link then stops working, as do
+    the account's other open links and every login token issued before."""
+    now = now or datetime.now(UTC)
+    reset = repo.get_open_reset(session, _hash_token(token), now)
+    if reset is None:
+        raise BadRequestError("This reset link is invalid or has expired")
+
+    user = reset.user
+    session.refresh(user, with_for_update=True)
+    user.password_hash = hash_password(new_password)
+    # They chose this password themselves, so no forced change after it.
+    # must_choose_username stays: a vendor who has not picked a login ID yet
+    # still does that at the next sign-in.
+    user.must_change_password = False
+    user.token_version += 1
+    repo.close_resets(session, user.id, now)
     session.commit()
     return user

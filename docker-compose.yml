@@ -29,6 +29,14 @@ services:
       PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-mock}
       PAYMENT_LINEPAY_CHANNEL_ID: ${PAYMENT_LINEPAY_CHANNEL_ID:-}
       PAYMENT_LINEPAY_CHANNEL_SECRET: ${PAYMENT_LINEPAY_CHANNEL_SECRET:-}
+      # Links in emails point here (set it to the LAN address for a demo on other computers)
+      APP_URL: ${APP_URL:-http://localhost:8000}
+      # Email for "forgot password" links; without MAIL_SMTP_HOST they are printed in the log
+      MAIL_SMTP_HOST: ${MAIL_SMTP_HOST:-}
+      MAIL_SMTP_PORT: ${MAIL_SMTP_PORT:-587}
+      MAIL_SMTP_USERNAME: ${MAIL_SMTP_USERNAME:-}
+      MAIL_SMTP_PASSWORD: ${MAIL_SMTP_PASSWORD:-}
+      MAIL_SENDER: ${MAIL_SENDER:-}
     ports:
       # Only this computer by default. For a demo with other computers on the same
       # network, set APP_BIND=0.0.0.0 (in .env or on the command line).
