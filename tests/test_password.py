@@ -1,6 +1,7 @@
 import httpx2
 import jwt
 from fastapi.testclient import TestClient
+from signup import sign_up
 
 from app.core.config import Settings
 
@@ -33,7 +34,7 @@ def change(
 
 
 def test_user_changes_their_password(client: TestClient) -> None:
-    assert client.post("/api/auth/register", json=ALICE).status_code == 201
+    assert sign_up(client, ALICE).status_code == 201
     this_session = sign_in(client)
     other_session = sign_in(client)  # e.g. the same account on another phone
 
@@ -60,7 +61,7 @@ def test_user_changes_their_password(client: TestClient) -> None:
 
 
 def test_change_password_rules(client: TestClient) -> None:
-    assert client.post("/api/auth/register", json=ALICE).status_code == 201
+    assert sign_up(client, ALICE).status_code == 201
     headers = sign_in(client)
 
     # Must be signed in
@@ -89,7 +90,7 @@ def test_tokens_without_a_version_are_rejected(
 ) -> None:
     """Tokens issued before this change have no "ver" claim; they must not slip
     past the check that a password change relies on."""
-    user = client.post("/api/auth/register", json=ALICE).json()
+    user = sign_up(client, ALICE).json()
     legacy = jwt.encode(
         {"sub": str(user["id"]), "exp": 9_999_999_999},
         settings.jwt_secret.get_secret_value(),
@@ -102,6 +103,6 @@ def test_tokens_without_a_version_are_rejected(
 def test_self_registered_accounts_are_not_forced_to_change(
     client: TestClient,
 ) -> None:
-    user = client.post("/api/auth/register", json=ALICE).json()
+    user = sign_up(client, ALICE).json()
     assert user["must_change_password"] is False
     assert client.get("/api/orders", headers=sign_in(client)).status_code == 200

@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
-from app.auth.models import PasswordReset, User
+from app.auth.models import EmailVerification, PasswordReset, User
 
 
 def get_by_id(session: Session, user_id: int) -> User | None:
@@ -62,5 +62,51 @@ def close_resets(session: Session, user_id: int, now: datetime) -> None:
     session.execute(
         update(PasswordReset)
         .where(PasswordReset.user_id == user_id, PasswordReset.used_at.is_(None))
+        .values(used_at=now)
+    )
+
+
+# ---- sign-up codes ----
+
+
+def add_verification(
+    session: Session, verification: EmailVerification
+) -> EmailVerification:
+    session.add(verification)
+    session.flush()
+    return verification
+
+
+def last_code_sent(session: Session, email: str) -> datetime | None:
+    return session.scalar(
+        select(func.max(EmailVerification.created_at)).where(
+            EmailVerification.email == email
+        )
+    )
+
+
+def get_open_verification(
+    session: Session, email: str, now: datetime
+) -> EmailVerification | None:
+    """The newest unused, unexpired code of this address, locked until the commit
+    so two sign-ups cannot use it at once."""
+    return session.scalar(
+        select(EmailVerification)
+        .where(
+            EmailVerification.email == email,
+            EmailVerification.used_at.is_(None),
+            EmailVerification.expires_at > now,
+        )
+        .order_by(EmailVerification.created_at.desc(), EmailVerification.id.desc())
+        .limit(1)
+        .with_for_update()
+    )
+
+
+def close_verifications(session: Session, email: str, now: datetime) -> None:
+    """Marks every open code of this address as used."""
+    session.execute(
+        update(EmailVerification)
+        .where(EmailVerification.email == email, EmailVerification.used_at.is_(None))
         .values(used_at=now)
     )

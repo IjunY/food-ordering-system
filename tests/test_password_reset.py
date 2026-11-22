@@ -8,6 +8,7 @@ from datetime import UTC, datetime, timedelta
 import httpx2
 import pytest
 from fastapi.testclient import TestClient
+from signup import sign_up
 
 from app.auth.service import request_password_reset
 from app.auth.states import UserRole
@@ -46,7 +47,7 @@ def outbox(client: TestClient) -> Iterator[Outbox]:
 
 @pytest.fixture
 def alice(client: TestClient) -> None:
-    assert client.post("/api/auth/register", json=ALICE).status_code == 201
+    assert sign_up(client, ALICE).status_code == 201
 
 
 def sign_in(client: TestClient, student_id: str, password: str) -> httpx2.Response:

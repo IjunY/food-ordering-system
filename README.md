@@ -73,6 +73,22 @@ With Docker, run the same commands inside the app container, e.g.
    away; 店家設定 changes the store details and photos, and has a "Change
    password" button.
 
+## Signing up
+
+Customers sign up in two steps, so the email address is known to be theirs:
+
+1. `POST /api/auth/register/send-code` with `{"email": ...}` emails a 6-digit
+   code ("感謝您註冊 NTHU 點餐系統，以下是您的驗證碼：" with the code large and
+   bold). 409 if the address already has an account, 429 if a code went out to
+   it less than a minute ago.
+2. `POST /api/auth/register` with the account details plus `email_code`. The
+   code works once, for 10 minutes, and stops working after 5 wrong tries (then
+   send a new one). Sending a new code makes the older one stop working.
+
+The email is sent the same way as the password reset links below (without
+`MAIL_SMTP_HOST`, development prints it in the server log). Vendor staff
+accounts made by an admin, and the seed script's demo accounts, skip this.
+
 ## Passwords
 
 - **Change password** (signed in): customers on their profile page, vendors

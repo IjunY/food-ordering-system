@@ -37,6 +37,12 @@ class PayloadTooLargeError(AppError):
     status_code = 413
 
 
+class TooManyRequestsError(AppError):
+    """Asked again too soon (e.g. another sign-up code within a minute)."""
+
+    status_code = 429
+
+
 class BadGatewayError(AppError):
     """An outside service (e.g. the payment provider) failed or could not be reached."""
 

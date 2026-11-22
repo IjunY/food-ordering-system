@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
+from signup import sign_up
 from sqlalchemy import select
 
 from app.auth.models import User
@@ -15,7 +16,7 @@ ALICE = {
 
 
 def register(client: TestClient, **overrides: str) -> dict:
-    response = client.post("/api/auth/register", json={**ALICE, **overrides})
+    response = sign_up(client, {**ALICE, **overrides})
     assert response.status_code == 201, response.text
     return response.json()
 
@@ -55,9 +56,7 @@ def test_password_is_stored_hashed(client: TestClient) -> None:
 def test_register_rejects_duplicate_student_id(client: TestClient) -> None:
     register(client)
 
-    response = client.post(
-        "/api/auth/register", json={**ALICE, "email": "someone-else@example.com"}
-    )
+    response = sign_up(client, {**ALICE, "email": "someone-else@example.com"})
     assert response.status_code == 409
     assert "student ID" in response.json()["detail"]
 
@@ -65,9 +64,9 @@ def test_register_rejects_duplicate_student_id(client: TestClient) -> None:
 def test_register_rejects_duplicate_email_ignoring_case(client: TestClient) -> None:
     register(client)
 
-    response = client.post(
-        "/api/auth/register",
-        json={**ALICE, "student_id": "990000002", "email": "Alice@Example.com"},
+    response = sign_up(
+        client,
+        {**ALICE, "student_id": "990000002", "email": "Alice@Example.com"},
     )
     assert response.status_code == 409
     assert "email" in response.json()["detail"]
@@ -81,7 +80,10 @@ def test_register_validates_input(client: TestClient) -> None:
         {"student_id": "has spaces"},
     ]
     for bad in bad_inputs:
-        response = client.post("/api/auth/register", json={**ALICE, **bad})
+        # Fields are checked before the code is, so any 6 digits will do here
+        response = client.post(
+            "/api/auth/register", json={**ALICE, "email_code": "000000", **bad}
+        )
         assert response.status_code == 422, bad
 
 

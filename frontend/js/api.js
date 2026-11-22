@@ -20,7 +20,9 @@ const data = (name) => (USE_MOCK ? mock[name] : real[name]);
 export const api = {
   // 帳號不受練習模式影響
   login: (student_id, password) => data('login')(student_id, password),
-  register: (d) => (USE_MOCK ? mock.login(d.student_id, d.password) : real.register(d)),
+  // 註冊：先寄 Email 驗證碼（sendSignupCode），再帶驗證碼註冊。假資料模式不寄信，驗證碼直接回給畫面
+  sendSignupCode: (email) => data('sendSignupCode')(email),
+  register: (d) => data('register')(d),
   // 第三個參數：第一次登入時選的登入帳號（之後不能改）
   changePassword: (current, next, newStudentId) => data('changePassword')(current, next, newStudentId),
   // 忘記密碼（寄重設連結）：只有真後端有，假資料模式是 null

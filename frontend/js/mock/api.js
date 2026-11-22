@@ -107,6 +107,23 @@ export async function login(student_id) {
   return { access_token: `mock-${role}`, user: { id: u.id, role, student_id: role === 'customer' ? student_id : null, restaurant_id: u.restaurant_id ?? null } };
 }
 
+// 註冊（假資料）：不會真的寄信，驗證碼直接回給畫面顯示；帳號也不會真的建立，驗證碼對了就登入
+const mockCodes = new Map();
+export async function sendSignupCode(email) {
+  await sleep();
+  const code = String(Math.floor(Math.random() * 1e6)).padStart(6, '0');
+  mockCodes.set(String(email).toLowerCase(), code);
+  return { demo_code: code };
+}
+export async function register({ student_id, email, email_code, password }) {
+  const key = String(email).toLowerCase();
+  const code = mockCodes.get(key);
+  if (!code) fail('The verification code has expired or was not sent; ask for a new one');
+  if (code !== email_code) fail('The verification code is incorrect');
+  mockCodes.delete(key);
+  return login(student_id, password);
+}
+
 export async function getMe() {
   await sleep(40);
   const s = me();

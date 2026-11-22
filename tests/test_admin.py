@@ -2,6 +2,7 @@ from collections.abc import Callable, Iterator
 
 import pytest
 from fastapi.testclient import TestClient
+from signup import sign_up
 from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -425,7 +426,7 @@ def test_customers_cannot_change_their_login_id(client: TestClient) -> None:
         "phone_number": "0912345678",
         "password": "correct-horse-battery",
     }
-    assert client.post("/api/auth/register", json=alice).status_code == 201
+    assert sign_up(client, alice).status_code == 201
     login = client.post(
         "/api/auth/login",
         json={"student_id": alice["student_id"], "password": alice["password"]},

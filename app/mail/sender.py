@@ -19,6 +19,8 @@ class Email:
     to: str
     subject: str
     body: str  # plain text
+    # Optional HTML version; mail apps that show HTML use it instead of the text
+    html: str | None = None
 
 
 class Mailer(Protocol):
@@ -36,6 +38,8 @@ class SmtpMailer:
         message["To"] = email.to
         message["Subject"] = email.subject
         message.set_content(email.body)
+        if email.html is not None:
+            message.add_alternative(email.html, subtype="html")
 
         context = ssl.create_default_context()
         if s.smtp_port == 465:
