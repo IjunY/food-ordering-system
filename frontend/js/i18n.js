@@ -1094,6 +1094,36 @@ Object.assign(DICT.en, {
   'admin.platform.created': 'Created "{name}". Temporary login ID: {id}',
 });
 
+// 預約取餐
+Object.assign(DICT.zh, {
+  'cart.scheduled': '預約取餐時間',
+  'cart.pick_slot': '取餐時間',
+  'cart.slot_rule': '每 15 分鐘一個時段，最早可選現在起 30 分鐘後',
+  'cart.slot_expired': '選的時段已經不到 30 分鐘後了，請重新選一個',
+  'pickup.today': '今天 {date}',
+  'pickup.tomorrow': '明天 {date}',
+  'pickup.tomorrow_short': '明天',
+  'order.booked_for': '預約 {time} 取餐',
+  'order.booked_short': '預約 {time}',
+  'pass.pickup_time': '取餐時間',
+  'admin.booked': '預約 {time} 取餐',
+  'admin.start_by': '建議 {time} 開始做',
+});
+Object.assign(DICT.en, {
+  'cart.scheduled': 'Book a pickup time',
+  'cart.pick_slot': 'Pickup time',
+  'cart.slot_rule': 'Every 15 minutes, starting 30 minutes from now',
+  'cart.slot_expired': 'That time is now less than 30 minutes away. Please pick another.',
+  'pickup.today': 'Today {date}',
+  'pickup.tomorrow': 'Tomorrow {date}',
+  'pickup.tomorrow_short': 'Tomorrow',
+  'order.booked_for': 'Booked for {time}',
+  'order.booked_short': 'Booked {time}',
+  'pass.pickup_time': 'Pickup time',
+  'admin.booked': 'Pickup at {time}',
+  'admin.start_by': 'Start by {time}',
+});
+
 const STORAGE_KEY = 'lang';
 let lang = (() => {
   try { return localStorage.getItem(STORAGE_KEY) === 'en' ? 'en' : 'zh'; } catch { return 'zh'; }

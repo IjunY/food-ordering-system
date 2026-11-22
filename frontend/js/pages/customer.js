@@ -6,6 +6,7 @@ import { actions, forms, inputs, navigate, rerender, poll, toast, confirmDialog 
 import { icon } from '../icons.js';
 import * as C from '../components.js';
 import { maybeStartTour } from '../tour.js';
+import { pickupSlots, slotAllowed } from '../pickup.js';
 
 const { esc, money, unit, hhmm } = C;
 const phone = (inner) => `<div class="phone">${inner}</div>`;
@@ -424,10 +425,22 @@ actions['add-to-cart'] = async (d) => {
 
 // ======================= C05 確認訂單 =======================
 const checkout = { pickup_type: 'asap', pickup_time: null };
-function nextSlots() {
-  const d = new Date(Date.now() + 15 * 60000);
-  d.setMinutes(Math.ceil(d.getMinutes() / 15) * 15, 0, 0);
-  return [0, 1, 2, 3].map((k) => new Date(d.getTime() + k * 15 * 60000).toISOString());
+
+// 預約時段的下拉選單：依日期分組（今天／明天），每 15 分鐘一個
+function slotSelect(slots, selected) {
+  const days = [];
+  for (const s of slots) {
+    const day = new Date(s).toDateString();
+    if (days.at(-1)?.day !== day) days.push({ day, label: C.dayLabel(s), slots: [] });
+    days.at(-1).slots.push(s);
+  }
+  return `<div class="slotpick">
+    <label class="lab" for="pickup-slot">${esc(t('cart.pick_slot'))}</label>
+    <select id="pickup-slot" class="num" data-input="pickup-slot">
+      ${days.map((g) => `<optgroup label="${esc(g.label)}">${g.slots.map((s) => `<option value="${esc(s)}"${s === selected ? ' selected' : ''}>${hhmm(s)}</option>`).join('')}</optgroup>`).join('')}
+    </select>
+    <small>${esc(t('cart.slot_rule'))}</small>
+  </div>`;
 }
 
 function cartLine(line) {
@@ -447,7 +460,7 @@ export async function cartPage() {
   }
   const [r, wait] = await Promise.all([api.getRestaurant(c.restaurant_id), api.getWaitEstimate(c.restaurant_id)]);
   const total = cartTotal(c);
-  const slots = nextSlots();
+  const slots = pickupSlots();
   const scheduled = checkout.pickup_type === 'scheduled';
   if (scheduled && !slots.includes(checkout.pickup_time)) checkout.pickup_time = slots[0];
   return phone(`${C.TopBar({ title: t('cart.review'), back: true })}
@@ -462,7 +475,7 @@ export async function cartPage() {
           ${C.Choice({ label: t('cart.asap'), aside: t('cart.around', { time: hhmm(wait.estimated_ready_at) }), selected: !scheduled, action: 'pickup-type', data: { type: 'asap' } })}
           ${C.Choice({ label: t('cart.scheduled'), aside: r.allow_scheduled_pickup ? '' : t('cart.scheduled_off'), selected: scheduled, action: 'pickup-type', data: { type: 'scheduled' }, disabled: !r.allow_scheduled_pickup })}
         </div>
-        ${scheduled ? `<div class="slots" role="group" aria-label="${esc(t('cart.pick_slot'))}">${slots.map((s) => `<button type="button" class="slot num" aria-pressed="${s === checkout.pickup_time}" data-action="pickup-slot" data-time="${esc(s)}">${hhmm(s)}</button>`).join('')}</div>` : ''}
+        ${scheduled ? slotSelect(slots, checkout.pickup_time) : ''}
       </fieldset>
       ${C.Note({ text: t('cart.mock_note') })}
     </main>
@@ -477,8 +490,14 @@ actions['cart-qty'] = (d) => {
   rerender();
 };
 actions['pickup-type'] = (d) => { checkout.pickup_type = d.type; if (d.type === 'asap') checkout.pickup_time = null; rerender(); };
-actions['pickup-slot'] = (d) => { checkout.pickup_time = d.time; rerender(); };
+inputs['pickup-slot'] = (el) => { checkout.pickup_time = el.value; };
 actions.checkout = async (_, el) => {
+  // 在這頁停太久，選的時段可能已經不到 30 分鐘後了：請顧客重選
+  if (checkout.pickup_type === 'scheduled' && !slotAllowed(checkout.pickup_time)) {
+    toast(t('cart.slot_expired'));
+    rerender();
+    return;
+  }
   el.disabled = true;
   el.setAttribute('aria-busy', 'true');
   const c = cart.get();
@@ -489,6 +508,7 @@ actions.checkout = async (_, el) => {
       pickup_type: checkout.pickup_type,
       pickup_time: checkout.pickup_type === 'scheduled' ? checkout.pickup_time : null,
     });
+    Object.assign(checkout, { pickup_type: 'asap', pickup_time: null });
     navigate(`pay-${order.id}`);
   } finally { if (el.isConnected) { el.disabled = false; el.removeAttribute('aria-busy'); } }
 };
@@ -555,7 +575,7 @@ export async function paidPage({ oid }) {
       ${cash ? C.Note({ text: t('order.pay_at_pickup') }) : ''}
       <div class="passwrap">
         ${C.Pass(o, { mode: 'full', extra: passLines(o) })}
-        <p class="msg">${esc(t('order.ready_around', { time: hhmm(o.estimated_ready_at) }))}</p>
+        <p class="msg">${esc(C.readyText(o))}</p>
       </div>
     </main>
     <div class="dock">
@@ -575,7 +595,7 @@ export async function orderStatusPage({ oid }) {
 
   const unpaid = o.status === 'pending_payment' && !o.payment_method;
   const when = Object.fromEntries(o.status_history.map((h) => [h.status, h.at]));
-  const eta = [t('order.ready_around', { time: hhmm(o.estimated_ready_at) }), o.queue_ahead ? t('order.queue_ahead', { n: o.queue_ahead }) : ''].filter(Boolean).join(' · ');
+  const eta = [C.readyText(o), o.queue_ahead ? t('order.queue_ahead', { n: o.queue_ahead }) : ''].filter(Boolean).join(' · ');
   const msg = o.status === 'ready' ? `<p class="msg msg--ready" role="status">${esc(t('order.ready_alert', { place: o.restaurant_location }))}</p><p class="upd">${esc(t('order.ready_at', { time: hhmm(when.ready || o.estimated_ready_at) }))} · ${esc(t('order.hold'))}</p>`
     : o.status === 'cancelled' ? `<p class="msg msg--cancel">${esc(t('pass.cancel_msg'))}</p>`
     : o.status === 'picked_up' ? `<p class="msg">${esc(t('pass.picked_msg'))}</p>`
@@ -610,7 +630,7 @@ export async function ordersPage() {
       <span class="code">${esc(o.pickup_number)}</span>
       <a class="nm" href="#order-${esc(o.id)}">${esc(o.restaurant_name)}</a>
       <span class="r"><b>${money(o.total)}</b><span${o.status === 'cancelled' ? ' class="x"' : ''}>${esc(t('pass.st.' + o.status))}</span></span>
-      <span class="mt num">${C.mmdd(o.created_at)} · ${hhmm(o.created_at)}</span>
+      <span class="mt num">${C.mmdd(o.created_at)} · ${hhmm(o.created_at)}${o.pickup_type === 'scheduled' ? ` · ${esc(t('order.booked_short', { time: C.pickupText(o.pickup_time) }))}` : ''}</span>
       <span class="its">${esc(C.itemsSummary(o.items, t('fmt.list_sep')))}</span>
       <button type="button" class="lnk" data-action="reorder" data-id="${esc(o.id)}">${esc(t('orders.reorder'))}</button>
     </li>`;

@@ -15,6 +15,7 @@ from app.menu import repo as menu_repo
 from app.menu.models import MenuItem
 from app.orders import repo
 from app.orders.models import Order, OrderItem
+from app.orders.pickup import check_pickup_time
 from app.orders.schemas import OrderCreate, OrderItemRead, OrderRead
 from app.orders.states import ALLOWED_TRANSITIONS, OrderStatus
 from app.payments import repo as payments_repo
@@ -104,6 +105,9 @@ def create_order(session: Session, user: User, data: OrderCreate) -> Order:
     vendor = menu_repo.get_vendor(session, vendor_id)
     if vendor is None or not vendor.is_accepting_orders:
         raise ConflictError("This vendor is not taking orders right now")
+    pickup_time = (
+        None if data.pickup_time is None else check_pickup_time(data.pickup_time)
+    )
 
     lines = []
     for (item_id, option_ids, note), quantity in quantities.items():
@@ -120,7 +124,12 @@ def create_order(session: Session, user: User, data: OrderCreate) -> Order:
                 note=note,
             )
         )
-    order = Order(created_by=user.student_id, vendor_id=vendor_id, items=lines)
+    order = Order(
+        created_by=user.student_id,
+        vendor_id=vendor_id,
+        items=lines,
+        pickup_time=pickup_time,
+    )
     repo.add(session, order)
     session.commit()
     return order
@@ -268,6 +277,7 @@ def to_read(session: Session, orders: Sequence[Order]) -> list[OrderRead]:
                 total=sum(line.subtotal for line in lines),
                 payment_status=payment_status.get(order.id, "unpaid"),
                 pay_at_pickup=order.pay_at_pickup,
+                pickup_time=order.pickup_time,
             )
         )
     return result

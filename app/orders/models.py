@@ -36,6 +36,12 @@ class Order(Base):
     # Such orders go to the vendor's board as "unpaid, pay at counter".
     pay_at_pickup: Mapped[bool] = mapped_column(default=False, server_default=false())
 
+    # The time the customer booked to pick up (on a 15-minute mark); None means
+    # "as soon as possible". See app/orders/pickup.py for the rules.
+    pickup_time: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), default=None
+    )
+
     # Link between OrderItem.order
     # back_populates: adding an OrderItem to a list also makes the item belong to the order
     # "all, delete-orphan": Items are deleted when an order is deleted. Also, an item no longer belongs to an order when the item is deleted.
