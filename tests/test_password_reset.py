@@ -229,3 +229,18 @@ def test_smtp_is_used_once_a_host_is_set(client: TestClient) -> None:
     without = MailSettings(_env_file=None)  # pyright: ignore[reportCallIssue]
     assert isinstance(get_mailer(request, with_smtp), SmtpMailer)  # type: ignore[arg-type]
     assert isinstance(get_mailer(request, without), LogMailer)  # type: ignore[arg-type]
+
+    # The Gmail account from .env.example, before its app password is filled in
+    no_password = MailSettings(
+        smtp_host="smtp.gmail.com",
+        smtp_username="nthu.mealorder@gmail.com",
+        _env_file=None,  # pyright: ignore[reportCallIssue]
+    )
+    assert isinstance(get_mailer(request, no_password), LogMailer)  # type: ignore[arg-type]
+    with_password = MailSettings(
+        smtp_host="smtp.gmail.com",
+        smtp_username="nthu.mealorder@gmail.com",
+        smtp_password="abcdabcdabcdabcd",
+        _env_file=None,  # pyright: ignore[reportCallIssue]
+    )
+    assert isinstance(get_mailer(request, with_password), SmtpMailer)  # type: ignore[arg-type]

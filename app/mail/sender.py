@@ -69,14 +69,17 @@ class LogMailer:
     def send(self, email: Email) -> None:
         if self._show_body:
             logger.warning(
-                "Email not sent (MAIL_SMTP_HOST is not set). To: %s\nSubject: %s\n\n%s",
+                "Email not sent (MAIL_SMTP_HOST or MAIL_SMTP_PASSWORD is not set). "
+                "To: %s\nSubject: %s\n\n%s",
                 email.to,
                 email.subject,
                 email.body,
             )
         else:
             logger.error(
-                "Email to %s was not sent: set MAIL_SMTP_HOST to send email", email.to
+                "Email to %s was not sent: set MAIL_SMTP_HOST and MAIL_SMTP_PASSWORD "
+                "to send email",
+                email.to,
             )
 
 
@@ -84,7 +87,10 @@ def get_mailer(
     request: Request,
     settings: Annotated[MailSettings, Depends(get_mail_settings)],
 ) -> Mailer:
-    if settings.smtp_host:
+    # A login name without its password (e.g. .env copied from .env.example before
+    # the app password was filled in) would only fail at every send: log instead
+    has_login = not settings.smtp_username or settings.smtp_password.get_secret_value()
+    if settings.smtp_host and has_login:
         return SmtpMailer(settings)
     return LogMailer(show_body=request.app.state.app_settings.app_env != "prod")
 

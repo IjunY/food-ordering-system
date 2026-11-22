@@ -99,8 +99,10 @@ accounts made by an admin, and the seed script's demo accounts, skip this.
   for 30 minutes; using it signs the user in and out
   everywhere else. The page answers the same whether or not the account exists,
   and sends at most one email per account per minute.
-- Sending email: set `MAIL_SMTP_HOST` etc. in `.env` (see `.env.example`; for
-  Gmail, use an [app password](https://myaccount.google.com/apppasswords)).
+- Sending email: emails go out from the project's Gmail account,
+  `nthu.mealorder@gmail.com` (the `MAIL_*` lines in `.env.example`). Put that
+  account's [app password](https://myaccount.google.com/apppasswords) in
+  `MAIL_SMTP_PASSWORD` in your `.env` (ask the team; never commit it).
   Without it, in development the email is printed in the server log instead:
   `docker compose logs app | grep -A 20 "Email not sent"`, then open the link.
 - Links in the email point at `APP_URL` (default `http://localhost:8000`). For a
