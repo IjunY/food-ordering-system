@@ -4,7 +4,7 @@ import json
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.admin import repo as admin_repo
 from app.auth import repo as user_repo
@@ -26,16 +26,34 @@ def test_the_stalls_menus_and_demo_accounts_are_loaded(client: TestClient) -> No
             account: user_repo.get_by_student_id(session, account)
             for account, _ in seed_demo.DEMO_ACCOUNTS
         }
+        # No student account: students sign up themselves
         assert {a: u.role for a, u in roles.items() if u} == {
-            "112012345": UserRole.CUSTOMER,
             "staff": UserRole.STAFF,
             "admin": UserRole.ADMIN,
         }
-        # The admin can use the admin pages; the staff account runs 牛肉先生
+        # The admin can use the admin pages; the staff account runs the demo vendor
         assert admin_repo.get_by_user_id(session, roles["admin"].id) is not None  # type: ignore[union-attr]
         staff_vendor = session.get(Vendor, roles["staff"].vendor_id)  # type: ignore[union-attr]
         assert staff_vendor is not None
         assert staff_vendor.name_zh == seed_demo.DEMO_STAFF_VENDOR
+
+
+def test_the_demo_vendor_is_one_of_the_stalls_in_the_file() -> None:
+    # A typo here (e.g. 碳 for 炭) would leave the staff account without a vendor
+    names = {v["name_zh"] for v in DEMO["vendors"]}
+    assert seed_demo.DEMO_STAFF_VENDOR in names
+    assert any(i["vendor"] == seed_demo.DEMO_STAFF_VENDOR for i in DEMO["items"])
+
+
+def test_a_mistyped_demo_vendor_stops_the_seed_before_writing(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(seed_demo, "DEMO_STAFF_VENDOR", "碳烤小姐")
+    with client.app.state.session_factory() as session:  # type: ignore[attr-defined]
+        before = session.scalar(select(func.count()).select_from(Vendor))
+        with pytest.raises(ValueError, match="not a vendor"):
+            seed_demo.seed(session, PASSWORD)
+        assert session.scalar(select(func.count()).select_from(Vendor)) == before
 
 
 def test_restarting_keeps_changes_made_in_the_app(client: TestClient) -> None:

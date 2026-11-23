@@ -9,10 +9,11 @@ first start when DEMO_PASSWORD is set in .env: see scripts/docker-entrypoint.sh.
   Center and the Snack Bar; see the file's _comment for where the data came
   from), with their areas, photos, descriptions and add-on choices. The app
   shows vendors and menus from the database, so this file is where they start.
-- Accounts: a customer (112012345), a vendor staff account (staff, managing
-  牛肉先生) and an admin (admin, with its row in the admins table), all with
-  the password given on the command line (at least 8 characters). More vendors
-  and their staff accounts can then be added by the admin in the app.
+- Accounts: a vendor staff account (staff, managing DEMO_STAFF_VENDOR) and an
+  admin (admin, with its row in the admins table), both with the password given
+  on the command line (at least 8 characters). There is no student account:
+  students sign up in the app. More vendors and their staff accounts can then
+  be added by the admin in the app.
 
 Running it again adds what is missing and brings vendors and items that are
 already there (matched by Chinese name) up to date with the file. Nothing is
@@ -47,11 +48,10 @@ from app.menu.schemas import MenuItemCreate, VendorCreate
 
 MENU_FILE = Path(__file__).with_name("nthu_menu.json")
 
-# The vendor the demo staff account manages
-DEMO_STAFF_VENDOR = "牛肉先生"
+# The vendor the demo staff account manages: exactly a name_zh in nthu_menu.json
+DEMO_STAFF_VENDOR = "炭烤小姐"
 
 DEMO_ACCOUNTS = [
-    ("112012345", UserRole.CUSTOMER),
     ("staff", UserRole.STAFF),
     ("admin", UserRole.ADMIN),
 ]
@@ -168,6 +168,13 @@ def has_vendors(session: Session) -> bool:
 def seed(session: Session, password: str, *, close_others: bool = False) -> str:
     """Loads the vendors, menu and demo accounts; returns a summary line."""
     demo = json.loads(MENU_FILE.read_text(encoding="utf-8"))
+    # Checked before writing anything: a name that matches no vendor would leave
+    # the demo staff account without a vendor (it could not use the vendor pages)
+    if DEMO_STAFF_VENDOR not in {v["name_zh"] for v in demo["vendors"]}:
+        raise ValueError(
+            f"DEMO_STAFF_VENDOR {DEMO_STAFF_VENDOR!r} is not a vendor in "
+            f"{MENU_FILE.name}; use one of its name_zh values exactly"
+        )
     vendors_added = seed_vendors(session, demo["vendors"])
     menu_added = seed_menu(session, demo["items"])
     closed = (

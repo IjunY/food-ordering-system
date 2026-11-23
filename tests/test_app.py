@@ -89,7 +89,7 @@ def test_seed_is_idempotent(client: TestClient) -> None:
 
         assert seed_vendors(session, vendors) == 1
         assert seed_menu(session, items) == 2
-        assert seed_accounts(session, "demo-password-1") == 3
+        assert seed_accounts(session, "demo-password-1") == len(DEMO_ACCOUNTS)
         # running again adds nothing ...
         assert seed_vendors(session, vendors) == 0
         assert seed_menu(session, items) == 0
@@ -153,7 +153,6 @@ def test_seed_is_idempotent(client: TestClient) -> None:
             ).all()
         )
         assert roles == {
-            "112012345": UserRole.CUSTOMER,
             "staff": UserRole.STAFF,
             "admin": UserRole.ADMIN,
         }

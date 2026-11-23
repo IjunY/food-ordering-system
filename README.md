@@ -42,7 +42,8 @@ that the Dockerfile's `CMD` stays in sync with this.
 
 With Docker this happens by itself (see Running). Without Docker, apply the
 migrations, then load the NTHU campus vendors and menus plus the demo accounts
-(`112012345` customer, `staff` for 牛肉先生, `admin`):
+(`staff` for 炭烤小姐, and `admin`). There is no demo student account: students
+sign up in the app.
 
 ```bash
 uv run alembic upgrade head
@@ -63,7 +64,8 @@ into a database that already has other vendors:
 - Staff accounts belong to one vendor (`users.vendor_id`) and only see and change
   that vendor's orders, menu and "accepting orders" switch
   (`PATCH /api/vendors/{id}`). Platform admins can see every vendor's orders but
-  not change them. The seed links the demo `staff` account to 牛肉先生.
+  not change them. The seed links the demo `staff` account to 炭烤小姐
+  (`DEMO_STAFF_VENDOR` in `scripts/seed_demo.py`).
 - A vendor that is not accepting orders (`is_accepting_orders = false`) cannot
   receive new orders (409).
 - The app shows vendors, menus, add-ons and orders from the database only.
