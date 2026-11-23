@@ -1,7 +1,7 @@
 """sign-up needs a code emailed to the address (email_verifications)
 
 Revision ID: a8d3f5c2e7b1
-Revises: 630baecd2949
+Revises: e4b7c1a9d203
 Create Date: 2026-11-23 12:00:00.000000
 
 """
@@ -13,7 +13,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "a8d3f5c2e7b1"
-down_revision: str | Sequence[str] | None = "630baecd2949"
+down_revision: str | Sequence[str] | None = "e4b7c1a9d203"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
