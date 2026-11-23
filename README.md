@@ -3,12 +3,29 @@
 
 ## Running
 
-With Docker (app + Postgres; needs a `.env` like `.env.example`, including
-`JWT_SECRET` and `PAYMENT_WEBHOOK_SECRET`, or Compose will not start even the database):
+With Docker (app + Postgres), one command:
 
 ```bash
 docker compose up --build
 ```
+
+Then open http://localhost:8000. Every time the app container starts, it first
+brings the database up to date (`alembic upgrade head`). On the very first start,
+if `DEMO_PASSWORD` is set in `.env`, it also loads the NTHU stalls and menus and
+the demo accounts (see below) with that password. Later starts leave the data
+alone, so whatever was changed in the app survives a restart. If a step fails,
+the app does not start and `docker compose logs app` says why.
+
+It needs a `.env` (Compose will not start even the database without
+`POSTGRES_PASSWORD`, `JWT_SECRET` and `PAYMENT_WEBHOOK_SECRET`). On a fresh
+clone, create one from the template and fill in the values:
+
+```bash
+cp -n .env.example .env   # -n: never overwrites an existing .env
+```
+
+`.env` holds your own secrets and is never committed; `.env.example` only lists
+the settings with placeholder values.
 
 Locally, without Docker (needs `DATABASE_URL` set, e.g. in `.env`):
 
@@ -23,16 +40,18 @@ that the Dockerfile's `CMD` stays in sync with this.
 
 ## Database and data
 
-Apply the migrations, then load the NTHU campus vendors and menus plus the demo
-accounts (`112012345` customer, `staff` for 牛肉先生, `admin`):
+With Docker this happens by itself (see Running). Without Docker, apply the
+migrations, then load the NTHU campus vendors and menus plus the demo accounts
+(`112012345` customer, `staff` for 牛肉先生, `admin`):
 
 ```bash
 uv run alembic upgrade head
-uv run python scripts/seed_demo.py --password <password for the demo accounts>
+uv run python -m scripts.seed_demo --password <password for the demo accounts>
 ```
 
-With Docker, run the same commands inside the app container, e.g.
-`docker compose exec app alembic upgrade head`.
+The seed can also be run by hand in the container, e.g. to load the demo data
+into a database that already has other vendors:
+`docker compose exec app python -m scripts.seed_demo --password <password>`.
 
 - The migrations also upgrade a database that already has menu items and
   orders: no need to wipe it (`docker compose down -v`) first.

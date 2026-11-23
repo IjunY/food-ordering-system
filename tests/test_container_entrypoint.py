@@ -54,3 +54,69 @@ def test_dockerfile_cmd_loads_the_app(container_env: None) -> None:
     while not isinstance(loaded, FastAPI) and hasattr(loaded, "app"):
         loaded = loaded.app
     assert isinstance(loaded, FastAPI), f"{target!r} did not produce a FastAPI app"
+
+
+ENTRYPOINT_SCRIPT = DOCKERFILE.parent / "scripts" / "docker-entrypoint.sh"
+
+
+def test_dockerfile_runs_the_entrypoint_script() -> None:
+    lines = [
+        line
+        for line in DOCKERFILE.read_text().splitlines()
+        if line.startswith("ENTRYPOINT ")
+    ]
+    assert len(lines) == 1, "expected exactly one ENTRYPOINT line in the Dockerfile"
+    assert json.loads(lines[0].removeprefix("ENTRYPOINT ")) == [
+        "sh",
+        "/code/scripts/docker-entrypoint.sh",
+    ]
+
+
+def _start_container(tmp_path: Path, env: dict[str, str]) -> tuple[int, list[str]]:
+    """Runs the entrypoint with stand-ins for alembic and python that log their arguments."""
+    import os
+    import subprocess
+
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir(exist_ok=True)
+    log = tmp_path / "log"
+    for name in ("alembic", "python"):
+        fake = bin_dir / name
+        fake.write_text(
+            f'#!/bin/sh\necho "{name} $*" >> "{log}"\nexit "${{FAIL_{name.upper()}:-0}}"\n'
+        )
+        fake.chmod(0o755)
+    result = subprocess.run(
+        ["sh", str(ENTRYPOINT_SCRIPT), "sh", "-c", f'echo "app started" >> "{log}"'],
+        env={"PATH": f"{bin_dir}:{os.environ['PATH']}", **env},
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return result.returncode, log.read_text().splitlines() if log.exists() else []
+
+
+def test_container_start_migrates_then_seeds_then_starts_the_app(
+    tmp_path: Path,
+) -> None:
+    code, steps = _start_container(tmp_path, {"DEMO_PASSWORD": "demo-password-123"})
+    assert code == 0
+    assert steps == [
+        "alembic upgrade head",
+        "python -m scripts.seed_demo --if-empty",
+        "app started",
+    ]
+
+
+def test_without_demo_password_nothing_is_seeded(tmp_path: Path) -> None:
+    code, steps = _start_container(tmp_path, {})
+    assert code == 0
+    assert steps == ["alembic upgrade head", "app started"]
+
+
+def test_a_failed_migration_keeps_the_app_from_starting(tmp_path: Path) -> None:
+    code, steps = _start_container(
+        tmp_path, {"DEMO_PASSWORD": "demo-password-123", "FAIL_ALEMBIC": "1"}
+    )
+    assert code != 0
+    assert steps == ["alembic upgrade head"]

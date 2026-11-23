@@ -38,5 +38,9 @@ WORKDIR /code
 USER app
 
 EXPOSE 8000
+# Before the app starts: database migrations, and the demo data on the first start
+# (scripts/docker-entrypoint.sh). Run through sh so it works without the file's
+# executable bit (e.g. a checkout on Windows).
+ENTRYPOINT ["sh", "/code/scripts/docker-entrypoint.sh"]
 # app/main.py exposes a factory (create_app), not a module-level `app`.
 CMD ["uvicorn", "app.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]

@@ -1,6 +1,9 @@
 """Fills the database with the NTHU campus vendors and menus, plus demo accounts.
 
-    uv run python scripts/seed_demo.py --password <password for the demo accounts>
+    uv run python -m scripts.seed_demo --password <password for the demo accounts>
+
+(or set DEMO_PASSWORD instead of --password). With Docker this runs by itself on the
+first start when DEMO_PASSWORD is set in .env: see scripts/docker-entrypoint.sh.
 
 - Vendors and menu: scripts/nthu_menu.json (real stalls in Fengyun Hall, Shuimu
   Center and the Snack Bar; see the file's _comment for where the data came
@@ -8,18 +11,24 @@
   shows vendors and menus from the database, so this file is where they start.
 - Accounts: a customer (112012345), a vendor staff account (staff, managing
   牛肉先生) and an admin (admin, with its row in the admins table), all with
-  the password given on the command line. More vendors and their staff
-  accounts can then be added by the admin in the app.
+  the password given on the command line (at least 8 characters). More vendors
+  and their staff accounts can then be added by the admin in the app.
 
 Running it again adds what is missing and brings vendors and items that are
 already there (matched by Chinese name) up to date with the file. Nothing is
 deleted. Vendors that are not in the file (e.g. the old sample vendors) stay as
 they are, unless --close-others is given: then they stop taking orders and
 their items go off the menu (past orders keep working).
+
+With --if-empty it does nothing when the database already has vendors. The
+container uses this on every start, so restarting never puts the stalls and
+items back to the file's values over changes made in the app.
 """
 
 import argparse
 import json
+import os
+from collections.abc import Sequence
 from pathlib import Path
 
 from sqlalchemy import select, update
@@ -152,36 +161,75 @@ def seed_accounts(session: Session, password: str) -> int:
     return added
 
 
-def main() -> None:
+def has_vendors(session: Session) -> bool:
+    return session.scalar(select(Vendor.id).limit(1)) is not None
+
+
+def seed(session: Session, password: str, *, close_others: bool = False) -> str:
+    """Loads the vendors, menu and demo accounts; returns a summary line."""
+    demo = json.loads(MENU_FILE.read_text(encoding="utf-8"))
+    vendors_added = seed_vendors(session, demo["vendors"])
+    menu_added = seed_menu(session, demo["items"])
+    closed = (
+        close_other_vendors(session, [v["name_zh"] for v in demo["vendors"]])
+        if close_others
+        else 0
+    )
+    accounts_added = seed_accounts(session, password)
+    return (
+        f"vendors added: {vendors_added}, menu items added: {menu_added}, "
+        f"accounts added: {accounts_added} (existing rows were updated to match "
+        f"{MENU_FILE.name})"
+        + (f", other vendors closed: {closed}" if close_others else "")
+    )
+
+
+def run(
+    session: Session,
+    password: str,
+    *,
+    if_empty: bool = False,
+    close_others: bool = False,
+) -> str:
+    if if_empty and has_vendors(session):
+        return "the database already has vendors, leaving it as it is"
+    return seed(session, password, close_others=close_others)
+
+
+def main(argv: Sequence[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
-        "--password", required=True, help="password for the demo accounts"
+        "--password",
+        default=os.environ.get("DEMO_PASSWORD") or None,
+        help="password for the demo accounts (default: the DEMO_PASSWORD variable)",
     )
     parser.add_argument(
         "--close-others",
         action="store_true",
         help="vendors not in the file stop taking orders and their items go off the menu",
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "--if-empty",
+        action="store_true",
+        help="do nothing if the database already has vendors",
+    )
+    args = parser.parse_args(argv)
+    if not args.password:
+        parser.error("give --password or set DEMO_PASSWORD")
+    if not 8 <= len(args.password) <= 128:
+        # Same rule as sign-up; checked here so the error is clear (not a traceback)
+        parser.error("the demo password must be 8 to 128 characters long")
 
-    demo = json.loads(MENU_FILE.read_text(encoding="utf-8"))
     engine = get_engine(get_settings())
     with sessionmaker(bind=engine)() as session:
-        vendors_added = seed_vendors(session, demo["vendors"])
-        menu_added = seed_menu(session, demo["items"])
-        closed = (
-            close_other_vendors(session, [v["name_zh"] for v in demo["vendors"]])
-            if args.close_others
-            else 0
+        message = run(
+            session,
+            args.password,
+            if_empty=args.if_empty,
+            close_others=args.close_others,
         )
-        accounts_added = seed_accounts(session, args.password)
     engine.dispose()
-    print(
-        f"vendors added: {vendors_added}, menu items added: {menu_added}, "
-        f"accounts added: {accounts_added} (existing rows were updated to match "
-        f"{MENU_FILE.name})"
-        + (f", other vendors closed: {closed}" if args.close_others else "")
-    )
+    print(f"Demo data: {message}")
 
 
 if __name__ == "__main__":
