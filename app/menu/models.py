@@ -25,6 +25,16 @@ class Vendor(Base):
     is_accepting_orders: Mapped[bool] = mapped_column(
         default=True, server_default=true()
     )
+    # Customers can book a pickup time (scheduled pickup) only when this is on
+    allow_scheduled_pickup: Mapped[bool] = mapped_column(
+        default=True, server_default=true()
+    )
+    # When bookings can be picked up, the same every day (Taiwan time): a list of
+    # {"open": "11:00", "close": "13:30"} (app.menu.schemas.PickupPeriod).
+    # Empty: any time. Checked by app.orders.pickup.
+    pickup_hours: Mapped[list[dict[str, str]]] = mapped_column(
+        JSON, default=list, server_default=text("'[]'")
+    )
     # Which part of campus the vendor is in: one of app.menu.schemas.AREAS.
     # The home page groups vendors by it.
     area: Mapped[str] = mapped_column(

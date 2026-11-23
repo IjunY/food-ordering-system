@@ -6,7 +6,7 @@ import { actions, forms, inputs, navigate, rerender, poll, toast, confirmDialog 
 import { icon } from '../icons.js';
 import * as C from '../components.js';
 import { maybeStartTour } from '../tour.js';
-import { pickupSlots, slotAllowed } from '../pickup.js';
+import { pickupSlots, slotAllowed, hoursText } from '../pickup.js';
 
 const { esc, money, unit, hhmm } = C;
 const phone = (inner) => `<div class="phone">${inner}</div>`;
@@ -489,10 +489,12 @@ actions['add-to-cart'] = async (d) => {
 };
 
 // ======================= C05 確認訂單 =======================
-const checkout = { pickup_type: 'asap', pickup_time: null };
+const checkout = { pickup_type: 'asap', pickup_time: null, hours: [] };
 
 // 預約時段的下拉選單：依日期分組（今天／明天），每 15 分鐘一個
-function slotSelect(slots, selected) {
+function slotSelect(slots, selected, hours) {
+  const rule = hours.length ? t('cart.slot_rule_hours', { hours: hoursText(hours) }) : t('cart.slot_rule');
+  if (!slots.length) return `<div class="slotpick"><small>${esc(t('cart.no_slots', { hours: hoursText(hours) }))}</small></div>`;
   const days = [];
   for (const s of slots) {
     const day = new Date(s).toDateString();
@@ -504,7 +506,7 @@ function slotSelect(slots, selected) {
     <select id="pickup-slot" class="num" data-input="pickup-slot">
       ${days.map((g) => `<optgroup label="${esc(g.label)}">${g.slots.map((s) => `<option value="${esc(s)}"${s === selected ? ' selected' : ''}>${hhmm(s)}</option>`).join('')}</optgroup>`).join('')}
     </select>
-    <small>${esc(t('cart.slot_rule'))}</small>
+    <small>${esc(rule)}</small>
   </div>`;
 }
 
@@ -525,7 +527,10 @@ export async function cartPage() {
   }
   const [r, wait] = await Promise.all([api.getRestaurant(c.restaurant_id), api.getWaitEstimate(c.restaurant_id)]);
   const total = cartTotal(c);
-  const slots = pickupSlots();
+  // 店家的可預約時段（沒設＝全天）；結帳時也要用，所以記在 checkout
+  checkout.hours = r.pickup_hours || [];
+  const slots = pickupSlots(Date.now(), checkout.hours);
+  if (!r.allow_scheduled_pickup && checkout.pickup_type === 'scheduled') Object.assign(checkout, { pickup_type: 'asap', pickup_time: null });
   const scheduled = checkout.pickup_type === 'scheduled';
   if (scheduled && !slots.includes(checkout.pickup_time)) checkout.pickup_time = slots[0];
   return phone(`${C.TopBar({ title: t('cart.review'), back: true })}
@@ -540,7 +545,7 @@ export async function cartPage() {
           ${C.Choice({ label: t('cart.asap'), aside: t('cart.around', { time: hhmm(wait.estimated_ready_at) }), selected: !scheduled, action: 'pickup-type', data: { type: 'asap' } })}
           ${C.Choice({ label: t('cart.scheduled'), aside: r.allow_scheduled_pickup ? '' : t('cart.scheduled_off'), selected: scheduled, action: 'pickup-type', data: { type: 'scheduled' }, disabled: !r.allow_scheduled_pickup })}
         </div>
-        ${scheduled ? slotSelect(slots, checkout.pickup_time) : ''}
+        ${scheduled ? slotSelect(slots, checkout.pickup_time, checkout.hours) : ''}
       </fieldset>
       ${C.Note({ text: t('cart.mock_note') })}
     </main>
@@ -558,8 +563,9 @@ actions['pickup-type'] = (d) => { checkout.pickup_type = d.type; if (d.type === 
 inputs['pickup-slot'] = (el) => { checkout.pickup_time = el.value; };
 actions.checkout = async (_, el) => {
   // 在這頁停太久，選的時段可能已經不到 30 分鐘後了：請顧客重選
-  if (checkout.pickup_type === 'scheduled' && !slotAllowed(checkout.pickup_time)) {
-    toast(t('cart.slot_expired'));
+  if (checkout.pickup_type === 'scheduled' && !slotAllowed(checkout.pickup_time, Date.now(), checkout.hours)) {
+    // 沒有時段可選（店家今天、明天的可預約時段都過了）時另外說
+    toast(t(checkout.pickup_time ? 'cart.slot_expired' : 'cart.no_slot_toast'));
     rerender();
     return;
   }

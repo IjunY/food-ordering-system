@@ -322,6 +322,40 @@ const accountPanel = (me) => (USE_MOCK ? '' : `<section class="panel">
   <div><a class="btn btn--sm" href="#password">${esc(t('password.change'))}</a></div>
 </section>`);
 
+// ---------- 可預約時段（店家設定的「接單設定」裡） ----------
+// 每列一段：開始～結束（台灣時間、每 15 分鐘一格，頭尾都可以預約）；一列都沒有＝全天都可以預約
+const MAX_PERIODS = 6;
+const timeInput = (cls, value, label) => `<span class="input input--sm"><input type="time" step="900" class="${cls} num" value="${esc(value)}" aria-label="${esc(label)}" required></span>`;
+const periodRow = (p) => `<li class="ph-row">
+  ${timeInput('ph-open', p.open, t('admin.ph.open'))}<span aria-hidden="true">–</span>${timeInput('ph-close', p.close, t('admin.ph.close'))}
+  <button type="button" class="icon-btn" data-action="ph-remove" aria-label="${esc(t('admin.ph.remove'))}">${icon('x')}</button>
+</li>`;
+function pickupHoursEditor(hours) {
+  return `<div class="ph-editor">
+    <p class="field__label">${esc(t('admin.ph.title'))}</p>
+    <p class="hint">${esc(t('admin.ph.hint'))}</p>
+    <ul class="ph-list">${hours.map(periodRow).join('')}</ul>
+    <button type="button" class="lnk" data-action="ph-add">＋ ${esc(t('admin.ph.add'))}</button>
+  </div>`;
+}
+actions['ph-add'] = (_, el) => {
+  const list = el.closest('.ph-editor').querySelector('.ph-list');
+  if (list.children.length >= MAX_PERIODS) { toast(t('admin.ph.too_many', { n: MAX_PERIODS })); return; }
+  list.insertAdjacentHTML('beforeend', periodRow(list.children.length ? { open: '17:00', close: '19:30' } : { open: '11:00', close: '13:30' }));
+  list.lastElementChild.querySelector('.ph-open').focus();
+};
+actions['ph-remove'] = (_, el) => el.closest('.ph-row').remove();
+// 讀畫面上的時段；有問題回傳錯誤訊息的 key
+function readPickupHours(form) {
+  const hours = [...form.querySelectorAll('.ph-row')].map((row) => ({
+    open: row.querySelector('.ph-open').value.slice(0, 5), close: row.querySelector('.ph-close').value.slice(0, 5),
+  }));
+  const onMark = (hhmm) => /^([01][0-9]|2[0-3]):(00|15|30|45)$/.test(hhmm);
+  if (hours.some((p) => !onMark(p.open) || !onMark(p.close))) return { error: 'admin.ph.err_mark' };
+  if (hours.some((p) => p.open >= p.close)) return { error: 'admin.ph.err_order' };
+  return { hours: hours.sort((a, b) => a.open.localeCompare(b.open)) };
+}
+
 export async function adminSettings() {
   const [r, me] = await Promise.all([api.admin.getRestaurant(), api.me()]);
   const e = r.edit;
@@ -349,7 +383,9 @@ export async function adminSettings() {
           <h2>${esc(t('admin.settings.orders'))}</h2>
           <div class="switch-rows">
             <label class="switch-row"><span>${esc(t('admin.settings.accept_online'))}</span><input type="checkbox" class="switch" name="is_accepting_orders"${r.is_accepting_orders ? ' checked' : ''}></label>
+            <label class="switch-row"><span>${esc(t('admin.settings.scheduled'))}</span><input type="checkbox" class="switch" name="allow_scheduled_pickup"${r.allow_scheduled_pickup ? ' checked' : ''}></label>
           </div>
+          ${pickupHoursEditor(r.pickup_hours || [])}
         </section>
         ${accountPanel(me)}
       </div>
@@ -357,8 +393,12 @@ export async function adminSettings() {
   </form>`);
 }
 forms.settings = async (fd, form) => {
+  // 時段的格式先自己檢查（瀏覽器對 type=time 的 15 分鐘限制不一定會擋）
+  const ph = readPickupHours(form);
+  if (ph.error) { toast(t(ph.error)); return; }
   if (invalid(form)) return;
   await api.admin.updateRestaurant({
+    allow_scheduled_pickup: fd.get('allow_scheduled_pickup') === 'on', pickup_hours: ph.hours,
     name: pair(fd, 'name'), location: pair(fd, 'location'), opening_hours: pair(fd, 'opening_hours'),
     description: pair(fd, 'description'), area: fd.get('area'),
     is_accepting_orders: fd.get('is_accepting_orders') === 'on',

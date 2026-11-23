@@ -71,7 +71,7 @@ function outRestaurant(d, r) {
     queue_count: e.queue_count, wait_minutes: e.wait_minutes,
     image_url: r.image_url, cover_image_url: r.cover_image_url, phone: r.phone,
     owner_account: r.owner_account, today_order_count: r.today_order_count,
-    allow_cash_on_pickup: r.allow_cash_on_pickup, allow_scheduled_pickup: r.allow_scheduled_pickup,
+    allow_cash_on_pickup: r.allow_cash_on_pickup, allow_scheduled_pickup: r.allow_scheduled_pickup, pickup_hours: r.pickup_hours || [],
     concurrent_capacity: r.concurrent_capacity, pickup_hold_minutes: r.pickup_hold_minutes,
   };
 }
@@ -178,7 +178,7 @@ export async function createOrder({ restaurant_id, items, pickup_type = 'asap', 
   if (!r.is_open || !r.is_accepting_orders) fail(getLang() === 'en' ? 'This restaurant is not taking orders right now' : '這家餐廳目前暫停接單');
   if (pickup_type === 'scheduled') {
     if (!r.allow_scheduled_pickup) fail(getLang() === 'en' ? 'This restaurant does not take booked pickups' : '這家餐廳不開放預約取餐');
-    if (!slotAllowed(pickup_time)) fail(getLang() === 'en' ? 'Pick a pickup time at least 30 minutes from now' : '預約時間要在現在起 30 分鐘以後');
+    if (!slotAllowed(pickup_time, Date.now(), r.pickup_hours || [])) fail(getLang() === 'en' ? "Pick a pickup time at least 30 minutes from now, within this stall's pickup hours" : '預約時間要在現在起 30 分鐘以後、店家的可預約時段內');
   }
   const menu = d.menus[restaurant_id];
   const lines = items.map((l) => {
@@ -320,6 +320,7 @@ export async function adminUpdateRestaurant(patch) {
   for (const [k, v] of Object.entries(patch)) {
     if (k === 'opening_hours') r.opening_hours_label = { ...v };
     else if (k === 'location') { r.location = { ...v }; r.location_detail = { ...v }; }
+    else if (k === 'pickup_hours') r.pickup_hours = v.map((p) => ({ ...p }));
     else if (v && typeof v === 'object' && 'zh' in v) r[k] = { ...v };
     else r[k] = v;
   }

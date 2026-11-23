@@ -78,8 +78,8 @@ function toRestaurant(v, items = []) {
     is_open: true, is_accepting_orders: v.is_accepting_orders, status: 'active',
     queue_count: e.queue_count, wait_minutes: e.wait_minutes,
     image_url: v.image_url, cover_image_url: v.cover_image_url, phone: '',
-    // 後端沒有這兩個設定：每家都可以到店付款、預約取餐（時段規則見 js/pickup.js）
-    allow_cash_on_pickup: true, allow_scheduled_pickup: true,
+    // 後端沒有「到店付款」的開關：每家都可以。預約取餐由店家開關，時段規則見 js/pickup.js
+    allow_cash_on_pickup: true, allow_scheduled_pickup: v.allow_scheduled_pickup, pickup_hours: v.pickup_hours || [],
     // 店家設定頁編輯用（兩種語言）
     edit: { name: v.name, location: v.location, description: v.description, opening_hours: v.opening_hours, area: v.area },
   };
@@ -355,13 +355,14 @@ export async function adminGetRestaurant() {
   return { ...toRestaurant(v, items), today_order_count: today.filter((o) => o.status !== 'cancelled').length };
 }
 
-// patch 的欄位：name / location / description / opening_hours 是 {zh, en}；area、is_accepting_orders、兩張照片照原樣
+// patch 的欄位：name / location / description / opening_hours 是 {zh, en}；area、is_accepting_orders、
+// allow_scheduled_pickup、pickup_hours（[{open, close}]）、兩張照片照原樣
 export async function adminUpdateRestaurant(patch) {
   const body = {};
   for (const k of ['name', 'location', 'description', 'opening_hours']) {
     if (patch[k]) { body[`${k}_zh`] = patch[k].zh; body[`${k}_en`] = patch[k].en; }
   }
-  for (const k of ['area', 'is_accepting_orders', 'image_url', 'cover_image_url']) if (k in patch) body[k] = patch[k];
+  for (const k of ['area', 'is_accepting_orders', 'allow_scheduled_pickup', 'pickup_hours', 'image_url', 'cover_image_url']) if (k in patch) body[k] = patch[k];
   const v = await http('PATCH', `/vendors/${await myVendorId()}`, body);
   return toRestaurant(v);
 }
