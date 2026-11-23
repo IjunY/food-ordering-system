@@ -644,3 +644,98 @@ def test_pickup_rule_edges() -> None:
     # Stored in UTC whatever timezone it came in
     taiwan = (now + timedelta(hours=1)).astimezone(TAIWAN)
     assert check_pickup_time(taiwan, now).tzinfo is UTC
+
+
+def test_pickup_hours_rule() -> None:
+    now = datetime(2026, 11, 23, 0, 0, tzinfo=UTC)  # 08:00 in Taiwan
+    lunch = [{"open": "11:00", "close": "13:30"}, {"open": "17:00", "close": "19:30"}]
+    at = datetime(2026, 11, 23, 11, 0, tzinfo=TAIWAN)
+    # Both ends of a period can be booked, the minutes outside cannot
+    for hhmm in ("11:00", "12:15", "13:30", "17:00", "19:30"):
+        h, m = map(int, hhmm.split(":"))
+        assert check_pickup_time(at.replace(hour=h, minute=m), now, lunch), hhmm
+    for hhmm in ("10:45", "13:45", "16:45", "19:45", "23:00"):
+        h, m = map(int, hhmm.split(":"))
+        with pytest.raises(BadRequestError):
+            check_pickup_time(at.replace(hour=h, minute=m), now, lunch)
+    # Checked in Taiwan time whatever timezone the time came in (03:00 UTC = 11:00)
+    assert check_pickup_time(datetime(2026, 11, 23, 3, 0, tzinfo=UTC), now, lunch)
+    # No pickup hours: any slot
+    assert check_pickup_time(at.replace(hour=23), now, [])
+
+
+def _set_pickup(client: TestClient, staff: dict[str, str], vendor_id: int, **body):
+    response = client.patch(f"/api/vendors/{vendor_id}", json=body, headers=staff)
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+def test_booking_follows_the_vendors_pickup_hours(
+    client: TestClient,
+    customer: dict[str, str],
+    staff: dict[str, str],
+    vendors: dict[str, int],
+    menu: dict[str, int],
+) -> None:
+    at = _slot(60)
+    if at.hour == 0 and at.minute == 0:  # keep the period below inside one day
+        at = _slot(90)
+    period = {
+        "open": (at - timedelta(minutes=15)).strftime("%H:%M"),
+        "close": at.strftime("%H:%M"),
+    }
+    vendor = _set_pickup(client, staff, vendors["noodles"], pickup_hours=[period])
+    assert vendor["pickup_hours"] == [period]
+    assert vendor["allow_scheduled_pickup"] is True
+    shown = client.get(f"/api/vendors/{vendors['noodles']}").json()
+    assert shown["pickup_hours"] == [period]
+
+    item = menu["noodles"]
+    after = book(client, customer, item, (at + timedelta(minutes=15)).isoformat())
+    assert after.status_code == 400
+    assert book(client, customer, item, at.isoformat()).status_code == 201
+    # "As soon as possible" is not limited by the pickup hours
+    assert book(client, customer, item, None).status_code == 201
+
+    # An empty list removes the limit again
+    _set_pickup(client, staff, vendors["noodles"], pickup_hours=[])
+    later = (at + timedelta(minutes=15)).isoformat()
+    assert book(client, customer, item, later).status_code == 201
+
+
+def test_vendor_can_turn_booking_off(
+    client: TestClient,
+    customer: dict[str, str],
+    staff: dict[str, str],
+    vendors: dict[str, int],
+    menu: dict[str, int],
+) -> None:
+    vendor = _set_pickup(
+        client, staff, vendors["noodles"], allow_scheduled_pickup=False
+    )
+    assert vendor["allow_scheduled_pickup"] is False
+    item = menu["noodles"]
+    assert book(client, customer, item, _slot(60).isoformat()).status_code == 409
+    assert book(client, customer, item, None).status_code == 201
+    # The other vendor still takes bookings
+    tea = book(client, customer, menu["tea"], _slot(60).isoformat())
+    assert tea.status_code == 201
+
+
+def test_pickup_hours_validation(
+    client: TestClient, staff: dict[str, str], vendors: dict[str, int]
+) -> None:
+    for bad in (
+        [{"open": "13:00", "close": "11:00"}],  # closes before it opens
+        [{"open": "11:00", "close": "11:00"}],
+        [{"open": "11:10", "close": "13:00"}],  # not a 15-minute mark
+        [{"open": "24:00", "close": "24:15"}],
+        [{"open": "11:00"}],
+        [{"open": "08:00", "close": "09:00"}] * 7,  # at most 6 periods
+    ):
+        response = client.patch(
+            f"/api/vendors/{vendors['noodles']}",
+            json={"pickup_hours": bad},
+            headers=staff,
+        )
+        assert response.status_code == 422, bad

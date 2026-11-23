@@ -281,6 +281,12 @@ input.switch { appearance: none; border: 0; }
 .switch-rows { display: grid; }
 .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 56px; border-bottom: 1px solid var(--hairline); cursor: pointer; }
 .switch-row:last-child { border-bottom: 0; }
+/* 可預約時段：每列「開始 – 結束 ×」 */
+.ph-editor { display: grid; gap: 6px; margin-top: 12px; }
+.ph-editor .field__label, .ph-editor .hint { margin: 0; }
+.ph-list { display: grid; gap: 8px; margin: 4px 0 0; padding: 0; list-style: none; }
+.ph-row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) 44px; gap: 8px; align-items: center; }
+.ph-editor > .lnk { justify-self: start; }
 
 /* ---------- 登入、註冊 ---------- */
 .auth { flex: 1 0 auto; display: flex; flex-direction: column; }

@@ -105,9 +105,11 @@ def create_order(session: Session, user: User, data: OrderCreate) -> Order:
     vendor = menu_repo.get_vendor(session, vendor_id)
     if vendor is None or not vendor.is_accepting_orders:
         raise ConflictError("This vendor is not taking orders right now")
-    pickup_time = (
-        None if data.pickup_time is None else check_pickup_time(data.pickup_time)
-    )
+    pickup_time = None
+    if data.pickup_time is not None:
+        if not vendor.allow_scheduled_pickup:
+            raise ConflictError("This vendor does not take booked pickups")
+        pickup_time = check_pickup_time(data.pickup_time, periods=vendor.pickup_hours)
 
     lines = []
     for (item_id, option_ids, note), quantity in quantities.items():

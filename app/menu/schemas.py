@@ -74,6 +74,31 @@ def _unique_group_ids(groups: list[OptionGroup] | None) -> None:
 
 
 # ---------- Vendors ----------
+# A time of day in Taiwan, "HH:MM", on a 15-minute mark like the pickup slots
+ClockTime = Annotated[
+    str, StringConstraints(pattern=r"^([01][0-9]|2[0-3]):(00|15|30|45)$")
+]
+
+
+class PickupPeriod(BaseModel):
+    """One stretch of the day in which customers can book a pickup, e.g.
+    11:00-13:30; both ends can be booked. The same every day."""
+
+    open: ClockTime
+    close: ClockTime
+
+    @model_validator(mode="after")
+    def _open_before_close(self) -> Self:
+        # "HH:MM" strings compare in time order
+        if self.open >= self.close:
+            raise ValueError("a pickup period must close after it opens")
+        return self
+
+
+# Empty: the vendor takes bookings at any time (still 30 minutes to 24 hours ahead)
+PickupHours = Annotated[list[PickupPeriod], Field(max_length=6)]
+
+
 class VendorCreate(BaseModel):
     name_zh: Name
     name_en: Name
@@ -85,6 +110,8 @@ class VendorCreate(BaseModel):
     location_en: ShortText = ""
     area: Area = "other"
     is_accepting_orders: bool = True
+    allow_scheduled_pickup: bool = True
+    pickup_hours: PickupHours = []
     image_url: ImageUrl | None = None
     cover_image_url: ImageUrl | None = None
 
@@ -105,6 +132,8 @@ class VendorUpdate(BaseModel):
     location_en: ShortText | None = None
     area: Area | None = None
     is_accepting_orders: bool | None = None
+    allow_scheduled_pickup: bool | None = None
+    pickup_hours: PickupHours | None = None  # [] removes the limit
     image_url: ImageUrl | None = None
     cover_image_url: ImageUrl | None = None
 
@@ -119,6 +148,8 @@ class VendorRead(BaseModel):
     location: Localized
     area: str
     is_accepting_orders: bool
+    allow_scheduled_pickup: bool
+    pickup_hours: list[PickupPeriod]
     image_url: str | None
     cover_image_url: str | None
     # Orders waiting at this vendor right now (confirming or preparing). Filled in

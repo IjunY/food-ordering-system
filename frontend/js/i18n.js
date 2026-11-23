@@ -1154,6 +1154,18 @@ Object.assign(DICT.zh, {
   'pass.pickup_time': '取餐時間',
   'admin.booked': '預約 {time} 取餐',
   'admin.start_by': '建議 {time} 開始做',
+  'cart.slot_rule_hours': '這家店的可預約時段：{hours}。每 15 分鐘一個時段，最早可選現在起 30 分鐘後',
+  'cart.no_slots': '這家店接下來 24 小時內沒有可預約的時段（可預約時段：{hours}），請改選盡快取餐',
+  'cart.no_slot_toast': '沒有可預約的時段，請改選盡快取餐',
+  'admin.ph.title': '可預約時段',
+  'admin.ph.hint': '顧客只能預約這些時段裡的取餐時間（每天一樣，每 15 分鐘一格，頭尾都可以預約）。一段都沒有就是全天都可以預約。',
+  'admin.ph.add': '新增時段',
+  'admin.ph.open': '開始時間',
+  'admin.ph.close': '結束時間',
+  'admin.ph.remove': '刪除這個時段',
+  'admin.ph.too_many': '最多 {n} 個時段',
+  'admin.ph.err_mark': '時段要選整點或 15、30、45 分',
+  'admin.ph.err_order': '每個時段的結束時間要晚於開始時間',
 });
 Object.assign(DICT.en, {
   'cart.scheduled': 'Book a pickup time',
@@ -1168,6 +1180,18 @@ Object.assign(DICT.en, {
   'pass.pickup_time': 'Pickup time',
   'admin.booked': 'Pickup at {time}',
   'admin.start_by': 'Start by {time}',
+  'cart.slot_rule_hours': 'This stall takes bookings {hours}. Every 15 minutes, starting 30 minutes from now',
+  'cart.no_slots': 'This stall has no bookable time in the next 24 hours (bookings {hours}). Please choose "As soon as possible".',
+  'cart.no_slot_toast': 'No time can be booked. Please choose "As soon as possible".',
+  'admin.ph.title': 'Pickup hours for bookings',
+  'admin.ph.hint': 'Customers can only book a pickup time within these hours (the same every day, every 15 minutes, both ends included). With none, bookings are open all day.',
+  'admin.ph.add': 'Add hours',
+  'admin.ph.open': 'From',
+  'admin.ph.close': 'Until',
+  'admin.ph.remove': 'Remove these hours',
+  'admin.ph.too_many': 'At most {n} periods',
+  'admin.ph.err_mark': 'Use times on the hour or at 15, 30 or 45 minutes',
+  'admin.ph.err_order': 'Each period has to end after it starts',
 });
 
 const STORAGE_KEY = 'lang';

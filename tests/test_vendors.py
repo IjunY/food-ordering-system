@@ -41,6 +41,9 @@ def test_staff_registers_their_vendor(
         "location": {"zh": "綜二館 1F", "en": "General Building II 1F"},
         "area": "other",
         "is_accepting_orders": True,
+        # bookings at any time unless the vendor sets its pickup hours
+        "allow_scheduled_pickup": True,
+        "pickup_hours": [],
         "image_url": None,
         "cover_image_url": None,
         "queue_count": 0,

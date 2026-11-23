@@ -1,5 +1,5 @@
 {
-  "_comment": "NTHU campus vendors and menus (Fengyun Hall, Shuimu Center, Snack Bar), collected 2026-11-18 from public Google Maps listings: a menu-board photo for 珈名鮮茶 (2026-03) and reviews that list dishes with prices. Prices change; check at the counter. Vendor descriptions were written by us. Images are original illustrations in frontend/img/, not photos of the real food. Items name their vendor by vendor name_zh. This file is what the database is seeded with; the app reads menus from the database. frontend/js/mock/data.js is a separate copy used only for the first-login tutorial and for opening the frontend without a backend.",
+  "_comment": "NTHU campus vendors and menus (Fengyun Hall, Shuimu Center, Snack Bar), collected 2026-11-18 from public Google Maps listings: a menu-board photo for 珈名鮮茶 (2026-03) and reviews that list dishes with prices. Prices change; check at the counter. Vendor descriptions were written by us. pickup_hours (when customers can book a pickup) are our own sample lunch and dinner hours, not hours published by the stalls; each stall can change them in its settings. Images are original illustrations in frontend/img/, not photos of the real food. Items name their vendor by vendor name_zh. This file is what the database is seeded with; the app reads menus from the database. frontend/js/mock/data.js is a separate copy used only for the first-login tutorial and for opening the frontend without a backend.",
   "vendors": [
     {
       "name_zh": "牛肉先生",
@@ -11,6 +11,8 @@
       "location_zh": "風雲樓 3F",
       "location_en": "Fengyun Hall 3F",
       "is_accepting_orders": true,
+      "allow_scheduled_pickup": true,
+      "pickup_hours": [{"open": "11:00", "close": "13:30"}, {"open": "17:00", "close": "19:30"}],
       "image_url": "img/vendors/r1.svg",
       "area": "fengyun",
       "cover_image_url": "img/vendors/r1-cover.svg"
@@ -25,6 +27,8 @@
       "location_zh": "風雲樓",
       "location_en": "Fengyun Hall",
       "is_accepting_orders": true,
+      "allow_scheduled_pickup": true,
+      "pickup_hours": [{"open": "11:00", "close": "13:30"}, {"open": "17:00", "close": "19:30"}],
       "image_url": "img/vendors/r2.svg",
       "area": "fengyun",
       "cover_image_url": "img/vendors/r2-cover.svg"
@@ -39,6 +43,8 @@
       "location_zh": "風雲樓",
       "location_en": "Fengyun Hall",
       "is_accepting_orders": true,
+      "allow_scheduled_pickup": true,
+      "pickup_hours": [{"open": "11:00", "close": "13:30"}, {"open": "17:00", "close": "19:30"}],
       "image_url": "img/vendors/r3.svg",
       "area": "fengyun",
       "cover_image_url": "img/vendors/r3-cover.svg"
@@ -53,6 +59,8 @@
       "location_zh": "水木生活中心 1F",
       "location_en": "Shuimu Center 1F",
       "is_accepting_orders": true,
+      "allow_scheduled_pickup": true,
+      "pickup_hours": [{"open": "11:00", "close": "13:30"}, {"open": "17:00", "close": "19:30"}],
       "image_url": "img/vendors/r4.svg",
       "area": "shuimu",
       "cover_image_url": "img/vendors/r4-cover.svg"
@@ -67,6 +75,8 @@
       "location_zh": "小吃部 1F",
       "location_en": "XCB 1F",
       "is_accepting_orders": true,
+      "allow_scheduled_pickup": true,
+      "pickup_hours": [{"open": "10:30", "close": "19:30"}],
       "image_url": "img/vendors/r5.svg",
       "area": "snack",
       "cover_image_url": "img/vendors/r5-cover.svg"
@@ -81,6 +91,8 @@
       "location_zh": "小吃部",
       "location_en": "XCB",
       "is_accepting_orders": true,
+      "allow_scheduled_pickup": true,
+      "pickup_hours": [{"open": "11:00", "close": "13:30"}, {"open": "17:00", "close": "19:30"}],
       "image_url": "img/vendors/r6.svg",
       "area": "snack",
       "cover_image_url": "img/vendors/r6-cover.svg"
