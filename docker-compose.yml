@@ -37,6 +37,9 @@ services:
       MAIL_SMTP_USERNAME: ${MAIL_SMTP_USERNAME:-}
       MAIL_SMTP_PASSWORD: ${MAIL_SMTP_PASSWORD:-}
       MAIL_SENDER: ${MAIL_SENDER:-}
+      # Password for the demo accounts. When set, the first start also loads the NTHU
+      # stalls, menus and demo accounts (scripts/docker-entrypoint.sh)
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-}
     ports:
       # Only this computer by default. For a demo with other computers on the same
       # network, set APP_BIND=0.0.0.0 (in .env or on the command line).
