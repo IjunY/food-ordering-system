@@ -229,7 +229,8 @@ async function toOrder(o) {
   const v = vendors.get(o.vendor_id);
   const id = String(o.id);
   const paid = o.payment_status === 'paid';
-  const method = paid ? online : o.pay_at_pickup ? 'cash_on_pickup' : null;
+  const refunded = o.payment_status === 'refunded'; // 線上付過、訂單取消後已退款
+  const method = paid || refunded ? online : o.pay_at_pickup ? 'cash_on_pickup' : null;
 
   let status = o.status === 'picked up' ? 'picked_up' : o.status;
   if (status === 'confirming') status = paid ? 'paid' : 'pending_payment';
@@ -251,7 +252,7 @@ async function toOrder(o) {
     status,
     payment_method: method,
     // 到店付款的單，取餐時在櫃台付清
-    payment_status: paid || (method === 'cash_on_pickup' && status === 'picked_up') ? 'paid' : 'unpaid',
+    payment_status: refunded ? 'refunded' : paid || (method === 'cash_on_pickup' && status === 'picked_up') ? 'paid' : 'unpaid',
     // 上一次線上付款的結果（failed / expired 時付款頁會說可以再試一次）
     payment_attempt: o.payment_status,
     total: o.total,

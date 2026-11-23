@@ -69,3 +69,11 @@ class Payment(Base):
     paid_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), default=None
     )
+
+    # 退款的時間。沒退過款是 None
+    refunded_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), default=None
+    )
+
+    # 金流商那邊的退款編號（LINE Pay 的 refundTransactionId），對帳用。假金流商沒有
+    refund_ref: Mapped[str | None] = mapped_column(String(64), default=None)

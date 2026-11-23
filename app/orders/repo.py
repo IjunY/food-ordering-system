@@ -23,7 +23,7 @@ def get(session: Session, order_id: int, for_update: bool = False) -> Order | No
 
 def list_orders(
     session: Session,
-    created_by: str | None = None,
+    user_id: int | None = None,
     vendor_id: int | None = None,
     status: OrderStatus | None = None,
     limit: int = 50,
@@ -36,8 +36,8 @@ def list_orders(
         .limit(limit)
         .offset(offset)
     )
-    if created_by is not None:
-        query = query.where(Order.created_by == created_by)
+    if user_id is not None:
+        query = query.where(Order.user_id == user_id)
     if vendor_id is not None:
         query = query.where(Order.vendor_id == vendor_id)
     if status is not None:

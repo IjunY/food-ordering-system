@@ -30,7 +30,11 @@ class Order(Base):
     )
     vendor_id: Mapped[int] = mapped_column(ForeignKey("vendors.id"))
 
-    created_by: Mapped[str] = mapped_column(String(100))
+    # The account that placed the order. Each order has exactly one, so the link
+    # lives on this table (no table in between). No ON DELETE: an account that has
+    # placed orders cannot be deleted, so order and payment history keeps its owner.
+    # Indexed because "my orders" filters on it.
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
 
     # The customer chose to pay at the counter when picking up (no online payment).
     # Such orders go to the vendor's board as "unpaid, pay at counter".

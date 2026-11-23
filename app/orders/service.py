@@ -18,7 +18,9 @@ from app.orders.models import Order, OrderItem
 from app.orders.pickup import check_pickup_time
 from app.orders.schemas import OrderCreate, OrderItemRead, OrderRead
 from app.orders.states import ALLOWED_TRANSITIONS, OrderStatus
+from app.payments import refunds
 from app.payments import repo as payments_repo
+from app.payments.provider import PaymentProvider
 
 
 def _manages(user: User, order: Order) -> bool:
@@ -33,9 +35,7 @@ def _manages(user: User, order: Order) -> bool:
 def _can_see(user: User, order: Order) -> bool:
     # Admins monitor every order; staff see their own vendor's; everyone sees their own
     return (
-        order.created_by == user.student_id
-        or user.role is UserRole.ADMIN
-        or _manages(user, order)
+        order.user_id == user.id or user.role is UserRole.ADMIN or _manages(user, order)
     )
 
 
@@ -127,7 +127,7 @@ def create_order(session: Session, user: User, data: OrderCreate) -> Order:
             )
         )
     order = Order(
-        created_by=user.student_id,
+        user_id=user.id,
         vendor_id=vendor_id,
         items=lines,
         pickup_time=pickup_time,
@@ -157,19 +157,19 @@ def list_orders(
 ) -> Sequence[Order]:
     # mine=true: only orders this account placed, whatever its role.
     # Otherwise admins see every order, staff see their vendor's, customers their own.
-    created_by: str | None = None
+    user_id: int | None = None
     vendor_id: int | None = None
     if mine:
-        created_by = user.student_id
+        user_id = user.id
     elif user.role is UserRole.ADMIN:
         pass
     elif user.role is UserRole.STAFF and user.vendor_id is not None:
         vendor_id = user.vendor_id
     else:
-        created_by = user.student_id
+        user_id = user.id
     return repo.list_orders(
         session,
-        created_by=created_by,
+        user_id=user_id,
         vendor_id=vendor_id,
         status=status,
         limit=limit,
@@ -177,31 +177,48 @@ def list_orders(
     )
 
 
-def _change_status(session: Session, order: Order, new_status: OrderStatus) -> Order:
+def _change_status(
+    session: Session,
+    order: Order,
+    new_status: OrderStatus,
+    provider: PaymentProvider,
+) -> Order:
+    """Moves the order on (the caller has locked its row). A cancelled order that was
+    paid online is refunded first; if the refund fails, nothing changes (502).
+    """
     if new_status not in ALLOWED_TRANSITIONS[order.status]:
         raise ConflictError(
             f"Cannot change an order from '{order.status.value}' to '{new_status.value}'"
         )
+    if new_status is OrderStatus.CANCELLED:
+        refunds.refund_order(session, provider, order.id)
     order.status = new_status
     session.commit()
     return order
 
 
 def update_status(
-    session: Session, user: User, order_id: int, new_status: OrderStatus
+    session: Session,
+    user: User,
+    order_id: int,
+    new_status: OrderStatus,
+    provider: PaymentProvider,
 ) -> Order:
     """The vendor's staff moving an order forward (or cancelling it)."""
     order = get_order(session, user, order_id, for_update=True)
     if not _manages(user, order):
         # e.g. staff looking at an order they placed themselves at another vendor
         raise ForbiddenError("Only the vendor's staff can change this order")
-    return _change_status(session, order, new_status)
+    return _change_status(session, order, new_status, provider)
 
 
-def cancel_order(session: Session, user: User, order_id: int) -> Order:
+def cancel_order(
+    session: Session, user: User, order_id: int, provider: PaymentProvider
+) -> Order:
+    """Cancels the order; if it was paid online, the payment is refunded in full."""
     order = get_order(session, user, order_id, for_update=True)
     if not _manages(user, order):
-        if order.created_by != user.student_id:
+        if order.user_id != user.id:
             # Only admins get here (anyone else could not see the order): they monitor only
             raise ForbiddenError("Admins can view orders but not change them")
         # Once the kitchen has started, only the vendor's staff can cancel.
@@ -210,14 +227,14 @@ def cancel_order(session: Session, user: User, order_id: int) -> Order:
             raise ForbiddenError(
                 "This order is already being prepared and can no longer be cancelled"
             )
-    return _change_status(session, order, OrderStatus.CANCELLED)
+    return _change_status(session, order, OrderStatus.CANCELLED, provider)
 
 
 def choose_pay_at_pickup(session: Session, user: User, order_id: int) -> Order:
     """The customer will pay at the counter instead of online; the order then shows
     up on the vendor's board as unpaid."""
     order = get_order(session, user, order_id, for_update=True)
-    if order.created_by != user.student_id:
+    if order.user_id != user.id:
         # staff and admins can see the order, but only the customer decides how to pay
         raise ForbiddenError("Only the customer who placed the order can choose this")
     if order.status is not OrderStatus.CONFIRMING:
@@ -272,7 +289,7 @@ def to_read(session: Session, orders: Sequence[Order]) -> list[OrderRead]:
                 id=order.id,
                 status=order.status,
                 created_at=order.created_at,
-                created_by=order.created_by,
+                user_id=order.user_id,
                 vendor_id=order.vendor_id,
                 vendor_name=vendors[order.vendor_id].name,
                 items=lines,

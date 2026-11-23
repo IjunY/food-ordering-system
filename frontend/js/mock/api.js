@@ -295,6 +295,8 @@ export async function adminUpdateOrderStatus(id, status) {
   const now = iso();
   if (status === 'preparing' && !o.status_history.some((h) => h.status === 'accepted')) o.status_history.push({ status: 'accepted', at: now });
   if (status === 'picked_up' && o.payment_status !== 'paid') o.payment_status = 'paid';
+  // 拒絕已經線上付款的單：後端會全額退款
+  if (status === 'cancelled' && o.payment_status === 'paid') o.payment_status = 'refunded';
   if (status === 'ready') o.estimated_ready_at = now;
   o.status = status;
   o.status_history.push({ status, at: now });

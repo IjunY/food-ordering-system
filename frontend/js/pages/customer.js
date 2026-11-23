@@ -668,7 +668,7 @@ export async function orderStatusPage({ oid }) {
   const when = Object.fromEntries(o.status_history.map((h) => [h.status, h.at]));
   const eta = [C.readyText(o), o.queue_ahead ? t('order.queue_ahead', { n: o.queue_ahead }) : ''].filter(Boolean).join(' · ');
   const msg = o.status === 'ready' ? `<p class="msg msg--ready" role="status">${esc(t('order.ready_alert', { place: o.restaurant_location }))}</p><p class="upd">${esc(t('order.ready_at', { time: hhmm(when.ready || o.estimated_ready_at) }))} · ${esc(t('order.hold'))}</p>`
-    : o.status === 'cancelled' ? `<p class="msg msg--cancel">${esc(t('pass.cancel_msg'))}</p>`
+    : o.status === 'cancelled' ? `<p class="msg msg--cancel">${esc(o.payment_status === 'refunded' ? t('pass.cancel_refunded', { amount: money(o.total) }) : t('pass.cancel_msg'))}</p>`
     : o.status === 'picked_up' ? `<p class="msg">${esc(t('pass.picked_msg'))}</p>`
     : unpaid ? `<p class="msg">${esc(t('pass.unpaid_msg'))}</p>`
     : `<p class="msg">${esc(t('pass.show'))}</p><p class="upd">${esc(eta)}</p>`;

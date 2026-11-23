@@ -74,7 +74,8 @@ def _finish(session: Session, payment: Payment, success: bool) -> Payment:
     """金流商說「成功／失敗」之後，決定這筆付款的最終狀態並存檔（假付款通知和 LINE Pay 共用）。"""
     # 如果訂單在付款途中被取消了（不再是「確認中」），就算金流商說成功，
     # 也不能標成已付款，否則會出現「已取消卻已付款」的訂單。
-    # （接真的金流商時，這種情況還要另外呼叫退款，把錢還給客人）
+    # （LINE Pay 不會走到這裡：confirm_linepay 看到訂單取消了就不向 LINE Pay 確認扣款。
+    #   已經付好款的訂單之後才被取消，錢由 refunds.py 退回）
     order = order_gateway.get_order_for_callback(session, payment.order_id)
     order_open = order is not None and order.status == OrderStatus.CONFIRMING
     new_status = PaymentStatus.PAID if success and order_open else PaymentStatus.FAILED
@@ -108,7 +109,7 @@ def create_payment(
 
     # 2. 只有下單的本人可以付款。店員雖然看得到所有訂單，但不能替客人付款。
     #    一樣回 404，不透露「這張訂單存在」
-    if order.created_by != user.student_id:
+    if order.user_id != user.id:
         raise NotFoundError("Order not found")
 
     # 3. 只有「確認中」的訂單可以付款；已取消、已在製作的都不行
