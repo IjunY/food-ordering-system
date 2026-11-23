@@ -1,7 +1,7 @@
 """vendors choose whether and when customers can book a pickup time
 
 Revision ID: b9e2d4f6a813
-Revises: a8d3f5c2e7b1
+Revises: d4f8a2b6c1e3
 Create Date: 2026-11-23 18:00:00.000000
 
 """
@@ -13,7 +13,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "b9e2d4f6a813"
-down_revision: str | Sequence[str] | None = "a8d3f5c2e7b1"
+down_revision: str | Sequence[str] | None = "d4f8a2b6c1e3"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
