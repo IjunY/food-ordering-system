@@ -110,6 +110,9 @@ a.pass:focus-visible { outline-offset: 3px; border-radius: var(--r-pass); }
 .fields { display: grid; grid-template-columns: 1.4fr 1fr .7fr; gap: 12px; padding: 14px 18px 16px; }
 .fields dd { margin-top: 3px; font-size: 15px; overflow-wrap: anywhere; }
 .fields dd.num { font-stretch: 85%; font-size: 16px; }
+.fields .wide { grid-column: 1 / -1; }
+.fields dd.booked { font-size: 17px; font-weight: 700; color: var(--nthu-purple); }
+.pass .vend .booked { display: block; margin-top: 2px; font-size: 12px; font-weight: 600; color: var(--sun-yellow); }
 .rule { margin: 0 18px; border-top: 1px solid var(--hairline); }
 .lines { padding: 14px 18px 16px; font-size: 14px; }
 .lines > div { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; }
@@ -330,10 +333,11 @@ input.switch { appearance: none; border: 0; }
 .line .sub { min-width: 52px; text-align: right; font: 600 18px var(--font-num); font-stretch: 78%; font-variant-numeric: tabular-nums; }
 .sum { display: flex; justify-content: space-between; align-items: baseline; padding: 16px var(--gutter) 0; }
 .sum b { font: 800 28px var(--font-num); font-stretch: 78%; font-variant-numeric: tabular-nums; }
-.slots { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding: 12px 16px 10px; border-top: 1px solid var(--hairline); }
-.slot { min-height: 44px; border: 1.5px solid var(--field-stroke); border-radius: var(--r-field); background: var(--card-white); font-size: 17px; font-weight: 600; text-align: center; transition: background-color var(--dur-micro), border-color var(--dur-micro); }
-.slot:hover { border-color: var(--nthu-purple); }
-.slot[aria-pressed="true"] { border-color: var(--nthu-purple); background: var(--nthu-purple); color: #fff; }
+/* 預約取餐：選了「預約取餐時間」才出現的下拉選單 */
+.slotpick { display: grid; gap: 6px; padding: 12px 16px 12px; border-top: 1px solid var(--hairline); }
+.slotpick select { width: 100%; height: 52px; padding: 0 12px; border: 1.5px solid var(--field-stroke); border-radius: var(--r-field); background: var(--card-white); color: var(--ink); font-size: 18px; font-weight: 600; transition: border-color var(--dur-micro), box-shadow var(--dur-micro); }
+.slotpick select:focus-visible { border-color: var(--nthu-purple); box-shadow: var(--sh-halo); outline: 0; }
+.slotpick small { font-size: 12px; color: var(--mute); }
 
 /* ---------- C06 付款 ---------- */
 .due { display: grid; gap: 4px; padding: 24px var(--gutter) 0; }
@@ -483,6 +487,9 @@ button.setrow { width: 100%; text-align: left; }
 .kt__items li { display: grid; grid-template-columns: 2.4ch minmax(0, 1fr); gap: 8px; align-items: baseline; font-size: 17px; }
 .kt__items .q { font: 800 20px var(--font-num); font-stretch: 78%; font-variant-numeric: tabular-nums; }
 .kt__items .lopt { font-size: 14px; }
+.kt__sched { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 10px; margin: 12px 16px 0; padding: 10px 12px; border: 1.5px solid var(--nthu-purple); border-radius: var(--r-tag-lg); background: var(--purple-tint); color: var(--purple-deep); }
+.kt__sched b { font-size: 17px; }
+.kt__sched span { font-size: 13px; }
 .kt__note { margin: 10px 16px 0; padding: 10px 12px; border-radius: var(--r-tag-lg); background: var(--fill); font-size: 14px; }
 .kt__foot { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 12px 16px 0; font-size: 13px; color: var(--mute); }
 .kt__foot b { color: var(--ink); font: 700 18px var(--font-num); font-stretch: 78%; }

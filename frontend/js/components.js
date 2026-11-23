@@ -17,6 +17,24 @@ export const mmdd = (iso) => {
   const d = new Date(iso);
   return `${two(d.getMonth() + 1)}/${two(d.getDate())}`;
 };
+// 預約取餐時間：今天的只寫時間，其他天前面加「明天」或日期
+const dayDiff = (iso) => {
+  const a = new Date(iso); a.setHours(0, 0, 0, 0);
+  const b = new Date(); b.setHours(0, 0, 0, 0);
+  return Math.round((a - b) / 86400000);
+};
+export const dayLabel = (iso) => {
+  const n = dayDiff(iso);
+  return n === 0 ? t('pickup.today', { date: mmdd(iso) }) : n === 1 ? t('pickup.tomorrow', { date: mmdd(iso) }) : mmdd(iso);
+};
+export const pickupText = (iso) => {
+  const n = dayDiff(iso);
+  return n === 0 ? hhmm(iso) : `${n === 1 ? t('pickup.tomorrow_short') : mmdd(iso)} ${hhmm(iso)}`;
+};
+// 訂單頁那句「預估幾點可取餐」；預約的單改說「預約幾點取餐」
+export const readyText = (o) => (o.pickup_type === 'scheduled' && o.pickup_time
+  ? t('order.booked_for', { time: pickupText(o.pickup_time) })
+  : t('order.ready_around', { time: hhmm(o.estimated_ready_at) }));
 const dataAttrs = (data = {}) => Object.entries(data).map(([k, v]) => ` data-${k}="${esc(v)}"`).join('');
 const actionAttr = (action) => (action ? ` data-action="${action}"` : '');
 
@@ -158,12 +176,13 @@ function legs(status) {
 export function Pass(o, { mode = 'mini', href = '', extra = '', snapping = false } = {}) {
   const status = t('pass.st.' + o.status);
   const cls = `pass pass--${mode} ${passTone(o.status)}${snapping ? ' snapping' : ''}`;
-  const label = `${t('pass.pickup')} ${o.pickup_number}, ${status}, ${o.restaurant_name}`;
+  const booked = o.pickup_type === 'scheduled' && o.pickup_time;
+  const label = `${t('pass.pickup')} ${o.pickup_number}, ${status}, ${o.restaurant_name}${booked ? ', ' + t('order.booked_for', { time: pickupText(o.pickup_time) }) : ''}`;
   const top = mode === 'mini'
     ? `<div class="top"><span class="lab">${esc(t('pass.pickup'))}</span><span class="lab">${esc(t('pass.status'))}</span>
-        <span class="code">${codeHtml(o.pickup_number)}</span><span class="vend">${esc(o.restaurant_name)}</span><div class="stat"><b>${esc(status)}</b></div></div>`
+        <span class="code">${codeHtml(o.pickup_number)}</span><span class="vend">${esc(o.restaurant_name)}${booked ? `<small class="booked">${esc(t('order.booked_short', { time: pickupText(o.pickup_time) }))}</small>` : ''}</span><div class="stat"><b>${esc(status)}</b></div></div>`
     : `<div class="top"><span class="lab">${esc(t('pass.pickup'))}</span><span class="code">${codeHtml(o.pickup_number)}</span><div class="stat"><b>${esc(status)}</b></div></div>
-       <dl class="fields"><div><dt class="lab">${esc(t('pass.stall'))}</dt><dd>${esc(o.restaurant_name)}</dd></div><div><dt class="lab">${esc(t('pass.place'))}</dt><dd>${esc(o.restaurant_location)}</dd></div><div><dt class="lab">${esc(t('pass.placed'))}</dt><dd class="num">${hhmm(o.created_at)}</dd></div></dl>`;
+       <dl class="fields"><div><dt class="lab">${esc(t('pass.stall'))}</dt><dd>${esc(o.restaurant_name)}</dd></div><div><dt class="lab">${esc(t('pass.place'))}</dt><dd>${esc(o.restaurant_location)}</dd></div><div><dt class="lab">${esc(t('pass.placed'))}</dt><dd class="num">${hhmm(o.created_at)}</dd></div>${booked ? `<div class="wide"><dt class="lab">${esc(t('pass.pickup_time'))}</dt><dd class="booked">${esc(t('order.booked_short', { time: pickupText(o.pickup_time) }))}</dd></div>` : ''}</dl>`;
   const inner = `${top}<div class="perf"></div>${legs(o.status)}${extra}`;
   return mode === 'mini'
     ? `<a class="${cls}" href="#${esc(href)}" aria-label="${esc(label)}">${inner}</a>`
@@ -231,10 +250,15 @@ export function KitchenTicket(o, isNew = false) {
   }[col];
   const tone = { unpaid: 's-confirming', paid: 's-confirming', accepted: 's-preparing', ready: 's-ready' }[col];
   const draggable = BOARD_MOVES[col] ? ` draggable="true" data-drag-id="${esc(o.id)}" data-col="${col}" data-no="${esc(o.pickup_number)}"` : '';
-  return `<article class="pass kt ${tone}${isNew ? ' snapping' : ''}"${draggable} aria-label="${esc(t('pass.pickup'))} ${esc(o.pickup_number)}">
+  const booked = o.pickup_type === 'scheduled' && o.pickup_time;
+  const sched = booked
+    ? `<p class="kt__sched"><b>${esc(t('admin.booked', { time: pickupText(o.pickup_time) }))}</b>${o.start_by && col !== 'ready' ? `<span>${esc(t('admin.start_by', { time: hhmm(o.start_by) }))}</span>` : ''}</p>`
+    : '';
+  return `<article class="pass kt ${tone}${booked ? ' kt--booked' : ''}${isNew ? ' snapping' : ''}"${draggable} aria-label="${esc(t('pass.pickup'))} ${esc(o.pickup_number)}${booked ? ', ' + esc(t('admin.booked', { time: pickupText(o.pickup_time) })) : ''}">
     <div class="top"><span class="lab">${esc(t('pass.pickup'))}</span><span class="lab">${esc(t('pass.placed'))} ${hhmm(o.created_at)}</span>
       <span class="code">${codeHtml(o.pickup_number)}</span><div class="stat"><b>${esc(t('admin.chip.' + col))}</b></div></div>
     <div class="perf"></div>
+    ${sched}
     <ul class="kt__items">${o.items.map((i) => `<li><span class="q">${esc(i.qty)}</span><span>${esc(i.name)}${i.options_label ? `<small class="lopt">${esc(i.options_label)}</small>` : ''}</span></li>`).join('')}</ul>
     ${o.note ? `<p class="kt__note">${esc(t('admin.note', { note: o.note }))}</p>` : ''}
     <div class="kt__foot"><b>${money(o.total)}</b><span>${esc(paymentText(o))}</span></div>

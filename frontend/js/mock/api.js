@@ -5,6 +5,7 @@
 import { getLang } from '../i18n.js';
 import { session } from '../store.js';
 import { shrinkImage } from '../image.js';
+import { slotAllowed } from '../pickup.js';
 import { SEED_RESTAURANTS, SEED_MENUS, PAYMENT_METHODS, USERS, REPORTS, seedOrders } from './data.js';
 
 // v3: 換成清大學餐的真實店家與菜單；舊版存在瀏覽器裡的示範資料不再沿用
@@ -90,6 +91,8 @@ function outOrder(d, o) {
     restaurant_name: loc(r.name), restaurant_location: loc(r.location),
     status: o.status, payment_method: o.payment_method, payment_status: o.payment_status,
     total: o.total, note: loc(o.note), pickup_type: o.pickup_type, pickup_time: o.pickup_time,
+    // 假資料沒有備餐時間：建議開始做＝取餐前 10 分鐘
+    start_by: o.pickup_time ? iso(new Date(Date.parse(o.pickup_time) - 10 * 60000)) : null,
     items: o.items.map((i) => ({ menu_item_id: i.menu_item_id, name: loc(i.name), qty: i.qty, unit_price: i.unit_price, subtotal: i.subtotal, options_label: loc(i.options_label), option_ids: i.option_ids || [] })),
     created_at: o.created_at, estimated_ready_at: o.estimated_ready_at,
     queue_ahead: isActive(o) ? ahead : 0, status_history: o.status_history,
@@ -173,6 +176,10 @@ export async function createOrder({ restaurant_id, items, pickup_type = 'asap', 
   const d = db();
   const r = findRestaurant(d, restaurant_id);
   if (!r.is_open || !r.is_accepting_orders) fail(getLang() === 'en' ? 'This restaurant is not taking orders right now' : '這家餐廳目前暫停接單');
+  if (pickup_type === 'scheduled') {
+    if (!r.allow_scheduled_pickup) fail(getLang() === 'en' ? 'This restaurant does not take booked pickups' : '這家餐廳不開放預約取餐');
+    if (!slotAllowed(pickup_time)) fail(getLang() === 'en' ? 'Pick a pickup time at least 30 minutes from now' : '預約時間要在現在起 30 分鐘以後');
+  }
   const menu = d.menus[restaurant_id];
   const lines = items.map((l) => {
     const mi = menu.items.find((i) => i.id === l.menu_item_id) ?? fail('Item not found');
@@ -277,7 +284,7 @@ export async function adminListOrders() {
   list.forEach(tick);
   save(d);
   return list.filter((o) => ['paid', 'accepted', 'preparing', 'ready'].includes(o.status) || (o.status === 'pending_payment' && o.payment_confirmed))
-    .sort((a, b) => a.created_at.localeCompare(b.created_at)).map((o) => outOrder(d, o));
+    .sort((a, b) => (a.pickup_time || a.created_at).localeCompare(b.pickup_time || b.created_at)).map((o) => outOrder(d, o));
 }
 
 export async function adminUpdateOrderStatus(id, status) {

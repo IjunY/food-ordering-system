@@ -78,8 +78,8 @@ function toRestaurant(v, items = []) {
     is_open: true, is_accepting_orders: v.is_accepting_orders, status: 'active',
     queue_count: e.queue_count, wait_minutes: e.wait_minutes,
     image_url: v.image_url, cover_image_url: v.cover_image_url, phone: '',
-    // 後端沒有這兩個設定：到店付款都可以；預約取餐的時間後端不會記下來，所以不開放
-    allow_cash_on_pickup: true, allow_scheduled_pickup: false,
+    // 後端沒有這兩個設定：每家都可以到店付款、預約取餐（時段規則見 js/pickup.js）
+    allow_cash_on_pickup: true, allow_scheduled_pickup: true,
     // 店家設定頁編輯用（兩種語言）
     edit: { name: v.name, location: v.location, description: v.description, opening_hours: v.opening_hours, area: v.area },
   };
@@ -236,6 +236,9 @@ async function toOrder(o) {
 
   const longest = Math.max(5, ...o.items.map((i) => prep.get(i.item_id) ?? 0));
   const eta = new Date(new Date(o.created_at).getTime() + longest * 60000).toISOString();
+  // 預約的單：取餐時間減掉最久的備餐時間＝建議店家幾點開始做
+  const pickup_time = o.pickup_time ? new Date(o.pickup_time).toISOString() : null;
+  const start_by = pickup_time ? new Date(Date.parse(pickup_time) - longest * 60000).toISOString() : null;
   const history = status === 'pending_payment' || status === 'cancelled' ? [] : [{ status: 'paid', at: o.created_at }];
   const notes = o.items.filter((i) => i.note).map((i) => i.note).join(' / ');
 
@@ -253,28 +256,31 @@ async function toOrder(o) {
     payment_attempt: o.payment_status,
     total: o.total,
     note: notes || null,
-    pickup_type: 'asap',
-    pickup_time: null,
+    pickup_type: pickup_time ? 'scheduled' : 'asap',
+    pickup_time,
+    start_by,
     items: o.items.map((i) => ({
       menu_item_id: String(i.item_id), name: loc(i.item_name), qty: i.quantity,
       unit_price: i.unit_price, subtotal: i.subtotal,
       options_label: i.options_label ? loc(i.options_label) : null, option_ids: i.option_ids, note: i.note,
     })),
     created_at: o.created_at,
-    estimated_ready_at: eta,
+    estimated_ready_at: pickup_time || eta,
     queue_ahead: 0,
     status_history: history,
   };
 }
 
-export async function createOrder({ items }) {
+export async function createOrder({ items, pickup_type = 'asap', pickup_time = null }) {
   const lines = items.map((l) => {
     const item_id = Number(l.menu_item_id);
     // 練習模式留下的品項（編號不是數字）不在資料庫裡
     if (!Number.isInteger(item_id)) throw new Error(en() ? 'This item is no longer on the menu. Please add it again.' : '這個品項已經不在菜單上，請重新加入購物車');
     return { item_id, quantity: l.qty, option_ids: l.option_ids || [], note: String(l.note || '').slice(0, 60) };
   });
-  return toOrder(await http('POST', '/orders', { items: lines }));
+  const body = { items: lines };
+  if (pickup_type === 'scheduled' && pickup_time) body.pickup_time = pickup_time;
+  return toOrder(await http('POST', '/orders', body));
 }
 
 export async function getOrder(id) {
@@ -324,7 +330,9 @@ export async function adminListOrders() {
   const list = await http('GET', '/orders?limit=200');
   const active = list.filter((o) => (o.status === 'confirming' ? o.payment_status === 'paid' || o.pay_at_pickup : ['preparing', 'ready'].includes(o.status)));
   const orders = await Promise.all(active.map((o) => toOrder(o)));
-  return orders.sort((a, b) => a.created_at.localeCompare(b.created_at));
+  // 照「該開始做的時間」排：一般的單看下單時間，預約的單看建議開始做的時間（遠的預約排後面）
+  const due = (o) => Date.parse(o.start_by || o.created_at);
+  return orders.sort((a, b) => due(a) - due(b));
 }
 
 export async function adminUpdateOrderStatus(id, status) {

@@ -1,11 +1,15 @@
 from collections.abc import Callable
+from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
 from fastapi.testclient import TestClient
 
 from app.auth.states import UserRole
+from app.core.errors import BadRequestError
+from app.orders.pickup import check_pickup_time
 
 Headers = Callable[..., dict[str, str]]
+TAIWAN = timezone(timedelta(hours=8))
 
 
 @pytest.fixture
@@ -552,3 +556,89 @@ def test_customer_chooses_to_pay_at_pickup(
         ).status_code
         == 409
     )
+
+
+# ---------- booking a pickup time ----------
+def _slot(minutes_from_now: int) -> datetime:
+    """The first 15-minute mark at least this many minutes from now, in Taiwan time."""
+    at = datetime.now(TAIWAN) + timedelta(minutes=minutes_from_now)
+    mark = at.replace(minute=at.minute - at.minute % 15, second=0, microsecond=0)
+    return mark if mark == at else mark + timedelta(minutes=15)
+
+
+def book(
+    client: TestClient, headers: dict[str, str], item_id: int, pickup_time: object
+):
+    return client.post(
+        "/api/orders",
+        json={
+            "items": [{"item_id": item_id, "quantity": 1}],
+            "pickup_time": pickup_time,
+        },
+        headers=headers,
+    )
+
+
+def test_order_without_a_time_is_as_soon_as_possible(
+    client: TestClient, customer: dict[str, str], menu: dict[str, int]
+) -> None:
+    assert place(client, customer, (menu["noodles"], 1))["pickup_time"] is None
+    assert book(client, customer, menu["noodles"], None).json()["pickup_time"] is None
+
+
+def test_customer_books_a_pickup_time_and_the_vendor_sees_it(
+    client: TestClient,
+    customer: dict[str, str],
+    staff: dict[str, str],
+    menu: dict[str, int],
+) -> None:
+    at = _slot(45)
+    response = book(client, customer, menu["noodles"], at.isoformat())
+    assert response.status_code == 201, response.text
+    order = response.json()
+    assert datetime.fromisoformat(order["pickup_time"]) == at
+
+    for_vendor = client.get("/api/orders", headers=staff).json()
+    assert [datetime.fromisoformat(o["pickup_time"]) for o in for_vendor] == [at]
+
+
+def test_pickup_time_rules(
+    client: TestClient, customer: dict[str, str], menu: dict[str, int]
+) -> None:
+    item = menu["noodles"]
+    # Within 30 minutes of now: too soon (this mark is 10 to 25 minutes away)
+    assert book(client, customer, item, _slot(10).isoformat()).status_code == 400
+    # In the past
+    assert book(client, customer, item, _slot(-60).isoformat()).status_code == 400
+    # Not on a 15-minute mark
+    off_mark = _slot(60) + timedelta(minutes=7)
+    assert book(client, customer, item, off_mark.isoformat()).status_code == 400
+    assert (
+        book(client, customer, item, (_slot(60) + timedelta(seconds=1)).isoformat())
+    ).status_code == 400
+    # More than a day ahead
+    assert book(client, customer, item, _slot(25 * 60).isoformat()).status_code == 400
+    # Without a timezone the time is ambiguous
+    naive = _slot(60).replace(tzinfo=None)
+    assert book(client, customer, item, naive.isoformat()).status_code == 422
+    assert book(client, customer, item, "soon").status_code == 422
+
+    # The first allowed slot (31 to 46 minutes away) and one almost a day ahead are fine
+    assert book(client, customer, item, _slot(31).isoformat()).status_code == 201
+    assert book(client, customer, item, _slot(23 * 60).isoformat()).status_code == 201
+
+
+def test_pickup_rule_edges() -> None:
+    now = datetime(2026, 11, 23, 4, 0, tzinfo=UTC)  # 12:00 in Taiwan
+    assert check_pickup_time(now + timedelta(minutes=30), now) == now + timedelta(
+        minutes=30
+    )
+    with pytest.raises(BadRequestError):
+        check_pickup_time(now + timedelta(minutes=15), now)
+    # 24 hours ahead is the last slot allowed
+    assert check_pickup_time(now + timedelta(hours=24), now)
+    with pytest.raises(BadRequestError):
+        check_pickup_time(now + timedelta(hours=24, minutes=15), now)
+    # Stored in UTC whatever timezone it came in
+    taiwan = (now + timedelta(hours=1)).astimezone(TAIWAN)
+    assert check_pickup_time(taiwan, now).tzinfo is UTC
