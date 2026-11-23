@@ -21,7 +21,7 @@ class OrderInfo:
     """付款模組需要知道的訂單資訊（只有這幾個欄位，其他的我們不關心）。"""
 
     id: int
-    created_by: str  # 下單者的學號（User.student_id）
+    user_id: int  # 下單者的帳號 id（User.id）
     status: OrderStatus
     total: int  # 訂單總金額（元）
 
@@ -31,7 +31,7 @@ def _to_info(order: Order) -> OrderInfo:
     # unit_price 是下單時存下的價格快照，店家之後改價也不會影響這張訂單。
     total = sum(item.unit_price * item.quantity for item in order.items)
     return OrderInfo(
-        id=order.id, created_by=order.created_by, status=order.status, total=total
+        id=order.id, user_id=order.user_id, status=order.status, total=total
     )
 
 

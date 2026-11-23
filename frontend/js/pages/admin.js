@@ -51,7 +51,9 @@ export async function adminBoard() {
 }
 async function changeStatus(d) {
   if (d.to === 'recall') { toast(t('admin.called', { no: d.no })); return; }
-  if (d.to === 'cancelled' && !(await confirmDialog(t('admin.reject_confirm', { no: d.no }), { danger: true }))) return;
+  // 線上付好款的單：拒絕＝全額退款，確認視窗先講清楚
+  const ask = d.refund ? t('admin.reject_confirm_refund', { no: d.no, amount: money(Number(d.refund)) }) : t('admin.reject_confirm', { no: d.no });
+  if (d.to === 'cancelled' && !(await confirmDialog(ask, { danger: true }))) return;
   await api.admin.updateOrderStatus(d.id, d.to);
   if (d.to === 'ready') toast(t('admin.notified', { no: d.no }));
   rerender();

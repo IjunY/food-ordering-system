@@ -138,6 +138,13 @@ def test_finished_payments_cannot_change() -> None:
     assert not can_transition(PaymentStatus.PAID, PaymentStatus.PENDING)
     assert not can_transition(PaymentStatus.FAILED, PaymentStatus.PAID)
     assert not can_transition(PaymentStatus.EXPIRED, PaymentStatus.PAID)
+    assert not can_transition(PaymentStatus.REFUNDED, PaymentStatus.PAID)
+
+
+def test_only_a_paid_payment_can_be_refunded() -> None:
+    assert can_transition(PaymentStatus.PAID, PaymentStatus.REFUNDED)
+    assert not can_transition(PaymentStatus.PENDING, PaymentStatus.REFUNDED)
+    assert not can_transition(PaymentStatus.FAILED, PaymentStatus.REFUNDED)
 
 
 # ---------- 建立付款 ----------
@@ -314,6 +321,58 @@ def test_order_cancelled_while_paying_is_not_marked_paid(
     assert send_callback(client, trade_no_of(created), 160).status_code == 200
 
     assert status_of(client, customer, created["payment"]["id"]) == "failed"
+
+
+# ---------- 退款 ----------
+
+
+def _paid(client: TestClient, customer: dict[str, str], order: dict) -> int:
+    """付好這張訂單，回傳付款編號。"""
+    created = start(client, customer, order["id"])
+    assert send_callback(client, trade_no_of(created), 160).status_code == 200
+    return created["payment"]["id"]
+
+
+def test_cancelling_a_paid_order_refunds_it(
+    client: TestClient, customer: dict[str, str], order: dict
+) -> None:
+    payment_id = _paid(client, customer, order)
+
+    cancelled = client.post(f"/api/orders/{order['id']}/cancel", headers=customer)
+
+    assert cancelled.status_code == 200, cancelled.text
+    assert cancelled.json()["status"] == "cancelled"
+    assert cancelled.json()["payment_status"] == "refunded"
+    payment = client.get(f"/api/payments/{payment_id}", headers=customer).json()
+    assert payment["status"] == "refunded"
+    assert payment["refunded_at"] is not None
+    with client.app.state.session_factory() as session:  # type: ignore[attr-defined]
+        assert not service.is_order_paid(session, order["id"])
+
+
+def test_staff_rejecting_a_paid_order_refunds_it(
+    client: TestClient, customer: dict[str, str], staff: dict[str, str], order: dict
+) -> None:
+    payment_id = _paid(client, customer, order)
+
+    rejected = client.patch(
+        f"/api/orders/{order['id']}/status",
+        json={"status": "cancelled"},
+        headers=staff,
+    )
+
+    assert rejected.status_code == 200, rejected.text
+    assert rejected.json()["payment_status"] == "refunded"
+    assert status_of(client, customer, payment_id) == "refunded"
+
+
+def test_cancelling_an_unpaid_order_refunds_nothing(
+    client: TestClient, customer: dict[str, str], order: dict
+) -> None:
+    cancelled = client.post(f"/api/orders/{order['id']}/cancel", headers=customer)
+
+    assert cancelled.status_code == 200, cancelled.text
+    assert cancelled.json()["payment_status"] == "unpaid"
 
 
 # ---------- 逾時 ----------

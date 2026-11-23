@@ -24,6 +24,7 @@ class PaymentRead(BaseModel):
     status: PaymentStatus
     expires_at: datetime
     paid_at: datetime | None
+    refunded_at: datetime | None
 
 
 class PaymentCreated(BaseModel):

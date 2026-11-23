@@ -10,6 +10,7 @@ class PaymentStatus(StrEnum):
     PAID = "paid"  # 金流商通知：付款成功
     FAILED = "failed"  # 金流商通知：付款失敗（例如卡被拒）
     EXPIRED = "expired"  # 超過期限沒付，自動作廢
+    REFUNDED = "refunded"  # 付過錢的訂單被取消，錢已經退回去（app/payments/refunds.py）
 
 
 # 允許的轉換表：key 是「目前狀態」，value 是「可以變成哪些狀態」
@@ -20,11 +21,13 @@ _ALLOWED: dict[PaymentStatus, set[PaymentStatus]] = {
         PaymentStatus.FAILED,
         PaymentStatus.EXPIRED,
     },
+    # 已付款只能再變成「已退款」（訂單被取消時）
+    PaymentStatus.PAID: {PaymentStatus.REFUNDED},
     # 下面三個是「終點」：一旦到了就不能再變。
     # 想重新付款的話，是建立一筆「新的」付款，而不是把舊的改回 PENDING。
-    PaymentStatus.PAID: set(),
     PaymentStatus.FAILED: set(),
     PaymentStatus.EXPIRED: set(),
+    PaymentStatus.REFUNDED: set(),
 }
 
 
