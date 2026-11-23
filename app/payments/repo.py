@@ -59,6 +59,18 @@ def get_latest_for_order(session: Session, order_id: int) -> Payment | None:
     return session.scalar(query)
 
 
+def get_paid_for_order(
+    session: Session, order_id: int, for_update: bool = False
+) -> Payment | None:
+    # 某張訂單「已付款」的那一筆（因為唯一索引，最多只會有一筆）
+    query = select(Payment).where(
+        Payment.order_id == order_id, Payment.status == PaymentStatus.PAID
+    )
+    if for_update:
+        query = query.with_for_update()
+    return session.scalar(query)
+
+
 def has_paid_payment(session: Session, order_id: int) -> bool:
     query = select(Payment.id).where(
         Payment.order_id == order_id,

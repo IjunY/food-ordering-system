@@ -10,9 +10,11 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr, ValidationError
+from sqlalchemy import select
 
 from app.auth.states import UserRole
 from app.payments.config import PaymentSettings, get_payment_settings
+from app.payments.models import Payment
 from app.payments.provider import LinePayProvider, PaymentProviderError
 from app.payments.router import get_linepay_provider, get_provider
 
@@ -21,6 +23,7 @@ Headers = Callable[..., dict[str, str]]
 CHANNEL_ID = "1234567890"
 SECRET = "test-line-pay-channel-secret"
 TRANSACTION_ID = "2026112000000000001"  # LINE Pay ids are 19 digits
+REFUND_ID = "2026112300000000002"
 
 
 class FakeLinePay:
@@ -30,6 +33,7 @@ class FakeLinePay:
         self.calls: list[tuple[str, dict[str, str], dict[str, Any]]] = []
         self.confirm_code = "0000"
         self.request_code = "0000"
+        self.refund_code = "0000"
 
     def __call__(self, url: str, headers: dict[str, str], body: bytes) -> dict:
         self.calls.append((url, headers, json.loads(body)))
@@ -46,6 +50,17 @@ class FakeLinePay:
                     },
                     "transactionId": int(TRANSACTION_ID),
                     "paymentAccessToken": "123456789012",
+                },
+            }
+        if url.endswith("/refund"):
+            if self.refund_code != "0000":
+                return {"returnCode": self.refund_code, "returnMessage": "Error"}
+            return {
+                "returnCode": "0000",
+                "returnMessage": "Success.",
+                "info": {
+                    "refundTransactionId": int(REFUND_ID),
+                    "refundTransactionDate": "2026-11-23T12:00:00Z",
                 },
             }
         return {"returnCode": self.confirm_code, "returnMessage": "Done"}
@@ -188,6 +203,22 @@ def test_request_is_signed_the_way_line_pay_expects() -> None:
         provider.create_checkout("abc124", 160)
 
 
+def test_a_payment_without_a_line_pay_transaction_has_nothing_to_refund() -> None:
+    # Paid on the mock checkout page (no LINE Pay transaction id): LINE Pay holds
+    # no money for it, so there is nothing to ask LINE Pay for
+    fake = FakeLinePay()
+    provider = LinePayProvider(
+        CHANNEL_ID,
+        SECRET,
+        "https://sandbox-api-pay.line.me/",
+        "http://app.test/",
+        send=fake,
+    )
+
+    assert provider.refund(None, 160) is None
+    assert fake.calls == []
+
+
 def test_customer_pays_with_line_pay(
     client: TestClient, line_pay: FakeLinePay, customer: dict[str, str], order: dict
 ) -> None:
@@ -265,6 +296,89 @@ def test_cancelled_orders_are_not_charged(
     assert "/confirm" not in "".join(
         line_pay.paths()
     )  # LINE Pay was never asked to charge
+
+
+def _paid(
+    client: TestClient, line_pay: FakeLinePay, customer: dict[str, str], order: dict
+) -> None:
+    start(client, customer, order["id"])
+    assert (
+        come_back(client, trade_no_of(line_pay)).headers["location"]
+        == f"/#paid-{order['id']}"
+    )
+
+
+def _refund_ref(client: TestClient, order_id: int) -> str | None:
+    with client.app.state.session_factory() as session:  # type: ignore[attr-defined]
+        return session.scalar(
+            select(Payment.refund_ref).where(Payment.order_id == order_id)
+        )
+
+
+def test_cancelling_a_paid_order_refunds_it_on_line_pay(
+    client: TestClient, line_pay: FakeLinePay, customer: dict[str, str], order: dict
+) -> None:
+    _paid(client, line_pay, customer, order)
+
+    cancelled = client.post(f"/api/orders/{order['id']}/cancel", headers=customer)
+
+    assert cancelled.status_code == 200, cancelled.text
+    assert cancelled.json()["status"] == "cancelled"
+    assert line_pay.paths()[-1] == f"/v3/payments/{TRANSACTION_ID}/refund"
+    assert line_pay.calls[-1][2] == {"refundAmount": 160}
+    assert order_payment(client, customer, order["id"]) == "refunded"
+    assert _refund_ref(client, order["id"]) == REFUND_ID
+
+    # Cancelling again is refused by the order (already cancelled), not sent to LINE Pay
+    again = client.post(f"/api/orders/{order['id']}/cancel", headers=customer)
+    assert again.status_code == 409
+    assert line_pay.paths().count(f"/v3/payments/{TRANSACTION_ID}/refund") == 1
+
+
+def test_a_failed_refund_leaves_the_order_as_it_was(
+    client: TestClient,
+    line_pay: FakeLinePay,
+    auth_headers: Headers,
+    customer: dict[str, str],
+    order: dict,
+) -> None:
+    _paid(client, line_pay, customer, order)
+    staff = auth_headers("staff02", UserRole.STAFF, vendor_id=order["vendor_id"])
+
+    line_pay.refund_code = "9000"  # LINE Pay internal error
+    rejected = client.patch(
+        f"/api/orders/{order['id']}/status",
+        json={"status": "cancelled"},
+        headers=staff,
+    )
+    assert rejected.status_code == 502
+    still = client.get(f"/api/orders/{order['id']}", headers=customer).json()
+    assert still["status"] == "confirming"
+    assert still["payment_status"] == "paid"
+
+    # LINE Pay did refund it after all, but we never heard back: trying again
+    # gets "already refunded" (1165), which completes the cancellation
+    line_pay.refund_code = "1165"
+    retry = client.patch(
+        f"/api/orders/{order['id']}/status",
+        json={"status": "cancelled"},
+        headers=staff,
+    )
+    assert retry.status_code == 200, retry.text
+    assert retry.json()["status"] == "cancelled"
+    assert retry.json()["payment_status"] == "refunded"
+    assert _refund_ref(client, order["id"]) is None
+
+
+def test_orders_paid_at_the_counter_are_not_refunded_online(
+    client: TestClient, line_pay: FakeLinePay, customer: dict[str, str], order: dict
+) -> None:
+    client.post(f"/api/orders/{order['id']}/pay-at-pickup", headers=customer)
+
+    cancelled = client.post(f"/api/orders/{order['id']}/cancel", headers=customer)
+
+    assert cancelled.status_code == 200, cancelled.text
+    assert line_pay.calls == []
 
 
 def test_line_pay_down_is_reported(

@@ -18,7 +18,9 @@ from app.orders.models import Order, OrderItem
 from app.orders.pickup import check_pickup_time
 from app.orders.schemas import OrderCreate, OrderItemRead, OrderRead
 from app.orders.states import ALLOWED_TRANSITIONS, OrderStatus
+from app.payments import refunds
 from app.payments import repo as payments_repo
+from app.payments.provider import PaymentProvider
 
 
 def _manages(user: User, order: Order) -> bool:
@@ -173,28 +175,45 @@ def list_orders(
     )
 
 
-def _change_status(session: Session, order: Order, new_status: OrderStatus) -> Order:
+def _change_status(
+    session: Session,
+    order: Order,
+    new_status: OrderStatus,
+    provider: PaymentProvider,
+) -> Order:
+    """Moves the order on (the caller has locked its row). A cancelled order that was
+    paid online is refunded first; if the refund fails, nothing changes (502).
+    """
     if new_status not in ALLOWED_TRANSITIONS[order.status]:
         raise ConflictError(
             f"Cannot change an order from '{order.status.value}' to '{new_status.value}'"
         )
+    if new_status is OrderStatus.CANCELLED:
+        refunds.refund_order(session, provider, order.id)
     order.status = new_status
     session.commit()
     return order
 
 
 def update_status(
-    session: Session, user: User, order_id: int, new_status: OrderStatus
+    session: Session,
+    user: User,
+    order_id: int,
+    new_status: OrderStatus,
+    provider: PaymentProvider,
 ) -> Order:
     """The vendor's staff moving an order forward (or cancelling it)."""
     order = get_order(session, user, order_id, for_update=True)
     if not _manages(user, order):
         # e.g. staff looking at an order they placed themselves at another vendor
         raise ForbiddenError("Only the vendor's staff can change this order")
-    return _change_status(session, order, new_status)
+    return _change_status(session, order, new_status, provider)
 
 
-def cancel_order(session: Session, user: User, order_id: int) -> Order:
+def cancel_order(
+    session: Session, user: User, order_id: int, provider: PaymentProvider
+) -> Order:
+    """Cancels the order; if it was paid online, the payment is refunded in full."""
     order = get_order(session, user, order_id, for_update=True)
     if not _manages(user, order):
         if order.user_id != user.id:
@@ -206,7 +225,7 @@ def cancel_order(session: Session, user: User, order_id: int) -> Order:
             raise ForbiddenError(
                 "This order is already being prepared and can no longer be cancelled"
             )
-    return _change_status(session, order, OrderStatus.CANCELLED)
+    return _change_status(session, order, OrderStatus.CANCELLED, provider)
 
 
 def choose_pay_at_pickup(session: Session, user: User, order_id: int) -> Order:

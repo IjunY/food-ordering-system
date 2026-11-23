@@ -219,7 +219,8 @@ export function itemsSummary(items, sep = '\n') {
   return items.map((i) => `${i.name} ×${i.qty}${i.options_label ? t('fmt.paren', { x: i.options_label }) : ''}`).join(sep);
 }
 export function paymentText(o) {
-  return `${t('pay.method.' + o.payment_method)}${t('fmt.paren', { x: t(o.payment_status === 'paid' ? 'pay.paid' : 'pay.unpaid') })}`;
+  const st = { paid: 'pay.paid', refunded: 'pay.refunded' }[o.payment_status] || 'pay.unpaid';
+  return `${t('pay.method.' + o.payment_method)}${t('fmt.paren', { x: t(st) })}`;
 }
 
 // ======================= 店家端 =======================
@@ -262,7 +263,7 @@ export function KitchenTicket(o, isNew = false) {
     <ul class="kt__items">${o.items.map((i) => `<li><span class="q">${esc(i.qty)}</span><span>${esc(i.name)}${i.options_label ? `<small class="lopt">${esc(i.options_label)}</small>` : ''}</span></li>`).join('')}</ul>
     ${o.note ? `<p class="kt__note">${esc(t('admin.note', { note: o.note }))}</p>` : ''}
     <div class="kt__foot"><b>${money(o.total)}</b><span>${esc(paymentText(o))}</span></div>
-    <div class="kt__actions">${acts.map(([st, key, to]) => Button({ label: t(key), style: st, block: true, action: 'order-status', data: { id: o.id, to, no: o.pickup_number } })).join('')}</div>
+    <div class="kt__actions">${acts.map(([st, key, to]) => Button({ label: t(key), style: st, block: true, action: 'order-status', data: { id: o.id, to, no: o.pickup_number, ...(to === 'cancelled' && o.payment_status === 'paid' ? { refund: o.total } : {}) } })).join('')}</div>
   </article>`;
 }
 

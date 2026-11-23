@@ -54,7 +54,10 @@ class OrderRead(BaseModel):
     vendor_name: dict[str, str]  # {"zh": ..., "en": ...}
     items: list[OrderItemRead]
     total: int
-    # The latest online payment for this order ("unpaid": none started yet)
-    payment_status: Literal["unpaid", "pending", "paid", "failed", "expired"]
+    # The latest online payment for this order ("unpaid": none started yet;
+    # "refunded": it was paid, then the order was cancelled and the money returned)
+    payment_status: Literal[
+        "unpaid", "pending", "paid", "failed", "expired", "refunded"
+    ]
     pay_at_pickup: bool  # the customer will pay at the counter
     pickup_time: datetime | None  # booked pickup time; None = as soon as possible

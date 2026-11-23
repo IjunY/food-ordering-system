@@ -15,6 +15,7 @@ from app.core.config import Settings
 from app.main import create_app
 from app.menu.models import Vendor
 from app.menu.schemas import VendorCreate
+from app.payments.config import PaymentSettings, get_payment_settings
 
 # Same database the migrations ran on: CI sets DATABASE_URL, locally it is the
 # docker-compose one. Run `uv run alembic upgrade head` first so the tables exist.
@@ -39,6 +40,13 @@ def settings(tmp_path: Path) -> Settings:
 @pytest.fixture
 def client(settings: Settings) -> Iterator[TestClient]:
     app = create_app(settings=settings)
+    # Payments never read .env in tests (CI has none): the mock provider with a fixed
+    # secret. Cancelling an order needs it, for refunds. Payment tests override it again.
+    app.dependency_overrides[get_payment_settings] = lambda: PaymentSettings(
+        webhook_secret=SecretStr("test-only-webhook-secret-0123456789abcdef"),
+        provider="mock",
+        _env_file=None,  # pyright: ignore[reportCallIssue]
+    )
     engine = app.state.session_factory.kw["bind"]
 
     # Cleanup: everything a test writes happens inside one outer transaction that is

@@ -24,9 +24,14 @@ class Checkout:
 class PaymentProviderError(Exception):
     """金流商回報錯誤，或連不上金流商。"""
 
+    def __init__(self, message: str, code: str | None = None) -> None:
+        super().__init__(message)
+        # 金流商的錯誤代碼（例如 LINE Pay 的 returnCode）；連不上時是 None
+        self.code = code
+
 
 class PaymentProvider(Protocol):
-    # Protocol 是「規格說明」：只要一個 class 有這兩個方法，就能被當成 PaymentProvider 使用。
+    # Protocol 是「規格說明」：只要一個 class 有這三個方法，就能被當成 PaymentProvider 使用。
     # 這裡的 ... 代表「只定義名稱和參數，不寫內容」
 
     def create_checkout(self, trade_no: str, amount: int) -> Checkout:
@@ -35,6 +40,13 @@ class PaymentProvider(Protocol):
 
     def verify_callback(self, body: bytes, signature: str) -> bool:
         """檢查一則通知的簽章是否正確。"""
+        ...
+
+    def refund(self, provider_ref: str | None, amount: int) -> str | None:
+        """把一筆已付款的錢全部退回去，回傳金流商的退款編號（沒有就 None）。
+
+        provider_ref 是付款時金流商給的交易編號。退不了時丟 PaymentProviderError。
+        """
         ...
 
 
@@ -65,6 +77,10 @@ class MockProvider:
         # 兩邊都轉成 bytes 再比：簽章裡如果被塞了奇怪的字元，會回傳 False 而不是讓程式出錯
         return hmac.compare_digest(expected.encode(), signature.encode())
 
+    def refund(self, provider_ref: str | None, amount: int) -> str | None:
+        # 假付款頁沒有真的收錢，所以也沒有錢要退
+        return None
+
     def build_callback(
         self, trade_no: str, amount: int, success: bool
     ) -> tuple[bytes, str]:
@@ -82,7 +98,10 @@ class MockProvider:
 #   2. 使用者在 LINE Pay 付款頁同意付款後，瀏覽器被導回我們的 confirmUrl（帶著 transactionId）
 #   3. 我們再呼叫 Confirm API，LINE Pay 回 0000 才算真的扣款成功
 # 所以付款成功與否，是「我們的伺服器問 LINE Pay」得到的答案，不是瀏覽器說了算。
-# 文件：https://pay.line.me/documents/online_v3.html
+# 文件：https://developers-pay.line.me/online-api-v3
+
+# Refund API 的回應代碼：這筆交易已經退款過了
+ALREADY_REFUNDED = "1165"
 
 # 送出請求的函式：(網址, 標頭, 內容) -> 回傳的 JSON。測試時換成假的，不用真的連網路
 Sender = Callable[[str, dict[str, str], bytes], dict[str, Any]]
@@ -134,7 +153,8 @@ class LinePayProvider:
         result = self._send(self._api_url + path, headers, body.encode())
         if result.get("returnCode") != "0000":
             raise PaymentProviderError(
-                f"LINE Pay error {result.get('returnCode')}: {result.get('returnMessage')}"
+                f"LINE Pay error {result.get('returnCode')}: {result.get('returnMessage')}",
+                code=result.get("returnCode"),
             )
         return result
 
@@ -179,6 +199,24 @@ class LinePayProvider:
         except PaymentProviderError:
             return False
         return True
+
+    def refund(self, provider_ref: str | None, amount: int) -> str | None:
+        """全額退款（Refund API）。LINE Pay 說「已經退過了」（1165）也算成功：
+        上次退款成功、但我們的資料庫沒存到時，再按一次取消就能補上。"""
+        if provider_ref is None:
+            # 沒有 LINE Pay 交易編號：這筆是在假付款頁付的，LINE Pay 沒收到錢
+            return None
+        try:
+            result = self._call(
+                f"/v3/payments/{provider_ref}/refund", {"refundAmount": amount}
+            )
+        except PaymentProviderError as exc:
+            if exc.code == ALREADY_REFUNDED:
+                return None
+            raise
+        # 退款已經成功了：就算回應裡少了退款編號，也不要因此出錯
+        ref = result.get("info", {}).get("refundTransactionId")
+        return None if ref is None else str(ref)
 
     def verify_callback(self, body: bytes, signature: str) -> bool:
         # LINE Pay 不送伺服器對伺服器的通知（結果靠 confirm 問），所以這個網址一律拒絕

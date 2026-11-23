@@ -6,6 +6,7 @@ from app.auth.dependencies import CurrentUser, DbSession, StaffUser
 from app.orders import service
 from app.orders.schemas import OrderCreate, OrderRead, OrderStatusUpdate
 from app.orders.states import OrderStatus
+from app.payments.router import ProviderDep  # to refund paid orders that get cancelled
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
@@ -39,9 +40,13 @@ def get_order(order_id: int, session: DbSession, user: CurrentUser) -> OrderRead
 
 @router.patch("/{order_id}/status", response_model=OrderRead)
 def update_order_status(
-    order_id: int, data: OrderStatusUpdate, session: DbSession, staff: StaffUser
+    order_id: int,
+    data: OrderStatusUpdate,
+    session: DbSession,
+    staff: StaffUser,
+    provider: ProviderDep,
 ) -> OrderRead:
-    order = service.update_status(session, staff, order_id, data.status)
+    order = service.update_status(session, staff, order_id, data.status, provider)
     return service.to_read(session, [order])[0]
 
 
@@ -52,6 +57,10 @@ def pay_at_pickup(order_id: int, session: DbSession, user: CurrentUser) -> Order
 
 
 @router.post("/{order_id}/cancel", response_model=OrderRead)
-def cancel_order(order_id: int, session: DbSession, user: CurrentUser) -> OrderRead:
-    order = service.cancel_order(session, user, order_id)
+def cancel_order(
+    order_id: int, session: DbSession, user: CurrentUser, provider: ProviderDep
+) -> OrderRead:
+    """Cancels the order. If it was paid online, the money is refunded first (502,
+    and the order stays as it was, when the payment provider cannot refund it)."""
+    order = service.cancel_order(session, user, order_id, provider)
     return service.to_read(session, [order])[0]

@@ -74,7 +74,8 @@ def _finish(session: Session, payment: Payment, success: bool) -> Payment:
     """金流商說「成功／失敗」之後，決定這筆付款的最終狀態並存檔（假付款通知和 LINE Pay 共用）。"""
     # 如果訂單在付款途中被取消了（不再是「確認中」），就算金流商說成功，
     # 也不能標成已付款，否則會出現「已取消卻已付款」的訂單。
-    # （接真的金流商時，這種情況還要另外呼叫退款，把錢還給客人）
+    # （LINE Pay 不會走到這裡：confirm_linepay 看到訂單取消了就不向 LINE Pay 確認扣款。
+    #   已經付好款的訂單之後才被取消，錢由 refunds.py 退回）
     order = order_gateway.get_order_for_callback(session, payment.order_id)
     order_open = order is not None and order.status == OrderStatus.CONFIRMING
     new_status = PaymentStatus.PAID if success and order_open else PaymentStatus.FAILED
