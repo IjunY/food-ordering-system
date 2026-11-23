@@ -104,7 +104,9 @@ def test_customer_places_an_order(
     order = place(client, customer, (menu["noodles"], 2), (menu["dumplings"], 1))
 
     assert order["status"] == "confirming"
-    assert order["created_by"] == "990000001"
+    me = client.get("/api/auth/me", headers=customer).json()
+    assert me["student_id"] == "990000001"
+    assert order["user_id"] == me["id"]
     assert order["vendor_id"] == vendors["noodles"]
     assert order["vendor_name"] == {"zh": "測試麵館", "en": "Test Noodle House"}
     assert order["total"] == 2 * 120 + 60

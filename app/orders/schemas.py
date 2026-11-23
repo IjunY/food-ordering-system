@@ -49,7 +49,7 @@ class OrderRead(BaseModel):
     id: int
     status: OrderStatus
     created_at: datetime
-    created_by: str  # student_id of the customer
+    user_id: int  # the account that placed the order (User.id)
     vendor_id: int
     vendor_name: dict[str, str]  # {"zh": ..., "en": ...}
     items: list[OrderItemRead]

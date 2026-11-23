@@ -33,9 +33,7 @@ def _manages(user: User, order: Order) -> bool:
 def _can_see(user: User, order: Order) -> bool:
     # Admins monitor every order; staff see their own vendor's; everyone sees their own
     return (
-        order.created_by == user.student_id
-        or user.role is UserRole.ADMIN
-        or _manages(user, order)
+        order.user_id == user.id or user.role is UserRole.ADMIN or _manages(user, order)
     )
 
 
@@ -125,7 +123,7 @@ def create_order(session: Session, user: User, data: OrderCreate) -> Order:
             )
         )
     order = Order(
-        created_by=user.student_id,
+        user_id=user.id,
         vendor_id=vendor_id,
         items=lines,
         pickup_time=pickup_time,
@@ -155,19 +153,19 @@ def list_orders(
 ) -> Sequence[Order]:
     # mine=true: only orders this account placed, whatever its role.
     # Otherwise admins see every order, staff see their vendor's, customers their own.
-    created_by: str | None = None
+    user_id: int | None = None
     vendor_id: int | None = None
     if mine:
-        created_by = user.student_id
+        user_id = user.id
     elif user.role is UserRole.ADMIN:
         pass
     elif user.role is UserRole.STAFF and user.vendor_id is not None:
         vendor_id = user.vendor_id
     else:
-        created_by = user.student_id
+        user_id = user.id
     return repo.list_orders(
         session,
-        created_by=created_by,
+        user_id=user_id,
         vendor_id=vendor_id,
         status=status,
         limit=limit,
@@ -199,7 +197,7 @@ def update_status(
 def cancel_order(session: Session, user: User, order_id: int) -> Order:
     order = get_order(session, user, order_id, for_update=True)
     if not _manages(user, order):
-        if order.created_by != user.student_id:
+        if order.user_id != user.id:
             # Only admins get here (anyone else could not see the order): they monitor only
             raise ForbiddenError("Admins can view orders but not change them")
         # Once the kitchen has started, only the vendor's staff can cancel.
@@ -215,7 +213,7 @@ def choose_pay_at_pickup(session: Session, user: User, order_id: int) -> Order:
     """The customer will pay at the counter instead of online; the order then shows
     up on the vendor's board as unpaid."""
     order = get_order(session, user, order_id, for_update=True)
-    if order.created_by != user.student_id:
+    if order.user_id != user.id:
         # staff and admins can see the order, but only the customer decides how to pay
         raise ForbiddenError("Only the customer who placed the order can choose this")
     if order.status is not OrderStatus.CONFIRMING:
@@ -270,7 +268,7 @@ def to_read(session: Session, orders: Sequence[Order]) -> list[OrderRead]:
                 id=order.id,
                 status=order.status,
                 created_at=order.created_at,
-                created_by=order.created_by,
+                user_id=order.user_id,
                 vendor_id=order.vendor_id,
                 vendor_name=vendors[order.vendor_id].name,
                 items=lines,

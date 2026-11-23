@@ -108,7 +108,7 @@ def create_payment(
 
     # 2. 只有下單的本人可以付款。店員雖然看得到所有訂單，但不能替客人付款。
     #    一樣回 404，不透露「這張訂單存在」
-    if order.created_by != user.student_id:
+    if order.user_id != user.id:
         raise NotFoundError("Order not found")
 
     # 3. 只有「確認中」的訂單可以付款；已取消、已在製作的都不行

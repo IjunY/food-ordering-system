@@ -12,7 +12,8 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    # The login name. Also what Order.created_by stores.
+    # The login name. Other tables point at an account by id, not by this
+    # (Order.user_id), because a staff account picks a new one at first sign-in.
     student_id: Mapped[str] = mapped_column(String(20), unique=True)
     email: Mapped[str] = mapped_column(String(255), unique=True)
     phone_number: Mapped[str] = mapped_column(String(20))
