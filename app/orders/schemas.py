@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, StringConstraints
+from pydantic import AwareDatetime, BaseModel, Field, StringConstraints
 
 from app.orders.states import OrderStatus
 
@@ -23,6 +23,9 @@ class OrderItemCreate(BaseModel):
 class OrderCreate(BaseModel):
     # Prices are not accepted from the client: the server copies them from the menu
     items: list[OrderItemCreate] = Field(min_length=1, max_length=50)
+    # None (or left out): pick up as soon as it is ready. Otherwise the booked time,
+    # with a timezone ("2026-11-23T12:30:00+08:00"); rules in app/orders/pickup.py
+    pickup_time: AwareDatetime | None = None
 
 
 class OrderStatusUpdate(BaseModel):
@@ -54,3 +57,4 @@ class OrderRead(BaseModel):
     # The latest online payment for this order ("unpaid": none started yet)
     payment_status: Literal["unpaid", "pending", "paid", "failed", "expired"]
     pay_at_pickup: bool  # the customer will pay at the counter
+    pickup_time: datetime | None  # booked pickup time; None = as soon as possible

@@ -116,6 +116,12 @@ The vendor's board has four columns: unpaid (pay at counter), paid (not
 accepted yet), accepted (preparing) and ready. Orders that are neither paid
 nor marked pay-at-pickup stay off the board.
 
+An order can book a pickup time: send `pickup_time` (with a timezone) in
+`POST /api/orders`; leave it out for "as soon as possible". It must be on a
+15-minute mark, at least 30 minutes from now and at most 24 hours ahead
+(`app/orders/pickup.py`). Orders return `pickup_time` (null = as soon as
+possible), so the vendor's board shows it.
+
 ## Looking at the database
 
 The database runs in the `db` container (Postgres, user/database from `.env`).
