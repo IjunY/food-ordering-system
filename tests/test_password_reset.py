@@ -8,6 +8,7 @@ from datetime import UTC, datetime, timedelta
 import httpx2
 import pytest
 from fastapi.testclient import TestClient
+from signup import sign_up
 
 from app.auth.service import request_password_reset
 from app.auth.states import UserRole
@@ -46,7 +47,7 @@ def outbox(client: TestClient) -> Iterator[Outbox]:
 
 @pytest.fixture
 def alice(client: TestClient) -> None:
-    assert client.post("/api/auth/register", json=ALICE).status_code == 201
+    assert sign_up(client, ALICE).status_code == 201
 
 
 def sign_in(client: TestClient, student_id: str, password: str) -> httpx2.Response:
@@ -228,3 +229,18 @@ def test_smtp_is_used_once_a_host_is_set(client: TestClient) -> None:
     without = MailSettings(_env_file=None)  # pyright: ignore[reportCallIssue]
     assert isinstance(get_mailer(request, with_smtp), SmtpMailer)  # type: ignore[arg-type]
     assert isinstance(get_mailer(request, without), LogMailer)  # type: ignore[arg-type]
+
+    # The Gmail account from .env.example, before its app password is filled in
+    no_password = MailSettings(
+        smtp_host="smtp.gmail.com",
+        smtp_username="nthu.mealorder@gmail.com",
+        _env_file=None,  # pyright: ignore[reportCallIssue]
+    )
+    assert isinstance(get_mailer(request, no_password), LogMailer)  # type: ignore[arg-type]
+    with_password = MailSettings(
+        smtp_host="smtp.gmail.com",
+        smtp_username="nthu.mealorder@gmail.com",
+        smtp_password="abcdabcdabcdabcd",
+        _env_file=None,  # pyright: ignore[reportCallIssue]
+    )
+    assert isinstance(get_mailer(request, with_password), SmtpMailer)  # type: ignore[arg-type]

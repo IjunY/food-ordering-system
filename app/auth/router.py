@@ -5,16 +5,17 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Request, status
 
 from app.auth import service
 from app.auth.dependencies import DbSession, SignedInUser
-from app.auth.emails import password_reset_email
+from app.auth.emails import password_reset_email, signup_code_email
 from app.auth.models import User
 from app.auth.schemas import (
+    EmailCodeRequest,
     PasswordChange,
     PasswordResetConfirm,
     PasswordResetRequest,
     TokenResponse,
     UserLogin,
     UserRead,
-    UserRegister,
+    UserSignUp,
 )
 from app.auth.security import create_access_token
 from app.mail.sender import Mailer, get_mailer, send_quietly
@@ -22,9 +23,29 @@ from app.mail.sender import Mailer, get_mailer, send_quietly
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+@router.post("/register/send-code", status_code=status.HTTP_202_ACCEPTED)
+def send_signup_code(
+    data: EmailCodeRequest,
+    session: DbSession,
+    background: BackgroundTasks,
+    mailer: Annotated[Mailer, Depends(get_mailer)],
+) -> None:
+    """Step 1 of signing up: emails a 6-digit code to this address.
+
+    409 if the address already has an account; 429 if a code went out less than a
+    minute ago. The email goes out after the response.
+    """
+    code = service.send_signup_code(session, data.email)
+    minutes = int(service.CODE_VALID_FOR.total_seconds() // 60)
+    background.add_task(
+        send_quietly, mailer, signup_code_email(data.email.lower(), code, minutes)
+    )
+
+
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
-def register(data: UserRegister, session: DbSession) -> User:
-    return service.register_user(session, data)
+def register(data: UserSignUp, session: DbSession) -> User:
+    """Step 2: creates the account, with the code from the email (email_code)."""
+    return service.sign_up(session, data)
 
 
 @router.post("/login", response_model=TokenResponse)

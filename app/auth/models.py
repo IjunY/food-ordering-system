@@ -68,3 +68,28 @@ class PasswordReset(Base):
     )
 
     user: Mapped[User] = relationship()
+
+
+class EmailVerification(Base):
+    """A sign-up code emailed to an address, to prove the address belongs to the
+    person signing up. The account is only created once the right code comes back.
+
+    Only a hash of the code is kept. A code works once, until expires_at, and only
+    for MAX_CODE_ATTEMPTS wrong guesses (app/auth/service.py); sending a new code
+    closes the older ones of that address.
+    """
+
+    __tablename__ = "email_verifications"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    email: Mapped[str] = mapped_column(String(255), index=True)  # lower case
+    # SHA-256 (hex) of "<email>:<code>"
+    code_hash: Mapped[str] = mapped_column(String(64))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    # Wrong codes tried against this one
+    attempts: Mapped[int] = mapped_column(default=0, server_default="0")
+    # Set when the code was used, or closed by a newer code / too many wrong tries
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )

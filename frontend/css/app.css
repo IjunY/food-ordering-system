@@ -262,6 +262,10 @@ a.pass:focus-visible { outline-offset: 3px; border-radius: var(--r-pass); }
 .field textarea, .ogroup textarea { display: block; padding: 10px 12px; line-height: 1.5; resize: vertical; }
 .field-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .hint { font-size: 13px; color: var(--mute); }
+/* 註冊：驗證碼欄位右邊是「寄驗證碼」按鈕 */
+.coderow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.coderow .input input { letter-spacing: .3em; }
+.coderow .btn { min-height: 52px; min-width: 7.5em; }
 .checks { display: grid; gap: 4px; }
 .checks li { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--mute); }
 .checks li .ico { width: 15px; height: 15px; stroke-width: 2.2; }

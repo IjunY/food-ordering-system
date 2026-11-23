@@ -15,6 +15,10 @@ PhoneNumber = Annotated[
     StringConstraints(strip_whitespace=True, pattern=r"^\+?[0-9]{8,15}$"),
 ]
 Password = Annotated[str, StringConstraints(min_length=8, max_length=128)]
+# The 6-digit code from the sign-up email
+EmailCode = Annotated[
+    str, StringConstraints(strip_whitespace=True, pattern=r"^[0-9]{6}$")
+]
 
 
 class UserRegister(BaseModel):
@@ -22,6 +26,17 @@ class UserRegister(BaseModel):
     email: EmailStr = Field(max_length=255)
     phone_number: PhoneNumber
     password: Password
+
+
+class EmailCodeRequest(BaseModel):
+    # Where to send the sign-up code
+    email: EmailStr = Field(max_length=255)
+
+
+class UserSignUp(UserRegister):
+    """A customer signing up: the account details plus the code emailed to them."""
+
+    email_code: EmailCode
 
 
 class UserLogin(BaseModel):

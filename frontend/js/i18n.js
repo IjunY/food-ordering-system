@@ -1094,6 +1094,46 @@ Object.assign(DICT.en, {
   'admin.platform.created': 'Created "{name}". Temporary login ID: {id}',
 });
 
+// 註冊：Email 驗證碼
+Object.assign(DICT.zh, {
+  'register.code': 'Email 驗證碼',
+  'register.code_send': '寄驗證碼',
+  'register.code_resend': '重新寄送',
+  'register.code_wait': '重新寄送（{n}）',
+  'register.code_hint': '填好 Email 後按「寄驗證碼」，把信裡的 6 位數字填在這裡',
+  'register.code_sent': '驗證碼已寄到 {email}，10 分鐘內有效（也看看垃圾郵件匣）',
+  'register.code_toast': '驗證碼已寄出',
+  'register.code_demo': '示範模式不會寄信，驗證碼是 {code}',
+  'register.need_email': '請先填寫正確的 Email',
+  'register.send_first': '請先按「寄驗證碼」，再填入信裡的驗證碼',
+  'register.need_code': '請填入 Email 收到的驗證碼',
+  'register.code_format': '驗證碼是 6 位數字',
+  'register.err.email_taken': '這個 Email 已經註冊過了，請直接登入',
+  'register.err.id_taken': '這個學號已經註冊過了',
+  'register.err.wait': '剛寄過驗證碼，請等一分鐘再重新寄送',
+  'register.err.code_wrong': '驗證碼不對，請再確認一次',
+  'register.err.code_expired': '驗證碼過期或錯太多次，請重新寄送',
+});
+Object.assign(DICT.en, {
+  'register.code': 'Email verification code',
+  'register.code_send': 'Send code',
+  'register.code_resend': 'Send again',
+  'register.code_wait': 'Send again ({n})',
+  'register.code_hint': 'Enter your email, tap "Send code", then type the 6 digits from the email here',
+  'register.code_sent': 'Code sent to {email}. It works for 10 minutes (check your spam folder too).',
+  'register.code_toast': 'Code sent',
+  'register.code_demo': 'Demo mode sends no email. Your code is {code}',
+  'register.need_email': 'Please enter a valid email first',
+  'register.send_first': 'Tap "Send code" first, then enter the code from the email',
+  'register.need_code': 'Please enter the code from the email',
+  'register.code_format': 'The code is 6 digits',
+  'register.err.email_taken': 'This email already has an account. Please sign in.',
+  'register.err.id_taken': 'This student ID already has an account',
+  'register.err.wait': 'A code was just sent. Please wait a minute before sending again.',
+  'register.err.code_wrong': 'That code is not right. Please check it again.',
+  'register.err.code_expired': 'The code has expired or was tried too many times. Please send a new one.',
+});
+
 // 預約取餐
 Object.assign(DICT.zh, {
   'cart.scheduled': '預約取餐時間',

@@ -92,6 +92,22 @@ into a database that already has other vendors:
    away; 店家設定 changes the store details and photos, and has a "Change
    password" button.
 
+## Signing up
+
+Customers sign up in two steps, so the email address is known to be theirs:
+
+1. `POST /api/auth/register/send-code` with `{"email": ...}` emails a 6-digit
+   code ("感謝您註冊 NTHU 點餐系統，以下是您的驗證碼：" with the code large and
+   bold). 409 if the address already has an account, 429 if a code went out to
+   it less than a minute ago.
+2. `POST /api/auth/register` with the account details plus `email_code`. The
+   code works once, for 10 minutes, and stops working after 5 wrong tries (then
+   send a new one). Sending a new code makes the older one stop working.
+
+The email is sent the same way as the password reset links below (without
+`MAIL_SMTP_HOST`, development prints it in the server log). Vendor staff
+accounts made by an admin, and the seed script's demo accounts, skip this.
+
 ## Passwords
 
 - **Change password** (signed in): customers on their profile page, vendors
@@ -102,8 +118,10 @@ into a database that already has other vendors:
   for 30 minutes; using it signs the user in and out
   everywhere else. The page answers the same whether or not the account exists,
   and sends at most one email per account per minute.
-- Sending email: set `MAIL_SMTP_HOST` etc. in `.env` (see `.env.example`; for
-  Gmail, use an [app password](https://myaccount.google.com/apppasswords)).
+- Sending email: emails go out from the project's Gmail account,
+  `nthu.mealorder@gmail.com` (the `MAIL_*` lines in `.env.example`). Put that
+  account's [app password](https://myaccount.google.com/apppasswords) in
+  `MAIL_SMTP_PASSWORD` in your `.env` (ask the team; never commit it).
   Without it, in development the email is printed in the server log instead:
   `docker compose logs app | grep -A 20 "Email not sent"`, then open the link.
 - Links in the email point at `APP_URL` (default `http://localhost:8000`). For a

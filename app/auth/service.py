@@ -6,15 +6,27 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.auth import repo
-from app.auth.models import PasswordReset, User
-from app.auth.schemas import UserRegister
+from app.auth.models import EmailVerification, PasswordReset, User
+from app.auth.schemas import UserRegister, UserSignUp
 from app.auth.security import DUMMY_PASSWORD_HASH, hash_password, verify_password
 from app.auth.states import UserRole
-from app.core.errors import BadRequestError, ConflictError, UnauthorizedError
+from app.core.errors import (
+    BadRequestError,
+    ConflictError,
+    TooManyRequestsError,
+    UnauthorizedError,
+)
 
 # At most one reset email per account per minute, so the form cannot be used to
 # flood someone's inbox
 RESET_EMAIL_INTERVAL = timedelta(minutes=1)
+
+# Sign-up codes: valid for 10 minutes, one email per address per minute, and a
+# code stops working after 5 wrong tries (a new one has to be sent), so the
+# 1,000,000 possible codes cannot be guessed
+CODE_VALID_FOR = timedelta(minutes=10)
+CODE_EMAIL_INTERVAL = timedelta(minutes=1)
+MAX_CODE_ATTEMPTS = 5
 
 
 def register_user(
@@ -50,6 +62,63 @@ def register_user(
         session.rollback()
         raise ConflictError("This student ID or email is already registered") from exc
     return user
+
+
+def _hash_code(email: str, code: str) -> str:
+    return hashlib.sha256(f"{email}:{code}".encode()).hexdigest()
+
+
+def send_signup_code(session: Session, email: str, now: datetime | None = None) -> str:
+    """Makes a new sign-up code for this address and returns it (to be emailed).
+
+    Older codes of the address stop working. Refused when the address already
+    has an account, or a code went out less than a minute ago.
+    """
+    now = now or datetime.now(UTC)
+    email = email.lower()
+    if repo.get_by_email(session, email) is not None:
+        raise ConflictError("This email is already registered")
+    last = repo.last_code_sent(session, email)
+    if last is not None and now - last < CODE_EMAIL_INTERVAL:
+        raise TooManyRequestsError(
+            "A code was just sent to this email; wait a minute before asking again"
+        )
+    code = f"{secrets.randbelow(1_000_000):06d}"
+    repo.close_verifications(session, email, now)
+    repo.add_verification(
+        session,
+        EmailVerification(
+            email=email,
+            code_hash=_hash_code(email, code),
+            created_at=now,
+            expires_at=now + CODE_VALID_FOR,
+        ),
+    )
+    session.commit()
+    return code
+
+
+def sign_up(session: Session, data: UserSignUp, now: datetime | None = None) -> User:
+    """A customer creating an account with the code emailed to them."""
+    now = now or datetime.now(UTC)
+    email = data.email.lower()
+    verification = repo.get_open_verification(session, email, now)
+    if verification is None:
+        raise BadRequestError(
+            "The verification code has expired or was not sent; ask for a new one"
+        )
+    if not secrets.compare_digest(
+        verification.code_hash, _hash_code(email, data.email_code)
+    ):
+        verification.attempts += 1
+        if verification.attempts >= MAX_CODE_ATTEMPTS:
+            verification.used_at = now  # too many wrong tries: a new code is needed
+        session.commit()
+        raise BadRequestError("The verification code is incorrect")
+    verification.used_at = now
+    # register_user commits the code as used together with the new account
+    # (or rolls both back if the student ID / email was taken meanwhile)
+    return register_user(session, data)
 
 
 def authenticate(session: Session, student_id: str, password: str) -> User:

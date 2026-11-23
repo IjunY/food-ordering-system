@@ -82,6 +82,13 @@ export async function registerPage() {
     <form class="acard" data-form="register" novalidate>
       ${C.TextField({ label: t('login.student_id'), name: 'student_id', num: true, extra: 'autocomplete="username" autocapitalize="off" spellcheck="false" maxlength="20"' })}
       ${C.TextField({ label: t('register.email'), name: 'email', type: 'email', extra: 'autocomplete="email"' })}
+      <div class="field"><label for="f-email_code">${esc(t('register.code'))}</label>
+        <div class="coderow">
+          <div class="input"><input type="text" class="num" id="f-email_code" name="email_code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" aria-describedby="code-hint"></div>
+          ${codeButton()}
+        </div>
+        <p class="hint" id="code-hint">${esc(t(codeState.sentTo ? 'register.code_sent' : 'register.code_hint', { email: codeState.sentTo }))}</p>
+      </div>
       ${C.TextField({ label: t('register.phone'), name: 'phone_number', type: 'tel', num: true, extra: 'autocomplete="tel" inputmode="tel"' })}
       ${C.TextField({ label: t('login.password'), name: 'password', type: 'password', reveal: true, input: 'password-rule', extra: 'autocomplete="new-password" minlength="8" aria-describedby="pw-rules"', hint: rule })}
       ${C.Cta({ label: t('register.submit'), type: 'submit' })}
@@ -89,6 +96,60 @@ export async function registerPage() {
     </form>
   </div>`);
 }
+// Email 驗證碼：按「寄驗證碼」後 60 秒內不能再按（後端也是一分鐘一封）
+const CODE_COOLDOWN = 60;
+const codeState = { sentTo: '', until: 0, timer: null };
+const codeWait = () => Math.max(0, Math.ceil((codeState.until - Date.now()) / 1000));
+function codeButton() {
+  const wait = codeWait();
+  const label = wait ? t('register.code_wait', { n: wait }) : t(codeState.sentTo ? 'register.code_resend' : 'register.code_send');
+  return `<button type="button" class="btn btn--sm" id="code-btn" data-action="send-code"${wait ? ' disabled' : ''}>${esc(label)}</button>`;
+}
+// 倒數只改按鈕，不重畫整頁（不然打到一半的欄位會清掉）
+function tickCodeButton() {
+  clearInterval(codeState.timer);
+  codeState.timer = setInterval(() => {
+    const btn = document.getElementById('code-btn');
+    if (btn) btn.outerHTML = codeButton();
+    if (!codeWait()) clearInterval(codeState.timer);
+  }, 1000);
+}
+// 後端的錯誤訊息（英文）→ 翻譯好的說明
+const SIGNUP_ERRORS = [
+  [/email is already registered/i, 'register.err.email_taken'],
+  [/student ID is already registered|student ID or email/i, 'register.err.id_taken'],
+  [/code was just sent/i, 'register.err.wait'],
+  [/code is incorrect/i, 'register.err.code_wrong'],
+  [/code has expired|was not sent/i, 'register.err.code_expired'],
+];
+const signupError = (err) => {
+  const hit = SIGNUP_ERRORS.find(([re]) => re.test(err.message || ''));
+  return hit ? t(hit[1]) : err.message || String(err);
+};
+actions['send-code'] = async (_, el) => {
+  const input = document.querySelector('[name=email]');
+  const email = String(input?.value || '').trim();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { toast(t('register.need_email')); input?.focus(); return; }
+  el.disabled = true;
+  try {
+    const res = await api.sendSignupCode(email);
+    codeState.sentTo = email;
+    codeState.until = Date.now() + CODE_COOLDOWN * 1000;
+    const hint = document.getElementById('code-hint');
+    if (hint) hint.textContent = t('register.code_sent', { email });
+    // 假資料模式不會寄信：直接把驗證碼告訴使用者
+    toast(res?.demo_code ? t('register.code_demo', { code: res.demo_code }) : t('register.code_toast', { email }));
+    document.querySelector('[name=email_code]')?.focus();
+  } catch (err) {
+    if (err.status === 429) codeState.until = Date.now() + CODE_COOLDOWN * 1000;
+    toast(signupError(err));
+  } finally {
+    const btn = document.getElementById('code-btn');
+    if (btn) btn.outerHTML = codeButton();
+    if (codeWait()) tickCodeButton();
+  }
+};
+
 // 邊打邊檢查密碼長度，不重畫（焦點留在欄位裡）
 inputs['password-rule'] = (el) => {
   const li = document.querySelector('#pw-rules li');
@@ -99,12 +160,16 @@ inputs['password-rule'] = (el) => {
   li.querySelector('svg').outerHTML = icon(ok ? 'check' : 'dot');
 };
 forms.register = async (fd, form) => {
-  const data = Object.fromEntries(['student_id', 'email', 'phone_number'].map((k) => [k, String(fd.get(k) || '').trim()]));
+  const data = Object.fromEntries(['student_id', 'email', 'email_code', 'phone_number'].map((k) => [k, String(fd.get(k) || '').trim()]));
   data.password = String(fd.get('password') || '');
   const empty = Object.keys(data).find((k) => !data[k]);
+  if (empty === 'email_code') { toast(t(codeState.sentTo ? 'register.need_code' : 'register.send_first')); form.querySelector('[name=email_code]')?.focus(); return; }
   if (empty) { toast(t('register.need_all')); form.querySelector(`[name=${empty}]`)?.focus(); return; }
+  if (!/^[0-9]{6}$/.test(data.email_code)) { toast(t('register.code_format')); form.querySelector('[name=email_code]')?.focus(); return; }
   if (data.password.length < 8) { toast(t('register.short_password')); form.querySelector('[name=password]')?.focus(); return; }
-  const res = await api.register(data);
+  let res;
+  try { res = await api.register(data); } catch (err) { toast(signupError(err)); return; }
+  Object.assign(codeState, { sentTo: '', until: 0 });
   session.set({ access_token: res.access_token, user: res.user });
   await maybeStartTour(res.user);
   navigate(homeOf(res.user.role));

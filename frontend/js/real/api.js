@@ -147,8 +147,14 @@ export async function login(student_id, password) {
   return toSession(await http('POST', '/auth/login', { student_id, password }));
 }
 
-export async function register({ student_id, email, phone_number, password }) {
-  await http('POST', '/auth/register', { student_id, email, phone_number, password });
+// 註冊第一步：後端寄 6 位數驗證碼到這個 email（一分鐘一封、10 分鐘內有效）
+export async function sendSignupCode(email) {
+  await http('POST', '/auth/register/send-code', { email });
+  return {};
+}
+
+export async function register({ student_id, email, email_code, phone_number, password }) {
+  await http('POST', '/auth/register', { student_id, email, email_code, phone_number, password });
   return login(student_id, password);
 }
 
